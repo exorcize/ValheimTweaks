@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.2.0";
+        public const string VERSION = "0.2.1";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;

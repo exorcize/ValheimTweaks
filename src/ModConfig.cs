@@ -112,18 +112,28 @@ namespace ValheimTweaks
                 "Sobrescreve a simulation distance. No HOST isso vira o teto de todos os " +
                 "jogadores (o jogo ja sincroniza; cliente so pode ficar abaixo).");
 
-            SimDistanceNear = cfg.Bind("04 - Performance", "SimDistanceNear", 3,
+            // NEAR = onde as CRIATURAS existem.
+            // ZDOMan.FindSectorObjects usa FindObjects() no anel 1..near (todos os ZDOs)
+            // e FindDistantObjects() no anel ate total (SO os ZDOs com ZNetView.m_distant,
+            // que e cenario estatico). Inimigo e animal nunca sao "distant" -- entao a
+            // distancia em que voce ENXERGA bicho e exatamente o near.
+            //   distancia = near * 64 + 32   (ZoneSystem.m_zoneSize = 64)
+            //   near 2:160m  3:224m  4:288m  5:352m  6:416m  7:480m  8:544m
+            // Custo: zonas ativas = (2n+1)^2, e o host paga por peer conectado.
+            SimDistanceNear = cfg.Bind("04 - Performance", "SimDistanceNear", 5,
                 new ConfigDescription(
-                    "Raio de zonas simuladas. Zonas ativas = (2n+1)^2 -- " +
-                    "2:25 zonas/181m  3:49/272m  4:81/362m  5:121/452m. " +
-                    "Tambem define o alcance visual do terreno e da agua, entao nao e de graca.",
-                    new AcceptableValueRange<int>(1, 5)));
+                    "Raio de zonas SIMULADAS. E isto que define a que distancia voce ve " +
+                    "inimigos e animais: near*64+32 metros. " +
+                    "2:160m(25 zonas)  3:224m(49)  4:288m(81)  5:352m(121)  6:416m(169)  7:480m(225). " +
+                    "O menu do jogo para no 6; acima disso e so pelo mod. Caro para o host.",
+                    new AcceptableValueRange<int>(1, 8)));
 
             SimDistanceFar = cfg.Bind("04 - Performance", "SimDistanceFar", 2,
                 new ConfigDescription(
-                    "Anel extra de 'ghost zones' (objetos distantes, sem simulacao). " +
-                    "O vanilla usa 2. Mexer aqui raramente compensa.",
-                    new AcceptableValueRange<int>(0, 4)));
+                    "Anel extra de 'ghost zones' alem do near. So instancia objetos marcados " +
+                    "como distant (cenario estatico) -- SEM criaturas e SEM simulacao, entao e " +
+                    "BARATO. Estende so o cenario ao longe. Vanilla = 2.",
+                    new AcceptableValueRange<int>(0, 6)));
         }
     }
 }

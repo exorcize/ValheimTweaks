@@ -74,9 +74,14 @@ namespace ValheimTweaks
             {
                 var sim = znet.GetSyncedSimulationDistance();
                 int zonas = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
+                float zoneSize = ZoneSystem.instance != null ? ZoneSystem.instance.m_zoneSize : 64f;
+                float distCriaturas = sim.NearSimulationDistance * zoneSize + zoneSize * 0.5f;
+                float distCenario = sim.TotalSimulationDistance * zoneSize + zoneSize * 0.5f;
                 sb.AppendLine($"  IsServer = {znet.IsServer()}");
                 sb.AppendLine($"  SimulationDistance: near = {sim.NearSimulationDistance}  far = {sim.FarSimulationDistance}  classic = {sim.IsClassic}");
-                sb.AppendLine($"    -> {zonas} zonas ativas (vanilla near=2 -> 25 zonas)");
+                sb.AppendLine($"    -> {zonas} zonas simuladas (vanilla near=2 -> 25 zonas)");
+                sb.AppendLine($"    -> CRIATURAS (inimigos/animais) visiveis ate ~{distCriaturas:0} m   [= near]");
+                sb.AppendLine($"    -> cenario distante ate ~{distCenario:0} m   [= near+far, o numero que o menu mostra]");
                 sb.AppendLine($"  ZRpc timeout atual = {Patches.TimeoutPatch.Current}s");
             }
             else
