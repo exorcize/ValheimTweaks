@@ -96,9 +96,73 @@ namespace ValheimTweaks
             sb.AppendLine($"  -> MaximizedWindow/Windowed passa pelo DWM e custa latencia. " +
                           $"Para MEDIR fps use borderless (captura de tela funciona); para JOGAR use exclusivo.");
 
+            DumpItemDrops(sb);
+
             sb.AppendLine("======================================================================");
 
             Plugin.Log.LogInfo(sb.ToString());
+        }
+
+        /// <summary>
+        /// Mede por que item no chao some de perto, em vez de teorizar.
+        ///
+        /// ItemDrop nao tem codigo de culling: quem esconde e o LODGroup do Unity.
+        /// A distancia em que um LOD troca (ou o objeto some) sai de:
+        ///     dist = (size * lodBias) / (2 * screenRelativeHeight * tan(fovV/2))
+        /// O ultimo LOD com threshold mais baixo e o ponto de sumico.
+        /// </summary>
+        private static void DumpItemDrops(StringBuilder sb)
+        {
+            sb.AppendLine("[ITENS NO CHAO]");
+
+            var drops = Object.FindObjectsByType<ItemDrop>(FindObjectsSortMode.None);
+            if (drops == null || drops.Length == 0)
+            {
+                sb.AppendLine("  (nenhum ItemDrop na cena -- jogue algo no chao e rode DumpNow)");
+                return;
+            }
+
+            var cam = Camera.allCameras.Length > 0 ? Camera.allCameras[0] : null;
+            float fovRad = (cam != null ? cam.fieldOfView : 65f) * Mathf.Deg2Rad;
+            float tanHalf = Mathf.Tan(fovRad * 0.5f);
+            float bias = QualitySettings.lodBias;
+            Vector3 origin = Player.m_localPlayer != null
+                ? Player.m_localPlayer.transform.position
+                : (cam != null ? cam.transform.position : Vector3.zero);
+
+            sb.AppendLine($"  {drops.Length} item(s) na cena. lodBias atual = {bias}");
+
+            int shown = 0;
+            foreach (var d in drops)
+            {
+                if (d == null || shown >= 6) continue;
+                shown++;
+
+                float dist = Vector3.Distance(origin, d.transform.position);
+                var lod = d.GetComponentInChildren<LODGroup>();
+                string nome = d.name.Replace("(Clone)", "");
+
+                if (lod == null)
+                {
+                    sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  sem LODGroup (nao e culling de LOD)");
+                    continue;
+                }
+
+                var lods = lod.GetLODs();
+                float menorThreshold = 1f;
+                foreach (var l in lods)
+                    if (l.screenRelativeTransitionHeight < menorThreshold)
+                        menorThreshold = l.screenRelativeTransitionHeight;
+
+                float cull = menorThreshold > 0f
+                    ? (lod.size * bias) / (2f * menorThreshold * tanHalf)
+                    : -1f;
+
+                sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  LODs={lods.Length} size={lod.size:0.00} " +
+                              $"cullAt={menorThreshold:0.0000} -> some a ~{cull:0}m");
+            }
+
+            sb.AppendLine("  -> dobrar lodBias dobra essas distancias (linear).");
         }
     }
 }

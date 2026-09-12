@@ -32,6 +32,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> FogDensityScale;
         internal static ConfigEntry<float> AmbientBrightness;
         internal static ConfigEntry<bool> TrilightAmbient;
+        internal static ConfigEntry<float> LodBiasOverride;
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -106,6 +107,17 @@ namespace ValheimTweaks
                 "EXPERIMENTAL. O jogo usa AmbientMode.Flat (uma cor vinda de todo lado, " +
                 "o mais chapado). Trilight separa ceu/horizonte/chao e da volume. " +
                 "Pode brigar com os shaders custom do Valheim -- teste antes de manter.");
+
+            // O que faz item no chao, pedra e recurso sumirem de perto: LODGroup +
+            // lodBias. O menu ("Nivel de detalhamento") mapeia 0:1.0 1:1.5 2:2.0 3:5.0
+            // e para por ai. Ver LodPatch.
+            LodBiasOverride = cfg.Bind("03 - Visual", "LodBiasOverride", 0f,
+                new ConfigDescription(
+                    "Sobrescreve o LOD bias. 0 = nao sobrescrever (usa o menu do jogo). " +
+                    "E ISTO que controla a que distancia item no chao, recurso, pedra e " +
+                    "arvore somem -- a distancia e LINEAR no valor (dobrar = dobrar o alcance). " +
+                    "Menu do jogo no maximo = 5.0. Acima disso, so aqui.",
+                    new AcceptableValueRange<float>(0f, 20f)));
 
             // O maior custo de CPU do host. Ver SimulationDistancePatch para a matematica.
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
