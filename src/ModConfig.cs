@@ -28,6 +28,15 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> ForceAnisotropic;
         internal static ConfigEntry<int> AnisotropicLevel;
         internal static ConfigEntry<bool> FullResTextures;
+        internal static ConfigEntry<bool> FogEnabled;
+        internal static ConfigEntry<float> FogDensityScale;
+        internal static ConfigEntry<float> AmbientBrightness;
+        internal static ConfigEntry<bool> TrilightAmbient;
+
+        // ---------- 04 - Performance ----------
+        internal static ConfigEntry<bool> SimDistanceEnabled;
+        internal static ConfigEntry<int> SimDistanceNear;
+        internal static ConfigEntry<int> SimDistanceFar;
 
         internal static void Init(ConfigFile cfg)
         {
@@ -74,6 +83,47 @@ namespace ValheimTweaks
             FullResTextures = cfg.Bind("03 - Visual", "FullResTextures", true,
                 "Garante mipmap limit 0 (textura em resolucao cheia). " +
                 "So tem efeito se algo tiver reduzido isso.");
+
+            // Medido no LAB: fogDensity 0,03 Exponential + ambiente Flat cinza 0,382.
+            // E dai que vem o aspecto lavado.
+            FogEnabled = cfg.Bind("03 - Visual", "FogEnabled", true,
+                "Desmarcar remove a nevoa por completo. Fica artificial, mas serve " +
+                "para enxergar quanto do visual e nevoa.");
+
+            FogDensityScale = cfg.Bind("03 - Visual", "FogDensityScale", 1.0f,
+                new ConfigDescription(
+                    "Multiplica a densidade da nevoa de TODO bioma e hora do dia. " +
+                    "1.0 = vanilla. 0.5 = metade (horizonte abre sem perder o clima).",
+                    new AcceptableValueRange<float>(0f, 2f)));
+
+            AmbientBrightness = cfg.Bind("03 - Visual", "AmbientBrightness", 1.0f,
+                new ConfigDescription(
+                    "Multiplica a luz ambiente. Acima de 1 clareia as sombras (menos " +
+                    "'buraco preto' em interior), abaixo de 1 aumenta o contraste.",
+                    new AcceptableValueRange<float>(0.25f, 2f)));
+
+            TrilightAmbient = cfg.Bind("03 - Visual", "TrilightAmbient", false,
+                "EXPERIMENTAL. O jogo usa AmbientMode.Flat (uma cor vinda de todo lado, " +
+                "o mais chapado). Trilight separa ceu/horizonte/chao e da volume. " +
+                "Pode brigar com os shaders custom do Valheim -- teste antes de manter.");
+
+            // O maior custo de CPU do host. Ver SimulationDistancePatch para a matematica.
+            SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
+                "Sobrescreve a simulation distance. No HOST isso vira o teto de todos os " +
+                "jogadores (o jogo ja sincroniza; cliente so pode ficar abaixo).");
+
+            SimDistanceNear = cfg.Bind("04 - Performance", "SimDistanceNear", 3,
+                new ConfigDescription(
+                    "Raio de zonas simuladas. Zonas ativas = (2n+1)^2 -- " +
+                    "2:25 zonas/181m  3:49/272m  4:81/362m  5:121/452m. " +
+                    "Tambem define o alcance visual do terreno e da agua, entao nao e de graca.",
+                    new AcceptableValueRange<int>(1, 5)));
+
+            SimDistanceFar = cfg.Bind("04 - Performance", "SimDistanceFar", 2,
+                new ConfigDescription(
+                    "Anel extra de 'ghost zones' (objetos distantes, sem simulacao). " +
+                    "O vanilla usa 2. Mexer aqui raramente compensa.",
+                    new AcceptableValueRange<int>(0, 4)));
         }
     }
 }

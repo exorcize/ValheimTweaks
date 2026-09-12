@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.1.0";
+        public const string VERSION = "0.2.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -135,6 +135,9 @@ namespace ValheimTweaks
             {
                 Patches.TextureFilterPatch.Apply();
                 Patches.TimeoutPatch.Apply();
+                Patches.SimulationDistancePatch.Apply();
+                // AmbientPatch nao precisa de Apply: o Postfix em EnvMan.SetEnv
+                // le a config a cada troca de ambiente, entao o slider e continuo.
                 Log.LogInfo($"Configuracoes aplicadas ({reason}).");
             }
             catch (Exception e)
