@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>ValheimTweaks</AssemblyName>
+    <RootNamespace>ValheimTweaks</RootNamespace>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <DebugType>portable</DebugType>
+    <!-- Unity/Mono nao entende nullable refs anotados; desliga o ruido. -->
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS0649;CS0169</NoWarn>
+  </PropertyGroup>
+
+  <!-- Caminhos locais. Se o Steam/r2modman mudarem de lugar, e so ajustar aqui. -->
+  <PropertyGroup>
+    <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
+    <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
+    <ProfileDir Condition="'$(ProfileDir)' == ''">$(AppData)\r2modmanPlus-local\Valheim\profiles\Default</ProfileDir>
+    <BepInExCore>$(ProfileDir)\BepInEx\core</BepInExCore>
+    <PluginDir>$(ProfileDir)\BepInEx\plugins\ValheimTweaks</PluginDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BepInEx + HarmonyX, direto do perfil do r2modman (sem NuGet). -->
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Codigo do jogo. Assembly-CSharp.dll e um stub de 23 KB: o jogo esta aqui. -->
+    <Reference Include="assembly_valheim">
+      <HintPath>$(ManagedDir)\assembly_valheim.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>$(ManagedDir)\assembly_utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Unity. Compilar contra os DLLs reais do jogo = erro de compilacao
+         se a API nao existir nesta versao (Unity 6000.0.75f1). -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Build = deploy. Cai direto no perfil do r2modman. -->
+  <Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
+    <MakeDir Directories="$(PluginDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" ContinueOnError="true" />
+    <Message Importance="high" Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll" />
+  </Target>
+
+</Project>
