@@ -33,6 +33,12 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> AmbientBrightness;
         internal static ConfigEntry<bool> TrilightAmbient;
         internal static ConfigEntry<float> LodBiasOverride;
+        internal static ConfigEntry<bool> SsaoOverride;
+        internal static ConfigEntry<int> SsaoSampleCount;
+        internal static ConfigEntry<bool> SsaoFullResolution;
+        internal static ConfigEntry<float> SsaoIntensity;
+        internal static ConfigEntry<float> SsaoRadius;
+        internal static ConfigEntry<float> SsaoPower;
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -118,6 +124,34 @@ namespace ValheimTweaks
                     "arvore somem -- a distancia e LINEAR no valor (dobrar = dobrar o alcance). " +
                     "Menu do jogo no maximo = 5.0. Acima disso, so aqui.",
                     new AcceptableValueRange<float>(0f, 20f)));
+
+            // CameraEffects.SetSSAO deixa Downsample = true HARDCODED nos dois niveis
+            // e limita o teto a Medium. Aqui destrava. Ver SsaoPatch.
+            SsaoOverride = cfg.Bind("03 - Visual", "SsaoOverride", true,
+                "Assume o controle da oclusao de ambiente (sombra de contato). " +
+                "LIGA o efeito mesmo se o menu do jogo estiver com ele desligado.");
+
+            SsaoSampleCount = cfg.Bind("03 - Visual", "SsaoSampleCount", 2,
+                new ConfigDescription(
+                    "0=Low 1=Medium 2=High 3=VeryHigh. O menu do jogo nunca passa de Medium.",
+                    new AcceptableValueRange<int>(0, 3)));
+
+            SsaoFullResolution = cfg.Bind("03 - Visual", "SsaoFullResolution", true,
+                "Roda o SSAO em resolucao cheia. O jogo forca meia resolucao SEMPRE, " +
+                "ate no nivel mais alto do menu.");
+
+            SsaoIntensity = cfg.Bind("03 - Visual", "SsaoIntensity", 1.0f,
+                new ConfigDescription("Forca da oclusao.", new AcceptableValueRange<float>(0f, 3f)));
+
+            SsaoRadius = cfg.Bind("03 - Visual", "SsaoRadius", 2.0f,
+                new ConfigDescription(
+                    "Raio em metros. Pequeno = so cantos; grande = sombreado amplo.",
+                    new AcceptableValueRange<float>(0.25f, 8f)));
+
+            SsaoPower = cfg.Bind("03 - Visual", "SsaoPower", 1.8f,
+                new ConfigDescription(
+                    "Curva de contraste da oclusao. Acima escurece mais o nucleo.",
+                    new AcceptableValueRange<float>(0.5f, 6f)));
 
             // O maior custo de CPU do host. Ver SimulationDistancePatch para a matematica.
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
