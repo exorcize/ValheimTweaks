@@ -19,6 +19,8 @@ namespace ValheimTweaks
         // ---------- 01 - Diagnostico ----------
         internal static ConfigEntry<bool> DumpOnWorldLoad;
         internal static ConfigEntry<bool> DumpNow;
+        internal static ConfigEntry<bool> ProfileNow;
+        internal static ConfigEntry<float> ProfileSeconds;
 
         // ---------- 02 - Rede ----------
         internal static ConfigEntry<bool> TimeoutEnabled;
@@ -77,6 +79,15 @@ namespace ValheimTweaks
 
             DumpNow = cfg.Bind("01 - Diagnostico", "DumpNow", false,
                 "Marque para forcar um dump agora. Volta sozinho para false depois de rodar.");
+
+            ProfileNow = cfg.Bind("01 - Diagnostico", "ProfileNow", false,
+                "Marque para medir frametime por ProfileSeconds e escrever o resultado no log. " +
+                "Volta sozinho para false. Mede de DENTRO do processo -- nao precisa de " +
+                "elevacao nem de injetor externo.");
+
+            ProfileSeconds = cfg.Bind("01 - Diagnostico", "ProfileSeconds", 20f,
+                new ConfigDescription("Duracao da medicao.",
+                    new AcceptableValueRange<float>(5f, 120f)));
 
             // --- Rede ---
             // ZNet.Start() chama ZRpc.SetLongTimeout(false), que trava m_timeout em 30s.

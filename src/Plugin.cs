@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.5.0";
+        public const string VERSION = "0.6.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -82,6 +82,8 @@ namespace ValheimTweaks
 
         private void Update()
         {
+            FrameProfiler.Tick();
+
             if (_reloadPending && ModConfig.HotReload.Value)
             {
                 // Debounce: editores gravam em varias etapas e disparam N eventos.
@@ -125,6 +127,13 @@ namespace ValheimTweaks
             {
                 ModConfig.DumpNow.Value = false;
                 Diagnostics.Dump("pedido manual");
+            }
+
+            if (ModConfig.ProfileNow.Value)
+            {
+                ModConfig.ProfileNow.Value = false;
+                if (!FrameProfiler.IsRunning)
+                    FrameProfiler.Start($"t{DateTime.Now:HHmmss}", ModConfig.ProfileSeconds.Value);
             }
         }
 
