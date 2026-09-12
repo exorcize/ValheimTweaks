@@ -39,6 +39,24 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> SsaoIntensity;
         internal static ConfigEntry<float> SsaoRadius;
         internal static ConfigEntry<float> SsaoPower;
+        internal static ConfigEntry<bool> AaOverride;
+        internal static ConfigEntry<bool> AaUseTaa;
+        internal static ConfigEntry<int> FxaaPreset;
+        internal static ConfigEntry<float> TaaJitterSpread;
+        internal static ConfigEntry<float> TaaSharpen;
+        internal static ConfigEntry<float> TaaStationaryBlending;
+        internal static ConfigEntry<float> TaaMotionBlending;
+        internal static ConfigEntry<float> ShadowDistance;
+        internal static ConfigEntry<int> ShadowCascades;
+        internal static ConfigEntry<int> PointLightLimit;
+        internal static ConfigEntry<int> PointLightShadowLimit;
+        internal static ConfigEntry<float> ClutterDistance;
+        internal static ConfigEntry<float> FieldOfView;
+
+        // ---------- 04 - Performance ----------
+        internal static ConfigEntry<int> MaxQueuedFrames;
+        internal static ConfigEntry<int> MaxSmoke;
+        internal static ConfigEntry<bool> FadeDistantSmokeFirst;
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -152,6 +170,97 @@ namespace ValheimTweaks
                 new ConfigDescription(
                     "Curva de contraste da oclusao. Acima escurece mais o nucleo.",
                     new AcceptableValueRange<float>(0.5f, 6f)));
+
+            // MSAA esta descartado: o diagnostico mediu a camera em DeferredShading.
+            // Sobra o post-processing, e o jogo nunca configura o metodo nem a
+            // qualidade -- fica no FXAA preset Default para sempre. Ver AntiAliasingPatch.
+            AaOverride = cfg.Bind("03 - Visual", "AaOverride", true,
+                "Assume o controle do anti-aliasing. O jogo so liga/desliga e nunca " +
+                "escolhe metodo nem qualidade.");
+
+            AaUseTaa = cfg.Bind("03 - Visual", "AaUseTaa", false,
+                "TAA em vez de FXAA. TAA e o correto em deferred e resolve serrilhado " +
+                "de geometria fina (folhagem, corda, cerca) que o FXAA so borra. " +
+                "Em troca deixa fantasma em movimento -- ajuste Sharpen e MotionBlending.");
+
+            FxaaPreset = cfg.Bind("03 - Visual", "FxaaPreset", 4,
+                new ConfigDescription(
+                    "So vale se AaUseTaa = false. 0=ExtremePerformance 1=Performance " +
+                    "2=Default (o que o jogo usa) 3=Quality 4=ExtremeQuality.",
+                    new AcceptableValueRange<int>(0, 4)));
+
+            TaaJitterSpread = cfg.Bind("03 - Visual", "TaaJitterSpread", 0.75f,
+                new ConfigDescription("Espalhamento do jitter. Maior = mais suave, mais borrado.",
+                    new AcceptableValueRange<float>(0.1f, 1f)));
+
+            TaaSharpen = cfg.Bind("03 - Visual", "TaaSharpen", 0.3f,
+                new ConfigDescription("Compensa o borrao do TAA. Demais gera halo.",
+                    new AcceptableValueRange<float>(0f, 3f)));
+
+            TaaStationaryBlending = cfg.Bind("03 - Visual", "TaaStationaryBlending", 0.95f,
+                new ConfigDescription("Peso do historico com a camera parada. Alto = mais estavel.",
+                    new AcceptableValueRange<float>(0f, 0.99f)));
+
+            TaaMotionBlending = cfg.Bind("03 - Visual", "TaaMotionBlending", 0.85f,
+                new ConfigDescription("Peso do historico em movimento. BAIXE se ver fantasma.",
+                    new AcceptableValueRange<float>(0f, 0.99f)));
+
+            // O menu para em 150m / 4 cascades (ShadowQuality 2).
+            ShadowDistance = cfg.Bind("03 - Visual", "ShadowDistance", 0f,
+                new ConfigDescription(
+                    "Distancia das sombras do sol em metros. 0 = nao sobrescrever. " +
+                    "Menu do jogo: 80 / 120 / 150.",
+                    new AcceptableValueRange<float>(0f, 500f)));
+
+            ShadowCascades = cfg.Bind("03 - Visual", "ShadowCascades", 0,
+                new ConfigDescription(
+                    "0 = nao sobrescrever. O Unity aceita 1, 2 ou 4. Mais cascades = " +
+                    "sombra mais nitida ao longe, mais custo.",
+                    new AcceptableValueRange<int>(0, 4)));
+
+            // Convencao: -2 = nao sobrescrever, -1 = ilimitado, 0+ = limite exato.
+            PointLightLimit = cfg.Bind("03 - Visual", "PointLightLimit", -2,
+                new ConfigDescription(
+                    "Quantas luzes pontuais (tocha, fogueira) ficam acesas ao mesmo tempo. " +
+                    "-2 = nao sobrescrever, -1 = ilimitado. Menu do jogo: 4 / 15 / 40 / ilimitado.",
+                    new AcceptableValueRange<int>(-2, 64)));
+
+            PointLightShadowLimit = cfg.Bind("03 - Visual", "PointLightShadowLimit", -2,
+                new ConfigDescription(
+                    "Quantas dessas luzes projetam SOMBRA. Das coisas mais caras numa base. " +
+                    "-2 = nao sobrescrever, -1 = ilimitado. Menu do jogo: 0 / 1 / 3 / ilimitado -- " +
+                    "o meio-termo (6, 8) so existe aqui.",
+                    new AcceptableValueRange<int>(-2, 32)));
+
+            ClutterDistance = cfg.Bind("03 - Visual", "ClutterDistance", 0f,
+                new ConfigDescription(
+                    "Ate onde a grama e desenhada. 0 = nao sobrescrever (medido em runtime: 45).",
+                    new AcceptableValueRange<float>(0f, 150f)));
+
+            FieldOfView = cfg.Bind("03 - Visual", "FieldOfView", 0f,
+                new ConfigDescription(
+                    "Campo de visao. 0 = nao sobrescrever (o jogo usa 65 fixo, sem opcao no menu). " +
+                    "Acima de ~100 distorce as bordas.",
+                    new AcceptableValueRange<float>(0f, 120f)));
+
+            // --- Performance ---
+            MaxQueuedFrames = cfg.Bind("04 - Performance", "MaxQueuedFrames", 0,
+                new ConfigDescription(
+                    "Frames pre-renderizados. O jogo trava em 2 e nao expoe no menu. " +
+                    "1 corta um frame de latencia. 0 = nao sobrescrever.",
+                    new AcceptableValueRange<int>(0, 4)));
+
+            // Cada fumaca e um Rigidbody de verdade. Ver SmokePatch.
+            MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
+                new ConfigDescription(
+                    "Teto global de particulas de fumaca. Cada uma e um Rigidbody simulado -- " +
+                    "custo de FISICA, nao de render. Vanilla = 100. 0 = nao sobrescrever.",
+                    new AcceptableValueRange<int>(0, 100)));
+
+            FadeDistantSmokeFirst = cfg.Bind("04 - Performance", "FadeDistantSmokeFirst", true,
+                "Ao estourar o teto, apaga a fumaca mais DISTANTE em vez da mais antiga " +
+                "(que costuma estar na tua frente). Usa Smoke.FadeMostDistant(), que ja " +
+                "existe no jogo e nunca e chamado.");
 
             // O maior custo de CPU do host. Ver SimulationDistancePatch para a matematica.
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,

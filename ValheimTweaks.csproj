@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <LangVersion>latest</LangVersion>
     <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -42,6 +42,11 @@
     </Reference>
     <Reference Include="assembly_utils">
       <HintPath>$(ManagedDir)\assembly_utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- PostProcessing v1 (FXAA/TAA/bloom). O jogo so liga/desliga; a gente configura. -->
+    <Reference Include="assembly_postprocessing">
+      <HintPath>$(ManagedDir)\assembly_postprocessing.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
