@@ -57,6 +57,7 @@ namespace ValheimTweaks
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<int> MaxQueuedFrames;
+        internal static ConfigEntry<int> MaxObjectsPerFrame;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
 
@@ -260,6 +261,15 @@ namespace ValheimTweaks
                     "Frames pre-renderizados. O jogo trava em 2 e nao expoe no menu. " +
                     "1 corta um frame de latencia. 0 = nao sobrescrever.",
                     new AcceptableValueRange<int>(0, 4)));
+
+            // Candidato numero 1 para engasgo. Ver ObjectBudgetPatch para o porque.
+            MaxObjectsPerFrame = cfg.Bind("04 - Performance", "MaxObjectsPerFrame", 0,
+                new ConfigDescription(
+                    "Teto de objetos instanciados por frame. O jogo diz 10, mas faz " +
+                    "Max(pendentes/100, 10) -- entao o teto CRESCE SEM LIMITE quando ha " +
+                    "muita coisa pendente, que e exatamente o que acontece ao atravessar " +
+                    "zona. 0 = nao limitar (vanilla). 10-30 troca engasgo por pop-in.",
+                    new AcceptableValueRange<int>(0, 200)));
 
             // Cada fumaca e um Rigidbody de verdade. Ver SmokePatch.
             MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
