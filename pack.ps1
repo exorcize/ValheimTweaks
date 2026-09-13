@@ -26,8 +26,12 @@ $manifest = [ordered]@{
     name           = "ValheimTweaks"
     version_number = $versao
     website_url    = ""
-    description    = "Anisotropico (bug do jogo), AA de qualidade, SSAO em resolucao cheia, nevoa ajustavel, tela cheia exclusiva, timeout de rede e diagnostico de performance."
-    dependencies   = @("denikson-BepInExPack_Valheim-5.4.2350")
+    description    = "Ajustes de video e rede que o menu do Valheim nao oferece: filtro anisotropico, anti-serrilhado com qualidade, nevoa ajustavel, tela cheia exclusiva, timeout de rede e distancia de simulacao."
+    dependencies   = @(
+        "denikson-BepInExPack_Valheim-5.4.2350",
+        # O menu de opcoes (F1) vem daqui; sem ele so da para editar o .cfg na mao.
+        "shudnal-ConfigurationManager-1.1.18"
+    )
 }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $stage "manifest.json") -Encoding UTF8
 
@@ -50,8 +54,8 @@ $g.Dispose()
 $bmp.Save((Join-Path $stage "icon.png"), [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
 
-Copy-Item (Join-Path $raiz "README.md")   (Join-Path $stage "README.md")   -Force
-Copy-Item (Join-Path $raiz "FINDINGS.md") (Join-Path $stage "FINDINGS.md") -Force -ErrorAction SilentlyContinue
+# FINDINGS.md fica so no repositorio: e nota de investigacao, nao documentacao de uso.
+Copy-Item (Join-Path $raiz "README.md") (Join-Path $stage "README.md") -Force
 Copy-Item $dll (Join-Path $stage "ValheimTweaks.dll") -Force
 
 $zip = Join-Path $saida "ValheimTweaks-$versao.zip"

@@ -1,144 +1,75 @@
 # ValheimTweaks
 
-Mod BepInEx pessoal para Valheim. Performance, visual e rede.
+Ajustes de vídeo e rede que o menu do Valheim não oferece.
 
-Alvo: **Valheim / Unity 6000.0.75f1 (Mono)**, BepInEx 5.4.2350 via r2modman.
-
----
-
-## Estado atual — v0.1.0
-
-| Bloco | Status |
-|---|---|
-| Esqueleto + hot reload de config | ✅ |
-| Diagnóstico do pipeline de render | ✅ |
-| Timeout de rede configurável | ✅ |
-| Filtro anisotrópico (bug do jogo) | ✅ |
-| SimulationDistance forçada pelo host | ⏳ próximo |
-| Fog / ambient (`EnvMan.SetEnv`) | ⏳ |
-| MSAA / SSAO full-res | ⏳ depende do diagnóstico |
-| Sync host→cliente (ServerSync) | ⏳ |
+Tudo é opcional e vem desligado ou no padrão do jogo, menos o filtro anisotrópico
+e o anti-serrilhado, que são praticamente de graça.
 
 ---
 
-## O que já faz
+## Requisitos
 
-### 1. Timeout de rede — `02 - Rede`
+- BepInEx (o r2modman instala junto)
+- Configuration Manager — é o que abre o menu de opções com **F1**
 
-O jogo trava o timeout de RPC em **30 s**:
+## Principais opções
 
-```csharp
-// ZRpc.cs
-private static float m_timeout;
-static ZRpc() { m_timeout = 600f; }
-public static void SetLongTimeout(bool enable) {
-    if (enable) m_timeout = 90f; else m_timeout = 30f;
-}
-// ZNet.Start() -> ZRpc.SetLongTimeout(enable: false)   // 30 s
-```
+**Filtro anisotrópico** — chão, estradas e pisos deixam de ficar borrados quando
+vistos de ângulo. É o ajuste com melhor retorno e custo quase zero.
 
-Postfix em `SetLongTimeout` sobrescreve o campo. Pega todos os call sites e não
-encosta na DLL do jogo.
+**Névoa ajustável** — o Valheim desenha bastante névoa, e ela lava as cores ao
+longe. Baixar para 0.4 abre o horizonte sem tirar o clima. Não custa desempenho.
 
-> ⚠️ Precisa estar ativo nas **duas pontas**. Quem não tiver o mod derruba a
-> conexão pelo lado dele no tempo padrão.
+**Anti-serrilhado com qualidade** — o jogo só liga e desliga. Aqui dá para
+escolher entre FXAA em cinco níveis ou TAA, que limpa muito melhor folhagem e
+cercas.
 
-### 2. Filtro anisotrópico — `03 - Visual`
+**Sombra de contato (SSAO)** — em resolução cheia e com mais qualidade do que o
+menu permite. É o que dá profundidade e tira o aspecto de objeto colado no chão.
 
-**Bug do próprio Valheim.** A opção "texturas anisotrópicas" existe no menu, é lida
-das prefs, guardada no state e salva de volta — mas **nunca é aplicada**. Não existe
-um único `QualitySettings.anisotropicFiltering` em toda a `assembly_valheim.dll`.
+**Tela cheia exclusiva** — o menu do jogo só alterna entre janela e sem bordas.
+A exclusiva costuma deixar o movimento mais suave, principalmente em monitor de
+alta taxa de atualização.
 
-O mod aplica de verdade e reaplica sempre que o jogo mexe nas próprias settings
-(via o evento público `GraphicsSettingsManager.GraphicsSettingsChanged`, sem Harmony).
+**Timeout de rede** — o jogo desiste de uma conexão parada em 30 segundos, o que
+derruba gente com internet instável. Aqui dá para aumentar.
 
-Efeito: chão, estrada, terreno e piso param de borrar em ângulo raso.
+**Distância de simulação** — permite ir além do limite do menu, para ver
+inimigos e animais de mais longe. Pesa em quem hospeda.
 
-### 3. Diagnóstico — `01 - Diagnostico`
+**Campo de visão** — fixo em 65 no jogo, ajustável aqui.
 
-Ao entrar no mundo, despeja no log o estado real: rendering path de cada câmera,
-MSAA, anisotrópico, LOD bias, sombras, `LightLod`, clutter, fog, simulation
-distance (com contagem de zonas) e modo de tela.
+Além desses, há controle de sombras, densidade e alcance da grama, limite de
+luzes de tocha, tesselação do terreno e alguns ajustes de desempenho.
 
-Serve para **parar de especular**. Em especial responde se MSAA é viável —
-só funciona em `Forward`.
+## Em multijogador
 
-Marque `DumpNow = true` no `.cfg` para forçar um dump na hora; ele se desmarca sozinho.
+A maior parte das opções é visual e vale só para quem as configurou — o seu
+ajuste não muda nada na tela dos outros.
 
----
+Duas exceções:
 
-## Build
+- **Timeout de rede**: cada jogador encerra a própria conexão, então todos
+  precisam ter o mod e o mesmo valor. Basta um sem o mod para derrubar.
+- **Distância de simulação**: quem hospeda define o teto. Os outros podem usar
+  menos, nunca mais.
 
-```bash
-dotnet build -c Release
-```
+## Ferramentas
 
-Compila contra os assemblies reais do jogo (se a API não existir nesta versão,
-é erro de compilação, não crash em runtime) e **copia o DLL direto para o perfil
-do r2modman**. Sem NuGet, sem restore de rede.
+Há uma seção de diagnóstico que escreve no log um resumo das configurações de
+vídeo em uso e mede o desempenho por alguns segundos, com média, percentis e
+contagem de engasgos. Útil para comparar ajustes com número em vez de impressão.
 
-Caminhos são sobrescrevíveis:
+Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afetar
+o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
+cena.
 
-```bash
-dotnet build -c Release -p:ValheimDir="D:\Steam\steamapps\common\Valheim"
-```
+## Alterando as opções
 
----
-
-## Ciclo de teste
-
-O hot reload é o que torna isso viável: **editar o `.cfg` aplica em jogo, sem reiniciar.**
+Pelo **F1** em jogo, ou editando direto:
 
 ```
 BepInEx/config/com.kyoka.valheimtweaks.cfg
 ```
 
-Um `FileSystemWatcher` detecta a escrita, faz `Config.Reload()` e reaplica.
-(O watcher dispara em thread de pool — a reaplicação é marshalada para a main
-thread no `Update()`, porque API do Unity é main-thread only.)
-
-### Dois mundos, propósitos diferentes
-
-| | Mundo **LAB** (novo) | Mundo **REAL** |
-|---|---|---|
-| Para quê | visual — A/B de AA, fog, SSAO, anisotrópico | performance de verdade |
-| Como | `devcommands` + cena travada | jogo normal, com os amigos online |
-| Por quê | comparação só vale se a cena for idêntica | custo de host é **por peer** |
-
-Mundo vazio não reproduz lag: o problema é base construída + zonas simuladas + peers.
-
-Comandos para travar a cena (confirmados em `Terminal.cs`):
-`devcommands`, `tod 0.5`, `env clear`, `goto`, `pos`, `freefly`, `debugmode`.
-
-> ⚠️ `devcommands` marca o mundo como *cheated* e derruba achievements.
-> Por isso fica no LAB, não no save real.
-
-### Tela
-
-- **Testar** → borderless (captura de tela funciona)
-- **Jogar** → fullscreen exclusivo (sem DWM no caminho, menos latência)
-
----
-
-## Menu
-
-`BepInEx.ConfigurationManager` (tecla **F1**) gera a UI sozinho a partir das
-definições em `ModConfig.cs`: `bool` vira switch, `AcceptableValueRange` vira
-slider, enum vira dropdown.
-
-Aba nativa no menu do jogo é viável depois — existe `Valheim.SettingsGui.ISettingsTab`
-e o `Settings.cs` descobre as abas por `GetComponent<ISettingsTab>()`.
-
----
-
-## Estrutura
-
-```
-src/
-├─ Plugin.cs          entry, hot reload, orquestração
-├─ ModConfig.cs       todas as opções
-├─ Diagnostics.cs     dump do pipeline
-└─ Patches/
-   ├─ TimeoutPatch.cs        Postfix ZRpc.SetLongTimeout
-   └─ TextureFilterPatch.cs  anisotrópico (evento, sem Harmony)
-```
+As mudanças valem na hora, sem reiniciar.

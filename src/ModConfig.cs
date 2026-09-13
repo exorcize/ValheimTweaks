@@ -3,13 +3,12 @@ using BepInEx.Configuration;
 namespace ValheimTweaks
 {
     /// <summary>
-    /// Todas as opcoes do mod em um lugar so.
+    /// Opções do mod. As seções são numeradas porque o Configuration Manager
+    /// ordena alfabeticamente.
     ///
-    /// As secoes sao numeradas porque o ConfigurationManager (F1) ordena
-    /// alfabeticamente -- sem o numero a ordem fica aleatoria.
-    ///
-    /// Toda entrada com AcceptableValueRange vira SLIDER no F1.
-    /// Toda entrada bool vira SWITCH. Enum vira dropdown.
+    /// Convenções usadas nas opções:
+    ///   float 0   = não sobrescrever (usa o que o menu do jogo definir)
+    ///   int  -2   = não sobrescrever, -1 = sem limite (nas opções de luz)
     /// </summary>
     internal static class ModConfig
     {
@@ -73,8 +72,6 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> GcSliceMs;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
-
-        // ---------- 04 - Performance ----------
         internal static ConfigEntry<bool> SimDistanceEnabled;
         internal static ConfigEntry<int> SimDistanceNear;
         internal static ConfigEntry<int> SimDistanceFar;
@@ -82,337 +79,287 @@ namespace ValheimTweaks
         internal static void Init(ConfigFile cfg)
         {
             HotReload = cfg.Bind("00 - Geral", "HotReload", true,
-                "Recarrega este arquivo automaticamente quando ele muda no disco e " +
-                "reaplica tudo sem fechar o jogo. Deixe ligado durante os testes.");
+                "Aplica mudanças deste arquivo na hora, sem precisar fechar o jogo.");
 
-            // --- Diagnostico ---
+            // ------------------------------------------------------------------
+            // 01 - Diagnóstico
+            // ------------------------------------------------------------------
             DumpOnWorldLoad = cfg.Bind("01 - Diagnostico", "DumpOnWorldLoad", true,
-                "Ao entrar no mundo, escreve no log o estado real do pipeline de render " +
-                "(rendering path da camera, MSAA, anisotropico, LOD, sombras, sim distance). " +
-                "E assim que a gente descobre o que o jogo realmente esta fazendo.");
+                "Ao entrar no mundo, anota no log um resumo das configurações de vídeo em uso.");
 
             DumpNow = cfg.Bind("01 - Diagnostico", "DumpNow", false,
-                "Marque para forcar um dump agora. Volta sozinho para false depois de rodar.");
+                "Gera esse resumo agora. Desmarca sozinho depois.");
 
             ProfileNow = cfg.Bind("01 - Diagnostico", "ProfileNow", false,
-                "Marque para medir frametime por ProfileSeconds e escrever o resultado no log. " +
-                "Volta sozinho para false. Mede de DENTRO do processo -- nao precisa de " +
-                "elevacao nem de injetor externo.");
+                "Mede o desempenho pelos próximos segundos e escreve o resultado no log. " +
+                "Desmarca sozinho depois.");
 
             ProfileSeconds = cfg.Bind("01 - Diagnostico", "ProfileSeconds", 20f,
-                new ConfigDescription("Duracao da medicao.",
+                new ConfigDescription("Duração da medição, em segundos.",
                     new AcceptableValueRange<float>(5f, 120f)));
 
             ProfileSystems = cfg.Bind("01 - Diagnostico", "ProfileSystems", true,
-                "Junto com o frametime, cronometra os sistemas do jogo (ZDOMan, streaming " +
-                "de objetos, ZoneSystem, grama, terreno) e mostra a reparticao do PIOR frame. " +
-                "E o que responde 'onde foram os 12ms' em vez de testar palpite por palpite.");
+                "Inclui na medição o tempo que cada parte do jogo consome por quadro.");
 
-            // --- Rede ---
-            // ZNet.Start() chama ZRpc.SetLongTimeout(false), que trava m_timeout em 30s.
-            // (o ctor estatico de ZRpc usa 600s, mas e sobrescrito no boot)
+            // ------------------------------------------------------------------
+            // 02 - Rede
+            // ------------------------------------------------------------------
             TimeoutEnabled = cfg.Bind("02 - Rede", "TimeoutEnabled", true,
-                "Sobrescreve o timeout de RPC do Valheim. " +
-                "PRECISA estar ativo nas DUAS pontas: quem nao tiver o mod derruba a conexao " +
-                "pelo lado dele no tempo padrao.");
+                "Ajusta quanto tempo o jogo aguenta uma conexão sem resposta antes de " +
+                "derrubar. Todos no servidor precisam do mod e do mesmo valor, porque cada " +
+                "um encerra a própria conexão.");
 
             TimeoutSeconds = cfg.Bind("02 - Rede", "TimeoutSeconds", 90f,
                 new ConfigDescription(
-                    "Segundos sem ping antes de fechar o socket. Padrao do jogo: 30 (Steam) / 90 (crossplay).",
+                    "Segundos até desistir de uma conexão parada. O jogo usa 30.",
                     new AcceptableValueRange<float>(30f, 600f)));
 
-            // --- Visual ---
-            // O jogo tem a opcao "texturas anisotropicas" no menu, salva ela nas prefs,
-            // e NUNCA a aplica: nao existe QualitySettings.anisotropicFiltering em
-            // lugar nenhum do assembly_valheim.dll. Este bloco corrige isso.
+            // ------------------------------------------------------------------
+            // 03 - Visual
+            // ------------------------------------------------------------------
             ForceAnisotropic = cfg.Bind("03 - Visual", "ForceAnisotropic", true,
-                "Forca filtro anisotropico. O jogo tem a opcao no menu mas nunca a aplica " +
-                "(bug do proprio Valheim). Deixa chao, estrada e piso nitidos em angulo raso. " +
-                "Custo praticamente zero.");
+                "Deixa chão, estradas e pisos nítidos quando vistos de ângulo, em vez de " +
+                "borrados. Custo quase zero.");
 
             AnisotropicLevel = cfg.Bind("03 - Visual", "AnisotropicLevel", 16,
-                new ConfigDescription(
-                    "Nivel de anisotropia (1 = desligado, 16 = maximo).",
+                new ConfigDescription("Intensidade do filtro. 1 desliga, 16 é o máximo.",
                     new AcceptableValueRange<int>(1, 16)));
 
             FullResTextures = cfg.Bind("03 - Visual", "FullResTextures", true,
-                "Garante mipmap limit 0 (textura em resolucao cheia). " +
-                "So tem efeito se algo tiver reduzido isso.");
+                "Mantém as texturas em resolução cheia.");
 
-            // Medido no LAB: fogDensity 0,03 Exponential + ambiente Flat cinza 0,382.
-            // E dai que vem o aspecto lavado.
             FogEnabled = cfg.Bind("03 - Visual", "FogEnabled", true,
-                "Desmarcar remove a nevoa por completo. Fica artificial, mas serve " +
-                "para enxergar quanto do visual e nevoa.");
+                "Desmarcar remove a névoa por completo. Fica artificial, mas serve para ver " +
+                "o quanto dela está escondendo a paisagem.");
 
             FogDensityScale = cfg.Bind("03 - Visual", "FogDensityScale", 1.0f,
                 new ConfigDescription(
-                    "Multiplica a densidade da nevoa de TODO bioma e hora do dia. " +
-                    "1.0 = vanilla. 0.5 = metade (horizonte abre sem perder o clima).",
+                    "Quanta névoa o jogo desenha. 1.0 é o padrão; abaixo disso o horizonte " +
+                    "abre e as cores ao longe param de lavar. Não custa desempenho.",
                     new AcceptableValueRange<float>(0f, 2f)));
 
             AmbientBrightness = cfg.Bind("03 - Visual", "AmbientBrightness", 1.0f,
                 new ConfigDescription(
-                    "Multiplica a luz ambiente. Acima de 1 clareia as sombras (menos " +
-                    "'buraco preto' em interior), abaixo de 1 aumenta o contraste.",
+                    "Clareia ou escurece a luz ambiente. Acima de 1 as sombras ficam menos " +
+                    "fechadas; abaixo de 1 aumenta o contraste.",
                     new AcceptableValueRange<float>(0.25f, 2f)));
 
             TrilightAmbient = cfg.Bind("03 - Visual", "TrilightAmbient", false,
-                "EXPERIMENTAL. O jogo usa AmbientMode.Flat (uma cor vinda de todo lado, " +
-                "o mais chapado). Trilight separa ceu/horizonte/chao e da volume. " +
-                "Pode brigar com os shaders custom do Valheim -- teste antes de manter.");
+                "Luz ambiente vinda de céu, horizonte e chão separadamente, em vez de uma cor " +
+                "só. Dá mais volume aos objetos, mas pode mudar o tom das cenas. Experimental.");
 
-            // O que faz item no chao, pedra e recurso sumirem de perto: LODGroup +
-            // lodBias. O menu ("Nivel de detalhamento") mapeia 0:1.0 1:1.5 2:2.0 3:5.0
-            // e para por ai. Ver LodPatch.
             LodBiasOverride = cfg.Bind("03 - Visual", "LodBiasOverride", 0f,
                 new ConfigDescription(
-                    "Sobrescreve o LOD bias. 0 = nao sobrescrever (usa o menu do jogo). " +
-                    "E ISTO que controla a que distancia item no chao, recurso, pedra e " +
-                    "arvore somem -- a distancia e LINEAR no valor (dobrar = dobrar o alcance). " +
-                    "Menu do jogo no maximo = 5.0. Acima disso, so aqui.",
+                    "Distância em que itens no chão, pedras e detalhes deixam de ser " +
+                    "desenhados. Dobrar o valor dobra a distância, e cobra desempenho na " +
+                    "mesma medida. 0 usa o que estiver no menu do jogo.",
                     new AcceptableValueRange<float>(0f, 20f)));
 
-            // CameraEffects.SetSSAO deixa Downsample = true HARDCODED nos dois niveis
-            // e limita o teto a Medium. Aqui destrava. Ver SsaoPatch.
             SsaoOverride = cfg.Bind("03 - Visual", "SsaoOverride", true,
-                "Assume o controle da oclusao de ambiente (sombra de contato). " +
-                "LIGA o efeito mesmo se o menu do jogo estiver com ele desligado.");
+                "Sombra suave onde os objetos encostam no chão e nos cantos. É o que tira o " +
+                "aspecto de coisa colada por cima do cenário.");
 
             SsaoSampleCount = cfg.Bind("03 - Visual", "SsaoSampleCount", 2,
                 new ConfigDescription(
-                    "0=Low 1=Medium 2=High 3=VeryHigh. O menu do jogo nunca passa de Medium.",
+                    "Qualidade da sombra de contato: 0 baixa, 1 média, 2 alta, 3 muito alta.",
                     new AcceptableValueRange<int>(0, 3)));
 
             SsaoFullResolution = cfg.Bind("03 - Visual", "SsaoFullResolution", true,
-                "Roda o SSAO em resolucao cheia. O jogo forca meia resolucao SEMPRE, " +
-                "ate no nivel mais alto do menu.");
+                "Calcula a sombra de contato em resolução cheia. Fica mais definida e custa " +
+                "mais GPU. Desmarque se precisar economizar.");
 
             SsaoIntensity = cfg.Bind("03 - Visual", "SsaoIntensity", 1.0f,
-                new ConfigDescription("Forca da oclusao.", new AcceptableValueRange<float>(0f, 3f)));
+                new ConfigDescription("Força da sombra de contato.",
+                    new AcceptableValueRange<float>(0f, 3f)));
 
             SsaoRadius = cfg.Bind("03 - Visual", "SsaoRadius", 2.0f,
                 new ConfigDescription(
-                    "Raio em metros. Pequeno = so cantos; grande = sombreado amplo.",
+                    "Alcance da sombra, em metros. Pequeno marca só os cantos; grande " +
+                    "sombreia áreas inteiras.",
                     new AcceptableValueRange<float>(0.25f, 8f)));
 
             SsaoPower = cfg.Bind("03 - Visual", "SsaoPower", 1.8f,
-                new ConfigDescription(
-                    "Curva de contraste da oclusao. Acima escurece mais o nucleo.",
+                new ConfigDescription("Contraste da sombra. Mais alto escurece o miolo.",
                     new AcceptableValueRange<float>(0.5f, 6f)));
 
-            // MSAA esta descartado: o diagnostico mediu a camera em DeferredShading.
-            // Sobra o post-processing, e o jogo nunca configura o metodo nem a
-            // qualidade -- fica no FXAA preset Default para sempre. Ver AntiAliasingPatch.
             AaOverride = cfg.Bind("03 - Visual", "AaOverride", true,
-                "Assume o controle do anti-aliasing. O jogo so liga/desliga e nunca " +
-                "escolhe metodo nem qualidade.");
+                "Controla o anti-serrilhado, que o jogo só liga e desliga sem deixar " +
+                "escolher a qualidade.");
 
             AaUseTaa = cfg.Bind("03 - Visual", "AaUseTaa", false,
-                "TAA em vez de FXAA. TAA e o correto em deferred e resolve serrilhado " +
-                "de geometria fina (folhagem, corda, cerca) que o FXAA so borra. " +
-                "Em troca deixa fantasma em movimento -- ajuste Sharpen e MotionBlending.");
+                "Usa TAA no lugar do FXAA. Bordas bem mais limpas em folhagem, cordas e " +
+                "cercas, mas pode deixar rastro atrás de coisas em movimento.");
 
             FxaaPreset = cfg.Bind("03 - Visual", "FxaaPreset", 4,
                 new ConfigDescription(
-                    "So vale se AaUseTaa = false. 0=ExtremePerformance 1=Performance " +
-                    "2=Default (o que o jogo usa) 3=Quality 4=ExtremeQuality.",
+                    "Qualidade do FXAA, de 0 (mais rápido) a 4 (mais limpo). Só vale com " +
+                    "AaUseTaa desmarcado.",
                     new AcceptableValueRange<int>(0, 4)));
 
             TaaJitterSpread = cfg.Bind("03 - Visual", "TaaJitterSpread", 0.75f,
-                new ConfigDescription("Espalhamento do jitter. Maior = mais suave, mais borrado.",
+                new ConfigDescription("Suavização do TAA. Maior suaviza mais e borra mais.",
                     new AcceptableValueRange<float>(0.1f, 1f)));
 
             TaaSharpen = cfg.Bind("03 - Visual", "TaaSharpen", 0.3f,
-                new ConfigDescription("Compensa o borrao do TAA. Demais gera halo.",
+                new ConfigDescription("Compensa o borrão do TAA. Demais cria halo nas bordas.",
                     new AcceptableValueRange<float>(0f, 3f)));
 
             TaaStationaryBlending = cfg.Bind("03 - Visual", "TaaStationaryBlending", 0.95f,
-                new ConfigDescription("Peso do historico com a camera parada. Alto = mais estavel.",
+                new ConfigDescription("Estabilidade da imagem com a câmera parada.",
                     new AcceptableValueRange<float>(0f, 0.99f)));
 
             TaaMotionBlending = cfg.Bind("03 - Visual", "TaaMotionBlending", 0.85f,
-                new ConfigDescription("Peso do historico em movimento. BAIXE se ver fantasma.",
+                new ConfigDescription("Baixe este se aparecer rastro atrás do que se move.",
                     new AcceptableValueRange<float>(0f, 0.99f)));
 
-            // O menu para em 150m / 4 cascades (ShadowQuality 2).
             ShadowDistance = cfg.Bind("03 - Visual", "ShadowDistance", 0f,
                 new ConfigDescription(
-                    "Distancia das sombras do sol em metros. 0 = nao sobrescrever. " +
-                    "Menu do jogo: 80 / 120 / 150.",
+                    "Até onde as sombras do sol aparecem, em metros. O menu do jogo vai até " +
+                    "150. 0 usa o menu.",
                     new AcceptableValueRange<float>(0f, 500f)));
 
             ShadowCascades = cfg.Bind("03 - Visual", "ShadowCascades", 0,
                 new ConfigDescription(
-                    "0 = nao sobrescrever. O Unity aceita 1, 2 ou 4. Mais cascades = " +
-                    "sombra mais nitida ao longe, mais custo.",
+                    "Divisões da sombra do sol: mais divisões deixam a sombra nítida também " +
+                    "ao longe. Aceita 1, 2 ou 4. 0 usa o menu.",
                     new AcceptableValueRange<int>(0, 4)));
 
-            // Convencao: -2 = nao sobrescrever, -1 = ilimitado, 0+ = limite exato.
+            ShadowResolution = cfg.Bind("03 - Visual", "ShadowResolution", 0,
+                new ConfigDescription(
+                    "Nitidez das sombras: 1 baixa, 2 média, 3 alta, 4 muito alta. O menu do " +
+                    "jogo para em alta. 0 usa o menu.",
+                    new AcceptableValueRange<int>(0, 4)));
+
             PointLightLimit = cfg.Bind("03 - Visual", "PointLightLimit", -2,
                 new ConfigDescription(
-                    "Quantas luzes pontuais (tocha, fogueira) ficam acesas ao mesmo tempo. " +
-                    "-2 = nao sobrescrever, -1 = ilimitado. Menu do jogo: 4 / 15 / 40 / ilimitado.",
+                    "Quantas tochas e fogueiras ficam acesas ao mesmo tempo. O jogo oferece " +
+                    "4, 15, 40 ou sem limite. Aqui dá para pôr qualquer número. " +
+                    "-2 usa o menu, -1 é sem limite.",
                     new AcceptableValueRange<int>(-2, 64)));
 
             PointLightShadowLimit = cfg.Bind("03 - Visual", "PointLightShadowLimit", -2,
                 new ConfigDescription(
-                    "Quantas dessas luzes projetam SOMBRA. Das coisas mais caras numa base. " +
-                    "-2 = nao sobrescrever, -1 = ilimitado. Menu do jogo: 0 / 1 / 3 / ilimitado -- " +
-                    "o meio-termo (6, 8) so existe aqui.",
+                    "Quantas dessas luzes projetam sombra. É o ajuste mais pesado numa base " +
+                    "cheia de fogo. O jogo oferece 0, 1, 3 ou sem limite; algo entre 6 e 8 " +
+                    "costuma ser o meio-termo. -2 usa o menu, -1 é sem limite.",
                     new AcceptableValueRange<int>(-2, 32)));
 
             ClutterDistance = cfg.Bind("03 - Visual", "ClutterDistance", 0f,
                 new ConfigDescription(
-                    "Ate onde a grama e desenhada. 0 = nao sobrescrever (medido em runtime: 45).",
+                    "Até onde a grama é desenhada, em metros. O jogo usa 45, e é por isso que " +
+                    "a grama parece nascer à sua frente enquanto anda. Aumentar afasta esse " +
+                    "limite, mas a área cresce ao quadrado e cobra caro. 0 usa o padrão.",
                     new AcceptableValueRange<float>(0f, 150f)));
+
+            ClutterAmountScale = cfg.Bind("03 - Visual", "ClutterAmountScale", 0f,
+                new ConfigDescription(
+                    "Densidade da grama, independente do alcance. 2.0 dobra a quantidade. " +
+                    "0 usa o padrão.",
+                    new AcceptableValueRange<float>(0f, 4f)));
+
+            Tesselation = cfg.Bind("03 - Visual", "Tesselation", 0,
+                new ConfigDescription(
+                    "Dá relevo de verdade ao terreno em vez de textura plana. Só pesa na GPU. " +
+                    "0 usa o menu, 1 liga, 2 desliga.",
+                    new AcceptableValueRange<int>(0, 2)));
 
             FieldOfView = cfg.Bind("03 - Visual", "FieldOfView", 0f,
                 new ConfigDescription(
-                    "Campo de visao. 0 = nao sobrescrever (o jogo usa 65 fixo, sem opcao no menu). " +
-                    "Acima de ~100 distorce as bordas.",
+                    "Campo de visão. O jogo usa 65 e não deixa mudar. Acima de 100 as bordas " +
+                    "distorcem. 0 mantém o padrão.",
                     new AcceptableValueRange<float>(0f, 120f)));
 
-            // --- Cena controlada para comparacao (puramente local, ver ScenePatch) ---
-            FreezeTimeOfDay = cfg.Bind("03 - Visual", "FreezeTimeOfDay", false,
-                "Trava a hora do dia usada no RENDER. Nao mexe no tempo real do mundo " +
-                "(m_totalSeconds), nao vai para os peers, nao marca o mundo. Serve para " +
-                "comparar visual sem o sol se mover no meio -- foi a falta disto que " +
-                "invalidou duas medicoes minhas.");
-
-            TimeOfDay = cfg.Bind("03 - Visual", "TimeOfDay", 0.5f,
-                new ConfigDescription(
-                    "So vale com FreezeTimeOfDay. 0 = meia-noite, 0.25 = amanhecer, " +
-                    "0.5 = MEIO-DIA, 0.75 = entardecer.",
-                    new AcceptableValueRange<float>(0f, 1f)));
-
-            ForceWeather = cfg.Bind("03 - Visual", "ForceWeather", "",
-                "Trava o clima. Vazio = normal do bioma. Ex.: Clear, Misty, Rain, " +
-                "ThunderStorm, SnowStorm. Tambem local.");
-
-            // --- Destravar qualidade alem do menu (custo de GPU, que aqui sobra) ---
-            ShadowResolution = cfg.Bind("03 - Visual", "ShadowResolution", 0,
-                new ConfigDescription(
-                    "Resolucao do shadow map. 0 = nao mexer, 1=Low 2=Medium 3=High 4=VeryHigh. " +
-                    "O menu do jogo para em High. Sombra mais nitida, sem serrilhado.",
-                    new AcceptableValueRange<int>(0, 4)));
-
-            // Deslocamento REAL de geometria no terreno, nao normal map. O menu so
-            // liga/desliga; como e keyword global de shader, o custo e todo de GPU.
-            Tesselation = cfg.Bind("03 - Visual", "Tesselation", 0,
-                new ConfigDescription(
-                    "0 = nao mexer (usa o menu), 1 = LIGAR, 2 = desligar. " +
-                    "Tesselacao da relevo de verdade ao terreno em vez de textura plana. " +
-                    "Custo so de GPU.",
-                    new AcceptableValueRange<int>(0, 2)));
-
-            // ClutterSystem: Low=amount/4, Med=amount/2, High=amount, e m_amountScale
-            // multiplica por cima. O menu do usuario esta em Med -- metade da grama.
-            ClutterAmountScale = cfg.Bind("03 - Visual", "ClutterAmountScale", 0f,
-                new ConfigDescription(
-                    "Multiplicador de DENSIDADE da grama (diferente de ClutterDistance, " +
-                    "que e alcance). 0 = nao mexer. 2.0 compensa o menu estar em 'Media', " +
-                    "que corta a densidade pela metade.",
-                    new AcceptableValueRange<float>(0f, 4f)));
-
-            // O menu do jogo so alterna Windowed <-> FullScreenWindow; exclusiva
-            // nao existe la. Ver DisplayModePatch para o porque disso importar.
             DisplayMode = cfg.Bind("03 - Visual", "DisplayMode", 0,
                 new ConfigDescription(
-                    "0 = nao mexer, 1 = TELA CHEIA EXCLUSIVA, 2 = borderless, 3 = janela. " +
-                    "Exclusiva tira a composicao do DWM do caminho. Se o jogo 'engasga' com " +
-                    "frametime bom, e provavelmente judder de composicao -- e isto resolve.",
+                    "Modo de janela: 1 tela cheia exclusiva, 2 sem bordas, 3 janela. " +
+                    "A exclusiva costuma deixar o movimento mais suave, e o menu do jogo não " +
+                    "oferece essa opção. 0 mantém como está.",
                     new AcceptableValueRange<int>(0, 3)));
 
             DisplayWidth = cfg.Bind("03 - Visual", "DisplayWidth", 0,
-                new ConfigDescription("0 = usar a resolucao do desktop.",
+                new ConfigDescription("Largura. 0 usa a resolução da área de trabalho.",
                     new AcceptableValueRange<int>(0, 7680)));
 
             DisplayHeight = cfg.Bind("03 - Visual", "DisplayHeight", 0,
-                new ConfigDescription("0 = usar a resolucao do desktop.",
+                new ConfigDescription("Altura. 0 usa a resolução da área de trabalho.",
                     new AcceptableValueRange<int>(0, 4320)));
 
-            // --- Performance ---
-            MaxQueuedFrames = cfg.Bind("04 - Performance", "MaxQueuedFrames", 0,
+            FreezeTimeOfDay = cfg.Bind("03 - Visual", "FreezeTimeOfDay", false,
+                "Trava a hora do dia na sua tela, útil para comparar ajustes sem o sol se " +
+                "mexer. Vale só para você: o horário do mundo e dos outros jogadores segue " +
+                "normal.");
+
+            TimeOfDay = cfg.Bind("03 - Visual", "TimeOfDay", 0.5f,
                 new ConfigDescription(
-                    "Frames pre-renderizados. O jogo trava em 2 e nao expoe no menu. " +
-                    "1 corta um frame de latencia. 0 = nao sobrescrever.",
-                    new AcceptableValueRange<int>(0, 4)));
+                    "Hora usada quando a anterior está marcada. 0 meia-noite, 0.25 amanhecer, " +
+                    "0.5 meio-dia, 0.75 entardecer.",
+                    new AcceptableValueRange<float>(0f, 1f)));
 
-            // Candidato numero 1 para engasgo. Ver ObjectBudgetPatch para o porque.
-            MaxObjectsPerFrame = cfg.Bind("04 - Performance", "MaxObjectsPerFrame", 0,
-                new ConfigDescription(
-                    "Teto de objetos instanciados por frame. O jogo diz 10, mas faz " +
-                    "Max(pendentes/100, 10) -- entao o teto CRESCE SEM LIMITE quando ha " +
-                    "muita coisa pendente, que e exatamente o que acontece ao atravessar " +
-                    "zona. 0 = nao limitar (vanilla). 10-30 troca engasgo por pop-in.",
-                    new AcceptableValueRange<int>(0, 200)));
+            ForceWeather = cfg.Bind("03 - Visual", "ForceWeather", "",
+                "Trava o clima na sua tela. Vazio segue o normal do bioma. " +
+                "Ex.: Clear, Misty, Rain, ThunderStorm, SnowStorm.");
 
-            // Mundo novo: o servidor troca o orcamento de geracao de 10ms por 100ms.
-            // Ver ZoneGenBudgetPatch.
-            ZoneGenBudgetMs = cfg.Bind("04 - Performance", "ZoneGenBudgetMs", 0f,
-                new ConfigDescription(
-                    "Teto de tempo por frame gerando mundo. Enquanto as locations de um " +
-                    "mundo NOVO nao terminam, o jogo usa 100 ms -- uma travada visivel a " +
-                    "cada frame afetado. 0 = nao mexer. 4-8 troca travada por geracao mais lenta.",
-                    new AcceptableValueRange<float>(0f, 100f)));
-
-            // Custo periodico exclusivo do host: 1 varredura das zonas near por
-            // jogador (voce + cada peer), a cada 2s, tudo num frame. Ver ZdoReleasePatch.
-            ZdoReleaseIntervalSec = cfg.Bind("04 - Performance", "ZdoReleaseIntervalSec", 2f,
-                new ConfigDescription(
-                    "Intervalo da transferencia de posse de ZDO. O jogo usa 2s e faz uma " +
-                    "varredura COMPLETA das zonas near por jogador conectado, num frame so. " +
-                    "Dobrar corta o custo pela metade; o preco e posse de objeto migrar mais " +
-                    "devagar entre jogadores. So afeta quem hospeda.",
-                    new AcceptableValueRange<float>(1f, 10f)));
-
-            GcSliceMs = cfg.Bind("04 - Performance", "GcSliceMs", 0f,
-                new ConfigDescription(
-                    "Fatia do coletor de lixo incremental. O boot.config do jogo usa 3 ms, " +
-                    "que ainda e quase um frame inteiro a 240 fps. Menor = coleta espalhada " +
-                    "por mais frames. 0 = nao mexer.",
-                    new AcceptableValueRange<float>(0f, 10f)));
-
-            // Cada fumaca e um Rigidbody de verdade. Ver SmokePatch.
-            MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
-                new ConfigDescription(
-                    "Teto global de particulas de fumaca. Cada uma e um Rigidbody simulado -- " +
-                    "custo de FISICA, nao de render. Vanilla = 100. 0 = nao sobrescrever.",
-                    new AcceptableValueRange<int>(0, 100)));
-
-            FadeDistantSmokeFirst = cfg.Bind("04 - Performance", "FadeDistantSmokeFirst", true,
-                "Ao estourar o teto, apaga a fumaca mais DISTANTE em vez da mais antiga " +
-                "(que costuma estar na tua frente). Usa Smoke.FadeMostDistant(), que ja " +
-                "existe no jogo e nunca e chamado.");
-
-            // O maior custo de CPU do host. Ver SimulationDistancePatch para a matematica.
+            // ------------------------------------------------------------------
+            // 04 - Performance
+            // ------------------------------------------------------------------
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
-                "Sobrescreve a simulation distance. No HOST isso vira o teto de todos os " +
-                "jogadores (o jogo ja sincroniza; cliente so pode ficar abaixo).");
+                "Controla a distância em que o mundo continua ativo ao seu redor. Quem " +
+                "hospeda define o teto para todos; os outros podem usar menos, nunca mais.");
 
-            // NEAR = onde as CRIATURAS existem.
-            // ZDOMan.FindSectorObjects usa FindObjects() no anel 1..near (todos os ZDOs)
-            // e FindDistantObjects() no anel ate total (SO os ZDOs com ZNetView.m_distant,
-            // que e cenario estatico). Inimigo e animal nunca sao "distant" -- entao a
-            // distancia em que voce ENXERGA bicho e exatamente o near.
-            //   distancia = near * 64 + 32   (ZoneSystem.m_zoneSize = 64)
-            //   near 2:160m  3:224m  4:288m  5:352m  6:416m  7:480m  8:544m
-            // Custo: zonas ativas = (2n+1)^2, e o host paga por peer conectado.
             SimDistanceNear = cfg.Bind("04 - Performance", "SimDistanceNear", 5,
                 new ConfigDescription(
-                    "Raio de zonas SIMULADAS. E isto que define a que distancia voce ve " +
-                    "inimigos e animais: near*64+32 metros. " +
-                    "2:160m(25 zonas)  3:224m(49)  4:288m(81)  5:352m(121)  6:416m(169)  7:480m(225). " +
-                    "O menu do jogo para no 6; acima disso e so pelo mod. Caro para o host.",
+                    "Distância em que inimigos, animais e objetos existem de fato. Cada passo " +
+                    "aqui são 64 metros a mais e bem mais trabalho para quem hospeda: " +
+                    "2 dá 160m, 3 dá 224m, 5 dá 352m, 6 dá 416m. O menu do jogo para no 6.",
                     new AcceptableValueRange<int>(1, 8)));
 
             SimDistanceFar = cfg.Bind("04 - Performance", "SimDistanceFar", 2,
                 new ConfigDescription(
-                    "Anel extra de 'ghost zones' alem do near. So instancia objetos marcados " +
-                    "como distant (cenario estatico) -- SEM criaturas e SEM simulacao, entao e " +
-                    "BARATO. Estende so o cenario ao longe. Vanilla = 2.",
+                    "Anel extra só de cenário ao fundo, sem criaturas e sem simulação. " +
+                    "É barato: dá horizonte sem o custo do ajuste acima. O jogo usa 2.",
                     new AcceptableValueRange<int>(0, 6)));
+
+            MaxQueuedFrames = cfg.Bind("04 - Performance", "MaxQueuedFrames", 0,
+                new ConfigDescription(
+                    "Quadros preparados com antecedência. 1 responde mais rápido ao mouse; " +
+                    "2 é o padrão do jogo. 0 não mexe.",
+                    new AcceptableValueRange<int>(0, 4)));
+
+            MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
+                new ConfigDescription(
+                    "Limite de partículas de fumaça. Cada uma é simulada com física, então " +
+                    "numa base com muitas fogueiras isso pesa. O jogo usa 100. 0 não mexe.",
+                    new AcceptableValueRange<int>(0, 100)));
+
+            FadeDistantSmokeFirst = cfg.Bind("04 - Performance", "FadeDistantSmokeFirst", true,
+                "Ao bater no limite, some primeiro com a fumaça mais distante em vez da mais " +
+                "antiga, que costuma ser justamente a que está na sua frente.");
+
+            MaxObjectsPerFrame = cfg.Bind("04 - Performance", "MaxObjectsPerFrame", 0,
+                new ConfigDescription(
+                    "Limite de objetos criados por quadro ao carregar uma região. Valores " +
+                    "baixos trocam travada por objetos aparecendo aos poucos. 0 não mexe.",
+                    new AcceptableValueRange<int>(0, 200)));
+
+            ZoneGenBudgetMs = cfg.Bind("04 - Performance", "ZoneGenBudgetMs", 0f,
+                new ConfigDescription(
+                    "Tempo máximo por quadro gerando terreno novo, em milissegundos. " +
+                    "Ajuda em mundo recém-criado, onde o jogo se permite pausas longas. " +
+                    "0 não mexe.",
+                    new AcceptableValueRange<float>(0f, 100f)));
+
+            ZdoReleaseIntervalSec = cfg.Bind("04 - Performance", "ZdoReleaseIntervalSec", 2f,
+                new ConfigDescription(
+                    "De quanto em quanto tempo o servidor redistribui os objetos entre os " +
+                    "jogadores. Aumentar alivia quem hospeda com muita gente conectada, ao " +
+                    "custo de objetos demorarem mais para trocar de dono. O jogo usa 2.",
+                    new AcceptableValueRange<float>(1f, 10f)));
+
+            GcSliceMs = cfg.Bind("04 - Performance", "GcSliceMs", 0f,
+                new ConfigDescription(
+                    "Quanto tempo por quadro o jogo gasta liberando memória. Valores menores " +
+                    "espalham esse trabalho em vez de concentrar. 0 não mexe.",
+                    new AcceptableValueRange<float>(0f, 10f)));
         }
     }
 }
