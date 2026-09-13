@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using UnityEngine;
 
 namespace ValheimTweaks
 {
@@ -73,6 +74,11 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
         internal static ConfigEntry<float> TeleportSpeed;
         internal static ConfigEntry<int> TeleportSimDistance;
+        internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreMarkKey;
+        internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreMarkedKey;
+        internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreHoveredKey;
+        internal static ConfigEntry<float> StoreRadius;
+        internal static ConfigEntry<bool> StoreFallbackAnyChest;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -326,6 +332,31 @@ namespace ValheimTweaks
                     "objetos aparecendo aos poucos ao chegar. 0 desliga. " +
                     "Nao afeta os outros jogadores.",
                     new AcceptableValueRange<int>(0, 8)));
+
+            // --- Guardar nos baus proximos ---
+            StoreMarkKey = cfg.Bind("05 - Conveniencia", "StoreMarkKey",
+                new KeyboardShortcut(KeyCode.LeftAlt),
+                "Com o inventario aberto, aponte um item e aperte esta tecla para marca-lo " +
+                "como 'guardar nos baus'. O item marcado fica com o icone azulado e a marca " +
+                "acompanha o item, mesmo se ele mudar de lugar.");
+
+            StoreMarkedKey = cfg.Bind("05 - Conveniencia", "StoreMarkedKey",
+                new KeyboardShortcut(KeyCode.Y),
+                "Guarda de uma vez todos os itens marcados nos baus proximos.");
+
+            StoreHoveredKey = cfg.Bind("05 - Conveniencia", "StoreHoveredKey",
+                new KeyboardShortcut(KeyCode.LeftControl),
+                "Guarda na hora apenas o item apontado, sem precisar marcar antes.");
+
+            StoreRadius = cfg.Bind("05 - Conveniencia", "StoreRadius", 12f,
+                new ConfigDescription(
+                    "Distancia em metros para procurar baus.",
+                    new AcceptableValueRange<float>(2f, 50f)));
+
+            StoreFallbackAnyChest = cfg.Bind("05 - Conveniencia", "StoreFallbackAnyChest", false,
+                "Por padrao um item so entra em bau que JA tenha aquele item, para nao " +
+                "baguncar a organizacao. Ligando isto, o que sobrar vai parar em qualquer " +
+                "bau com espaco.");
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +

@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.21.0</Version>
+    <Version>0.22.0</Version>
     <LangVersion>latest</LangVersion>
     <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -66,6 +66,11 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Image/Button dos slots de inventario. -->
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
