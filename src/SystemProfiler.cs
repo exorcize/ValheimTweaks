@@ -28,6 +28,7 @@ namespace ValheimTweaks
             CreateDestroyObjects,// streaming de objetos do ZNetScene
             ZNetSceneUpdate,
             ZoneSystem,          // geracao/carregamento de zona
+            ZdoRelease,          // transferencia de posse de ZDO (host, a cada 2s, por peer)
             Clutter,             // grama
             HeightmapRegen,      // rebuild de mesh de terreno (spiky)
             COUNT

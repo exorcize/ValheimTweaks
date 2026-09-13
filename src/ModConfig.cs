@@ -60,6 +60,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> MaxQueuedFrames;
         internal static ConfigEntry<int> MaxObjectsPerFrame;
         internal static ConfigEntry<float> ZoneGenBudgetMs;
+        internal static ConfigEntry<float> ZdoReleaseIntervalSec;
         internal static ConfigEntry<float> GcSliceMs;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
@@ -287,6 +288,16 @@ namespace ValheimTweaks
                     "mundo NOVO nao terminam, o jogo usa 100 ms -- uma travada visivel a " +
                     "cada frame afetado. 0 = nao mexer. 4-8 troca travada por geracao mais lenta.",
                     new AcceptableValueRange<float>(0f, 100f)));
+
+            // Custo periodico exclusivo do host: 1 varredura das zonas near por
+            // jogador (voce + cada peer), a cada 2s, tudo num frame. Ver ZdoReleasePatch.
+            ZdoReleaseIntervalSec = cfg.Bind("04 - Performance", "ZdoReleaseIntervalSec", 2f,
+                new ConfigDescription(
+                    "Intervalo da transferencia de posse de ZDO. O jogo usa 2s e faz uma " +
+                    "varredura COMPLETA das zonas near por jogador conectado, num frame so. " +
+                    "Dobrar corta o custo pela metade; o preco e posse de objeto migrar mais " +
+                    "devagar entre jogadores. So afeta quem hospeda.",
+                    new AcceptableValueRange<float>(1f, 10f)));
 
             GcSliceMs = cfg.Bind("04 - Performance", "GcSliceMs", 0f,
                 new ConfigDescription(
