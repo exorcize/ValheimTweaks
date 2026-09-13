@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.22.0</Version>
+    <Version>0.23.0</Version>
     <LangVersion>latest</LangVersion>
     <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -66,6 +66,21 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- TextAnchor, usado pelos layout groups. -->
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- CanvasGroup / RectTransform. -->
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Texto da lista de itens guardados. -->
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <!-- Image/Button dos slots de inventario. -->

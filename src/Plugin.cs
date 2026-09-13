@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.22.0";
+        public const string VERSION = "0.23.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -84,6 +84,7 @@ namespace ValheimTweaks
         {
             FrameProfiler.Tick();
             Patches.QuickStorePatch.Update();
+            Patches.StoreHudPatch.Update();
 
             if (_reloadPending && ModConfig.HotReload.Value)
             {

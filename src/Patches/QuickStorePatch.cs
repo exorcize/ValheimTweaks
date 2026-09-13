@@ -131,6 +131,11 @@ namespace ValheimTweaks.Patches
             return achados;
         }
 
+        // Inventario -> Container. O Prefix do StackAll so recebe o inventario, e
+        // precisamos do Container para descobrir o nome do bau.
+        private static readonly Dictionary<Inventory, Container> Dono =
+            new Dictionary<Inventory, Container>();
+
         private static void Despejar(System.Func<ItemDrop.ItemData, bool> filtro, string oQue)
         {
             var baus = BausProximos();
@@ -138,6 +143,13 @@ namespace ValheimTweaks.Patches
             {
                 Aviso("Nenhum bau por perto");
                 return;
+            }
+
+            Dono.Clear();
+            foreach (var b in baus)
+            {
+                var inv = b.GetInventory();
+                if (inv != null) Dono[inv] = b;
             }
 
             s_filtro = filtro;
@@ -167,12 +179,22 @@ namespace ValheimTweaks.Patches
                 int movidos = 0;
                 var itens = new List<ItemDrop.ItemData>(fromInventory.GetAllItems());
 
+                Dono.TryGetValue(__instance, out var bau);
+                string nomeBau = StoreHudPatch.NomeDoBau(bau);
+
                 // 1a passada: so onde o bau JA tem o item (comportamento do jogo).
                 foreach (var item in itens)
                 {
                     if (!s_filtro(item) || player.IsItemEquiped(item)) continue;
                     if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
-                    if (__instance.AddItem(item)) { fromInventory.RemoveItem(item); movidos++; }
+
+                    int qtd = item.m_stack;
+                    if (__instance.AddItem(item))
+                    {
+                        fromInventory.RemoveItem(item);
+                        movidos++;
+                        StoreHudPatch.Adicionar(item, qtd, nomeBau);
+                    }
                 }
 
                 // 2a passada (opcional): qualquer bau com espaco.
@@ -181,7 +203,14 @@ namespace ValheimTweaks.Patches
                     foreach (var item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
                     {
                         if (!s_filtro(item) || player.IsItemEquiped(item)) continue;
-                        if (__instance.AddItem(item)) { fromInventory.RemoveItem(item); movidos++; }
+
+                        int qtd = item.m_stack;
+                        if (__instance.AddItem(item))
+                        {
+                            fromInventory.RemoveItem(item);
+                            movidos++;
+                            StoreHudPatch.Adicionar(item, qtd, nomeBau);
+                        }
                     }
                 }
 

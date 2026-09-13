@@ -79,6 +79,12 @@ namespace ValheimTweaks
         internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreHoveredKey;
         internal static ConfigEntry<float> StoreRadius;
         internal static ConfigEntry<bool> StoreFallbackAnyChest;
+        internal static ConfigEntry<bool> StoreHudEnabled;
+        internal static ConfigEntry<float> StoreHudX;
+        internal static ConfigEntry<float> StoreHudY;
+        internal static ConfigEntry<float> StoreHudSeconds;
+        internal static ConfigEntry<int> StoreHudMaxLines;
+        internal static ConfigEntry<float> StoreHudFontSize;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -357,6 +363,32 @@ namespace ValheimTweaks
                 "Por padrao um item so entra em bau que JA tenha aquele item, para nao " +
                 "baguncar a organizacao. Ligando isto, o que sobrar vai parar em qualquer " +
                 "bau com espaco.");
+
+            StoreHudEnabled = cfg.Bind("05 - Conveniencia", "StoreHudEnabled", true,
+                "Mostra no canto inferior esquerdo a lista do que foi guardado, com o icone " +
+                "do item e, quando o bau tem nome proprio, uma seta e o nome.");
+
+            StoreHudX = cfg.Bind("05 - Conveniencia", "StoreHudX", 20f,
+                new ConfigDescription("Distancia da borda esquerda, em pixels.",
+                    new AcceptableValueRange<float>(0f, 800f)));
+
+            StoreHudY = cfg.Bind("05 - Conveniencia", "StoreHudY", 240f,
+                new ConfigDescription(
+                    "Altura a partir da borda de baixo, em pixels. O padrao ja passa por cima " +
+                    "da HUD de vida e comida; ajuste se ficar sobreposto na sua resolucao.",
+                    new AcceptableValueRange<float>(0f, 900f)));
+
+            StoreHudSeconds = cfg.Bind("05 - Conveniencia", "StoreHudSeconds", 4f,
+                new ConfigDescription("Quanto tempo cada linha fica na tela.",
+                    new AcceptableValueRange<float>(1f, 20f)));
+
+            StoreHudMaxLines = cfg.Bind("05 - Conveniencia", "StoreHudMaxLines", 8,
+                new ConfigDescription("Maximo de linhas ao mesmo tempo.",
+                    new AcceptableValueRange<int>(1, 20)));
+
+            StoreHudFontSize = cfg.Bind("05 - Conveniencia", "StoreHudFontSize", 14f,
+                new ConfigDescription("Tamanho da fonte da lista.",
+                    new AcceptableValueRange<float>(8f, 28f)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
