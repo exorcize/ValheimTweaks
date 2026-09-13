@@ -55,6 +55,9 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> PointLightShadowLimit;
         internal static ConfigEntry<float> ClutterDistance;
         internal static ConfigEntry<float> FieldOfView;
+        internal static ConfigEntry<int> DisplayMode;
+        internal static ConfigEntry<int> DisplayWidth;
+        internal static ConfigEntry<int> DisplayHeight;
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<int> MaxQueuedFrames;
@@ -263,6 +266,23 @@ namespace ValheimTweaks
                     "Campo de visao. 0 = nao sobrescrever (o jogo usa 65 fixo, sem opcao no menu). " +
                     "Acima de ~100 distorce as bordas.",
                     new AcceptableValueRange<float>(0f, 120f)));
+
+            // O menu do jogo so alterna Windowed <-> FullScreenWindow; exclusiva
+            // nao existe la. Ver DisplayModePatch para o porque disso importar.
+            DisplayMode = cfg.Bind("03 - Visual", "DisplayMode", 0,
+                new ConfigDescription(
+                    "0 = nao mexer, 1 = TELA CHEIA EXCLUSIVA, 2 = borderless, 3 = janela. " +
+                    "Exclusiva tira a composicao do DWM do caminho. Se o jogo 'engasga' com " +
+                    "frametime bom, e provavelmente judder de composicao -- e isto resolve.",
+                    new AcceptableValueRange<int>(0, 3)));
+
+            DisplayWidth = cfg.Bind("03 - Visual", "DisplayWidth", 0,
+                new ConfigDescription("0 = usar a resolucao do desktop.",
+                    new AcceptableValueRange<int>(0, 7680)));
+
+            DisplayHeight = cfg.Bind("03 - Visual", "DisplayHeight", 0,
+                new ConfigDescription("0 = usar a resolucao do desktop.",
+                    new AcceptableValueRange<int>(0, 4320)));
 
             // --- Performance ---
             MaxQueuedFrames = cfg.Bind("04 - Performance", "MaxQueuedFrames", 0,
