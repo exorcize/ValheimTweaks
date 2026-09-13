@@ -37,6 +37,11 @@ derruba gente com internet instável. Aqui dá para aumentar.
 **Distância de simulação** — permite ir além do limite do menu, para ver
 inimigos e animais de mais longe. Pesa em quem hospeda.
 
+**Portal rápido** — a travessia demora porque o jogo espera a área de destino
+terminar de carregar, e ela disputa fila com mais de cem zonas ao redor. O mod
+reduz esse alcance só durante a passagem e restaura ao chegar. Medido: de 15
+segundos para menos de 2. Vale só para você, não muda nada para os outros.
+
 **Campo de visão** — fixo em 65 no jogo, ajustável aqui.
 
 **Reparo automático** — conserta todo o equipamento gasto ao abrir o inventário

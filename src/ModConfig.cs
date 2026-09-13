@@ -308,7 +308,7 @@ namespace ValheimTweaks
             // ------------------------------------------------------------------
             // 05 - Conveniencia
             // ------------------------------------------------------------------
-            TeleportSpeed = cfg.Bind("05 - Conveniencia", "TeleportSpeed", 1f,
+            TeleportSpeed = cfg.Bind("05 - Conveniencia", "TeleportSpeed", 4f,
                 new ConfigDescription(
                     "Acelera o portal. O jogo impoe uma espera fixa de 8 segundos em viagem " +
                     "longa, mesmo quando o destino ja carregou; 4 transforma isso em 2 " +
@@ -319,10 +319,12 @@ namespace ValheimTweaks
             TeleportSimDistance = cfg.Bind("05 - Conveniencia", "TeleportSimDistance", 2,
                 new ConfigDescription(
                     "Reduz a distancia de simulacao SO durante a travessia do portal e " +
-                    "restaura ao chegar. O destino so libera quando a zona central termina " +
-                    "de carregar, e com a distancia alta ela disputa a fila com mais de cem " +
-                    "zonas. Medido neste mundo: 15s com 5 contra 1,5-3,7s com 2. " +
-                    "0 desliga. Nao afeta os outros jogadores.",
+                    "restaura ao chegar. E de longe o maior ganho: o destino so libera " +
+                    "quando a zona central termina de carregar, e com a distancia normal ela " +
+                    "disputa a fila com mais de cem zonas. Medido: 15s no padrao contra 1,5s " +
+                    "com 2 e 0,7s com 1. Valores menores sao mais rapidos mas podem deixar " +
+                    "objetos aparecendo aos poucos ao chegar. 0 desliga. " +
+                    "Nao afeta os outros jogadores.",
                     new AcceptableValueRange<int>(0, 8)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
