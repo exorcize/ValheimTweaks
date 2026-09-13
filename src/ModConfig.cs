@@ -71,6 +71,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> GcSliceMs;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
+        internal static ConfigEntry<float> TeleportSpeed;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -306,6 +307,14 @@ namespace ValheimTweaks
             // ------------------------------------------------------------------
             // 05 - Conveniencia
             // ------------------------------------------------------------------
+            TeleportSpeed = cfg.Bind("05 - Conveniencia", "TeleportSpeed", 1f,
+                new ConfigDescription(
+                    "Acelera o portal. O jogo impoe uma espera fixa de 8 segundos em viagem " +
+                    "longa, mesmo quando o destino ja carregou; 4 transforma isso em 2 " +
+                    "segundos. A verificacao de destino pronto continua valendo, entao some " +
+                    "so a espera artificial, nunca a real. 1 mantem o padrao.",
+                    new AcceptableValueRange<float>(1f, 8f)));
+
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
                 "uma bancada, forja ou estacao equivalente. Reparo no Valheim nao gasta " +
