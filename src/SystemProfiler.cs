@@ -29,6 +29,7 @@ namespace ValheimTweaks
             ZNetSceneUpdate,
             ZoneSystem,          // geracao/carregamento de zona
             ZdoRelease,          // transferencia de posse de ZDO (host, a cada 2s, por peer)
+            SpawnZone,           // geracao de zona nova: instancia tudo e destroi
             Clutter,             // grama
             HeightmapRegen,      // rebuild de mesh de terreno (spiky)
             COUNT
@@ -40,6 +41,8 @@ namespace ValheimTweaks
         private static readonly double[] TotalMs = new double[(int)Sys.COUNT];
         private static readonly double[] WorstMs = new double[(int)Sys.COUNT];
         private static readonly int[] Calls = new int[(int)Sys.COUNT];
+
+        private static int _zonesGeradas;
 
         private static int _lastFrame = -1;
         private static int _frames;
@@ -67,7 +70,14 @@ namespace ValheimTweaks
             Array.Clear(WorstFrameBreakdown, 0, WorstFrameBreakdown.Length);
             _worstFrameMs = 0;
             _frames = 0;
+            _zonesGeradas = 0;
         }
+
+        /// <summary>
+        /// Conta zonas geradas na janela. Serve para separar "mundo novo estreando"
+        /// (custo que some sozinho) de "problema permanente".
+        /// </summary>
+        internal static void CountZoneSpawn() { if (_enabled) _zonesGeradas++; }
 
         internal static long Begin() => _enabled ? Stopwatch.GetTimestamp() : 0L;
 
@@ -132,6 +142,12 @@ namespace ValheimTweaks
                 if (WorstFrameBreakdown[i] > 0.01)
                     sb.AppendLine($"     {(Sys)i,-22} {WorstFrameBreakdown[i],9:0.00} ms");
             }
+            sb.AppendLine();
+            sb.AppendLine($"  zonas GERADAS nesta janela: {_zonesGeradas}");
+            sb.AppendLine(_zonesGeradas > 0
+                ? "     -> mundo ainda estreando aqui. Este custo e pago UMA VEZ por zona"
+                : "     -> nenhuma zona nova: area ja explorada, custo de geracao = 0");
+            sb.AppendLine($"  ZDOs no mundo: {(ZDOMan.instance != null ? ZDOMan.instance.NrOfObjects() : -1)}");
             sb.AppendLine("  (o que nao aparece aqui e render, fisica, animacao e IA)");
             sb.AppendLine("-----------------------------------------------");
             return sb.ToString();

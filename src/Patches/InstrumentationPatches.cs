@@ -52,6 +52,22 @@ namespace ValheimTweaks.Patches
             private static void Postfix(long __state) => SystemProfiler.End(SystemProfiler.Sys.Clutter, __state);
         }
 
+        // Geracao de zona: instancia toda a vegetacao e destroi em seguida, so para
+        // registrar os ZDOs. Custo UMA VEZ por zona (SetZoneGenerated), mas enorme.
+        // Hipotese a testar: em mundo novo isto domina o engasgo de caminhada, e
+        // some sozinho conforme o mundo e explorado.
+        [HarmonyPatch(typeof(ZoneSystem), "SpawnZone")]
+        internal static class SpawnZoneHook
+        {
+            private static void Prefix(out long __state) => __state = SystemProfiler.Begin();
+
+            private static void Postfix(long __state, bool __result)
+            {
+                SystemProfiler.End(SystemProfiler.Sys.SpawnZone, __state);
+                if (__result) SystemProfiler.CountZoneSpawn();
+            }
+        }
+
         // Rebuild de mesh de terreno: raro mas caro, tipico de pico isolado.
         [HarmonyPatch(typeof(Heightmap), nameof(Heightmap.Regenerate))]
         internal static class HeightmapRegenerate
