@@ -55,6 +55,9 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> PointLightShadowLimit;
         internal static ConfigEntry<float> ClutterDistance;
         internal static ConfigEntry<float> FieldOfView;
+        internal static ConfigEntry<int> ShadowResolution;
+        internal static ConfigEntry<int> Tesselation;
+        internal static ConfigEntry<float> ClutterAmountScale;
         internal static ConfigEntry<int> DisplayMode;
         internal static ConfigEntry<int> DisplayWidth;
         internal static ConfigEntry<int> DisplayHeight;
@@ -266,6 +269,31 @@ namespace ValheimTweaks
                     "Campo de visao. 0 = nao sobrescrever (o jogo usa 65 fixo, sem opcao no menu). " +
                     "Acima de ~100 distorce as bordas.",
                     new AcceptableValueRange<float>(0f, 120f)));
+
+            // --- Destravar qualidade alem do menu (custo de GPU, que aqui sobra) ---
+            ShadowResolution = cfg.Bind("03 - Visual", "ShadowResolution", 0,
+                new ConfigDescription(
+                    "Resolucao do shadow map. 0 = nao mexer, 1=Low 2=Medium 3=High 4=VeryHigh. " +
+                    "O menu do jogo para em High. Sombra mais nitida, sem serrilhado.",
+                    new AcceptableValueRange<int>(0, 4)));
+
+            // Deslocamento REAL de geometria no terreno, nao normal map. O menu so
+            // liga/desliga; como e keyword global de shader, o custo e todo de GPU.
+            Tesselation = cfg.Bind("03 - Visual", "Tesselation", 0,
+                new ConfigDescription(
+                    "0 = nao mexer (usa o menu), 1 = LIGAR, 2 = desligar. " +
+                    "Tesselacao da relevo de verdade ao terreno em vez de textura plana. " +
+                    "Custo so de GPU.",
+                    new AcceptableValueRange<int>(0, 2)));
+
+            // ClutterSystem: Low=amount/4, Med=amount/2, High=amount, e m_amountScale
+            // multiplica por cima. O menu do usuario esta em Med -- metade da grama.
+            ClutterAmountScale = cfg.Bind("03 - Visual", "ClutterAmountScale", 0f,
+                new ConfigDescription(
+                    "Multiplicador de DENSIDADE da grama (diferente de ClutterDistance, " +
+                    "que e alcance). 0 = nao mexer. 2.0 compensa o menu estar em 'Media', " +
+                    "que corta a densidade pela metade.",
+                    new AcceptableValueRange<float>(0f, 4f)));
 
             // O menu do jogo so alterna Windowed <-> FullScreenWindow; exclusiva
             // nao existe la. Ver DisplayModePatch para o porque disso importar.

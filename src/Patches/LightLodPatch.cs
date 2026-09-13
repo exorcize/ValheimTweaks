@@ -1,3 +1,4 @@
+using HarmonyLib;
 using UnityEngine;
 
 namespace ValheimTweaks.Patches
@@ -54,12 +55,26 @@ namespace ValheimTweaks.Patches
                 Plugin.Log.LogInfo($"LightLod.m_shadowLimit -> {shadows}");
             }
 
-            float grass = ModConfig.ClutterDistance.Value;
             var clutter = ClutterSystem.instance;
-            if (grass > 0f && clutter != null && !Mathf.Approximately(clutter.m_distance, grass))
+            if (clutter == null) return;
+
+            float grass = ModConfig.ClutterDistance.Value;
+            if (grass > 0f && !Mathf.Approximately(clutter.m_distance, grass))
             {
                 clutter.m_distance = grass;
                 Plugin.Log.LogInfo($"ClutterSystem.m_distance -> {grass}");
+            }
+
+            // Densidade da grama. O menu mapeia Low->amount/4, Med->amount/2,
+            // High->amount; m_amountScale multiplica por cima disso e e publico.
+            // Trocar o valor exige limpar os patches ja gerados, senao a densidade
+            // nova so aparece em terreno novo -- por isso o ClearAll.
+            float escala = ModConfig.ClutterAmountScale.Value;
+            if (escala > 0f && !Mathf.Approximately(clutter.m_amountScale, escala))
+            {
+                clutter.m_amountScale = escala;
+                AccessTools.Method(typeof(ClutterSystem), "ClearAll")?.Invoke(clutter, null);
+                Plugin.Log.LogInfo($"ClutterSystem.m_amountScale -> {escala} (patches regenerados)");
             }
         }
     }

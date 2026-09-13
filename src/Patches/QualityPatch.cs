@@ -56,6 +56,25 @@ namespace ValheimTweaks.Patches
                 QualitySettings.shadowCascades = (cascades == 3) ? 4 : cascades;
             }
 
+            // --- Resolucao do shadow map: o menu para em High (ShadowQuality 2).
+            int shadowRes = ModConfig.ShadowResolution.Value;
+            if (shadowRes > 0)
+            {
+                var alvo = (ShadowResolution)(shadowRes - 1);
+                if (QualitySettings.shadowResolution != alvo)
+                    QualitySettings.shadowResolution = alvo;
+            }
+
+            // --- Tesselacao: deslocamento REAL de geometria no terreno, nao normal map.
+            // O jogo so liga/desliga pelo menu (ApplyShaderKeywords). Como e keyword
+            // global de shader, o custo e todo de GPU -- que nesta maquina sobra.
+            int tess = ModConfig.Tesselation.Value;
+            if (tess > 0)
+            {
+                if (tess == 1) Shader.EnableKeyword("TESSELATION_ON");
+                else Shader.DisableKeyword("TESSELATION_ON");
+            }
+
             // --- Frames pre-renderizados: o jogo trava em 2. 1 corta um frame de
             // latencia (custa um pouco de fps em cenario GPU-bound; aqui a GPU sobra).
             int queued = ModConfig.MaxQueuedFrames.Value;
