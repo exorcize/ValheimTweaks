@@ -130,6 +130,45 @@ para A/B de custo. Andando serve só para reproduzir o sintoma, não para medir.
 
 ---
 
+## Portal lento: era a simulação, não o cronômetro
+
+`Player.UpdateTeleport` tem três limiares fixos (2 s inicial, 8 s de piso para
+viagem longa, 15 s de desistência) — mas nenhum deles era o gargalo. Instrumentado:
+**100% do tempo** estava preso em `ZNetScene.IsAreaReady`.
+
+O motivo está em `ZoneSystem`:
+
+```csharp
+public bool IsZoneLoaded(Vector2s zoneID) {
+    if (m_zones.ContainsKey(zoneID))
+        return !m_loadingObjectsInZones.ContainsKey(zoneID);
+    return false;
+}
+```
+
+A zona do destino só fica pronta quando **todo objeto dela** termina de carregar o
+asset (`SoftReferenceableAssets`, assíncrono). `CreateLocalZones` pede a zona
+central primeiro e já retorna, mas nos frames seguintes entram as outras — e a
+central passa a disputar a mesma fila.
+
+Medido no mesmo portal, mesma máquina:
+
+| near | zonas | tempo |
+|---|---|---|
+| 5 | 121 | 14,70 s · 16,82 s |
+| 2 | 25 | 3,70 s · 1,48 s |
+| 1 | 9 | **2,03 s · 0,69 s** |
+
+Solução: reduzir só enquanto `IsTeleporting()` e restaurar ao chegar.
+
+⚠️ **Não** usar `ZNet.ApplySimulationDistance` nem `SimulationDistanceServerHandshake`
+para isso: eles mexem no teto que o host envia aos peers, e derrubariam a distância
+de simulação de todos os jogadores a cada portal. O caminho correto é alterar só o
+valor *desejado local* e chamar `ZoneSystem.ApplySettings()`, que apenas relê.
+
+Hipótese descartada no caminho: `IsAreaReady` usa `new SimulationDistance(1, 0)`,
+só o anel imediato — o raio dela nunca foi o problema, e sim a fila compartilhada.
+
 ## Método (aprendido do jeito difícil)
 
 1. **Repetir antes de concluir.** Uma medição não distingue efeito de ruído.
