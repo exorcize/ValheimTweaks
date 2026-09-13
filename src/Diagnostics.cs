@@ -104,6 +104,8 @@ namespace ValheimTweaks
                               ? ModConfig.MaxObjectsPerFrame.Value.ToString()
                               : "sem limite (vanilla: Max(pendentes/100, 10), cresce sozinho)"));
 
+            DumpWorldRates(sb);
+
             // ---- Tela ----
             sb.AppendLine("[TELA]");
             sb.AppendLine($"  {Screen.width}x{Screen.height} @ {Screen.currentResolution.refreshRateRatio.value:0.##}Hz  " +
@@ -116,6 +118,69 @@ namespace ValheimTweaks
             sb.AppendLine("======================================================================");
 
             Plugin.Log.LogInfo(sb.ToString());
+        }
+
+        /// <summary>
+        /// Lista os multiplicadores e flags que o mundo realmente tem.
+        ///
+        /// O menu de World Modifiers expoe so 5 categorias (Combat, DeathPenalty,
+        /// Resources, Raids, Portals), mas o enum GlobalKeys tem 41 chaves
+        /// funcionais, todas lidas por Game.UpdateWorldRates via trySetScalarKey.
+        /// O mapeamento menu -> chave vem de dados de prefab, nao de codigo, entao
+        /// nao da para saber por leitura o que o menu cobre. Isto mostra o estado
+        /// REAL, que e o que importa.
+        /// </summary>
+        private static void DumpWorldRates(StringBuilder sb)
+        {
+            sb.AppendLine("[MUNDO: MULTIPLICADORES]");
+
+            void Rate(string nome, float v)
+            {
+                if (!Mathf.Approximately(v, 1f)) sb.AppendLine($"  {nome,-22} {v:0.##}  <- alterado");
+            }
+
+            Rate("PlayerDamage", Game.m_playerDamageRate);
+            Rate("EnemyDamage", Game.m_enemyDamageRate);
+            Rate("EnemyLevelUp", Game.m_enemyLevelUpRate);
+            Rate("EnemySpeedSize", Game.m_enemySpeedSize);
+            Rate("Resource", Game.m_resourceRate);
+            Rate("Event/Raids", Game.m_eventRate);
+            Rate("Stamina", Game.m_staminaRate);
+            Rate("StaminaRegen", Game.m_staminaRegenRate);
+            Rate("MoveStamina", Game.m_moveStaminaRate);
+            Rate("Eitr", Game.m_eitrRate);
+            Rate("Durability", Game.m_durabilityRate);
+            Rate("Food", Game.m_foodRate);
+            Rate("Adrenaline", Game.m_adrenalineRate);
+            Rate("SkillGain", Game.m_skillGainRate);
+            Rate("SkillReduction", Game.m_skillReductionRate);
+            Rate("CarryWeight", Game.m_carryWeightRate);
+            sb.AppendLine($"  WorldLevel             {Game.m_worldLevel}");
+            sb.AppendLine("  (so aparece o que difere de 1.0)");
+
+            var zs = ZoneSystem.instance;
+            if (zs == null) { sb.AppendLine("  (ZoneSystem ausente)"); return; }
+
+            sb.AppendLine("[MUNDO: FLAGS ATIVAS]");
+            // So as que mudam regra de jogo -- as de progresso (defeated_*) ficam de fora.
+            GlobalKeys[] interessantes =
+            {
+                GlobalKeys.TeleportAll, GlobalKeys.NoPortals, GlobalKeys.NoBossPortals,
+                GlobalKeys.DeathKeepEquip, GlobalKeys.DeathKeepInventory,
+                GlobalKeys.DeathDeleteItems, GlobalKeys.DeathDeleteUnequipped, GlobalKeys.DeathSkillsReset,
+                GlobalKeys.NoBuildCost, GlobalKeys.NoCraftCost, GlobalKeys.NoWorkbench,
+                GlobalKeys.NoBuildingFall, GlobalKeys.DungeonBuild,
+                GlobalKeys.AllPiecesUnlocked, GlobalKeys.AllRecipesUnlocked,
+                GlobalKeys.PassiveMobs, GlobalKeys.NoMap,
+                GlobalKeys.NoHeavySnow, GlobalKeys.AllHeavySnow, GlobalKeys.NoPseudoDrops
+            };
+
+            bool alguma = false;
+            foreach (var k in interessantes)
+            {
+                if (zs.GetGlobalKey(k)) { sb.AppendLine($"  {k}"); alguma = true; }
+            }
+            if (!alguma) sb.AppendLine("  nenhuma (mundo no padrao)");
         }
 
         /// <summary>
