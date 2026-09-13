@@ -71,6 +71,8 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> GcSliceMs;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
+        internal static ConfigEntry<bool> AutoRepairOnOpen;
+        internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
         internal static ConfigEntry<int> SimDistanceNear;
         internal static ConfigEntry<int> SimDistanceFar;
@@ -301,6 +303,17 @@ namespace ValheimTweaks
             // ------------------------------------------------------------------
             // 04 - Performance
             // ------------------------------------------------------------------
+            // ------------------------------------------------------------------
+            // 05 - Conveniencia
+            // ------------------------------------------------------------------
+            AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
+                "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
+                "uma bancada, forja ou estacao equivalente. Reparo no Valheim nao gasta " +
+                "material, entao isso so poupa cliques.");
+
+            RepairButtonRepairsAll = cfg.Bind("05 - Conveniencia", "RepairButtonRepairsAll", true,
+                "O botao de reparo conserta tudo de uma vez em vez de um item por clique.");
+
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
                 "Controla a distância em que o mundo continua ativo ao seu redor. Quem " +
                 "hospeda define o teto para todos; os outros podem usar menos, nunca mais.");

@@ -39,6 +39,10 @@ inimigos e animais de mais longe. Pesa em quem hospeda.
 
 **Campo de visão** — fixo em 65 no jogo, ajustável aqui.
 
+**Reparo automático** — conserta todo o equipamento gasto ao abrir o inventário
+perto de uma bancada ou forja, em vez de um item por clique. Reparo no Valheim
+não consome material, então isso só poupa cliques.
+
 Além desses, há controle de sombras, densidade e alcance da grama, limite de
 luzes de tocha, tesselação do terreno e alguns ajustes de desempenho.
 
