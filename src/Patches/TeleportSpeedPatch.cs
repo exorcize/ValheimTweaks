@@ -1,4 +1,6 @@
+using System.Reflection;
 using HarmonyLib;
+using UnityEngine;
 
 namespace ValheimTweaks.Patches
 {
@@ -15,22 +17,28 @@ namespace ValheimTweaks.Patches
     ///     ...
     ///     else if (m_teleportTimer > 15f || !m_distantTeleport)  // desistência
     ///
-    /// O piso de 8 segundos vale para teleporte distante mesmo quando o destino
-    /// já carregou. É daí que vem a demora: não é carregamento, é espera imposta.
+    /// Multiplicar o dt que alimenta o cronômetro faz os três limiares chegarem
+    /// proporcionalmente antes, sem tocar na lógica. O IsAreaReady continua
+    /// segurando: some a espera artificial, não a real.
     ///
-    /// Em vez de trocar as três constantes por transpiler, multiplicamos o dt que
-    /// alimenta o cronômetro. Todos os limiares chegam proporcionalmente antes e a
-    /// lógica fica intacta -- inclusive o IsAreaReady, que continua segurando o
-    /// teleporte se o destino realmente não estiver pronto. Ou seja: some a espera
-    /// artificial, não a espera real.
+    /// ---- Instrumentação ----
+    /// São duas esperas somadas e elas se parecem de dentro do jogo. O log separa:
+    /// quanto tempo foi piso do cronômetro e quanto foi destino carregando.
+    /// Sem isso não dá para saber se aumentar o multiplicador ainda ajuda ou se
+    /// o limite passou a ser o carregamento.
     ///
-    /// Com multiplicador 4: os 8 s viram 2 s, e a espera inicial 0,5 s.
-    ///
-    /// É local. O estado de teleporte é do próprio jogador e não trafega na rede,
-    /// então cada um ajusta o seu sem afetar os outros.
+    /// É local. O estado de teleporte é do próprio jogador e não trafega na rede.
     /// </summary>
     internal static class TeleportSpeedPatch
     {
+        private static readonly FieldInfo TargetPosField =
+            AccessTools.Field(typeof(Player), "m_teleportTargetPos");
+
+        private static bool _teleportando;
+        private static float _inicio;
+        private static int _framesEsperandoArea;
+        private static int _framesTotal;
+
         [HarmonyPatch(typeof(Player), "UpdateTeleport")]
         internal static class UpdateTeleportHook
         {
@@ -38,6 +46,52 @@ namespace ValheimTweaks.Patches
             {
                 float mult = ModConfig.TeleportSpeed.Value;
                 if (mult > 1f) dt *= mult;
+            }
+
+            private static void Postfix(Player __instance)
+            {
+                if (__instance != Player.m_localPlayer) return;
+
+                bool agora = __instance.IsTeleporting();
+
+                if (agora && !_teleportando)
+                {
+                    _teleportando = true;
+                    _inicio = Time.realtimeSinceStartup;
+                    _framesEsperandoArea = 0;
+                    _framesTotal = 0;
+                }
+                else if (agora)
+                {
+                    _framesTotal++;
+
+                    // Conta os frames em que o destino ainda nao estava pronto.
+                    // Se isso for quase todo o teleporte, o multiplicador nao ajuda
+                    // mais -- o que falta e carregamento.
+                    if (TargetPosField != null && ZNetScene.instance != null)
+                    {
+                        var alvo = (Vector3)TargetPosField.GetValue(__instance);
+                        if (!ZNetScene.instance.IsAreaReady(alvo)) _framesEsperandoArea++;
+                    }
+                }
+                else if (_teleportando)
+                {
+                    _teleportando = false;
+                    float total = Time.realtimeSinceStartup - _inicio;
+                    float pctArea = _framesTotal > 0
+                        ? 100f * _framesEsperandoArea / _framesTotal
+                        : 0f;
+
+                    Plugin.Log.LogInfo(
+                        $"[TELEPORTE] {total:0.00}s no total | " +
+                        $"{pctArea:0}% do tempo esperando o destino carregar | " +
+                        $"multiplicador {ModConfig.TeleportSpeed.Value:0.#}x");
+
+                    if (pctArea > 60f)
+                        Plugin.Log.LogInfo(
+                            "[TELEPORTE] o gargalo e CARREGAMENTO do destino, nao o cronometro. " +
+                            "Aumentar TeleportSpeed nao vai ajudar mais.");
+                }
             }
         }
     }
