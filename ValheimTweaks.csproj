@@ -70,11 +70,26 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Build = deploy. Cai direto no perfil do r2modman. -->
+  <!-- Build = deploy. Cai direto no perfil do r2modman.
+
+       O r2modman desabilita um mod renomeando TODO arquivo da pasta para .old
+       (visto em Azumatt-AzuCraftyBoxes: AzuCraftyBoxes.dll.old, manifest.json.old...).
+       Se copiassemos o DLL por cima disso, o mod voltaria a carregar em silencio
+       enquanto o gerenciador ainda mostra "desabilitado", e a pessoa ficaria
+       procurando por que o mod ressuscitou. Entao o deploy respeita o toggle. -->
   <Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
-    <MakeDir Directories="$(PluginDir)" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" ContinueOnError="true" />
-    <Message Importance="high" Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll" />
+    <PropertyGroup>
+      <ModDisabled Condition="Exists('$(PluginDir)\$(AssemblyName).dll.old')">true</ModDisabled>
+    </PropertyGroup>
+
+    <Message Importance="high" Condition="'$(ModDisabled)' == 'true'"
+             Text="  -&gt; deploy PULADO: mod esta desabilitado no r2modman (encontrado $(AssemblyName).dll.old). Reabilite la para voltar a receber builds." />
+
+    <MakeDir Directories="$(PluginDir)" Condition="'$(ModDisabled)' != 'true'" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)"
+          ContinueOnError="true" Condition="'$(ModDisabled)' != 'true'" />
+    <Message Importance="high" Condition="'$(ModDisabled)' != 'true'"
+             Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll" />
   </Target>
 
 </Project>
