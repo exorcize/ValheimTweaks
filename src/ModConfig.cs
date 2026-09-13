@@ -58,6 +58,9 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> ShadowResolution;
         internal static ConfigEntry<int> Tesselation;
         internal static ConfigEntry<float> ClutterAmountScale;
+        internal static ConfigEntry<bool> FreezeTimeOfDay;
+        internal static ConfigEntry<float> TimeOfDay;
+        internal static ConfigEntry<string> ForceWeather;
         internal static ConfigEntry<int> DisplayMode;
         internal static ConfigEntry<int> DisplayWidth;
         internal static ConfigEntry<int> DisplayHeight;
@@ -269,6 +272,23 @@ namespace ValheimTweaks
                     "Campo de visao. 0 = nao sobrescrever (o jogo usa 65 fixo, sem opcao no menu). " +
                     "Acima de ~100 distorce as bordas.",
                     new AcceptableValueRange<float>(0f, 120f)));
+
+            // --- Cena controlada para comparacao (puramente local, ver ScenePatch) ---
+            FreezeTimeOfDay = cfg.Bind("03 - Visual", "FreezeTimeOfDay", false,
+                "Trava a hora do dia usada no RENDER. Nao mexe no tempo real do mundo " +
+                "(m_totalSeconds), nao vai para os peers, nao marca o mundo. Serve para " +
+                "comparar visual sem o sol se mover no meio -- foi a falta disto que " +
+                "invalidou duas medicoes minhas.");
+
+            TimeOfDay = cfg.Bind("03 - Visual", "TimeOfDay", 0.5f,
+                new ConfigDescription(
+                    "So vale com FreezeTimeOfDay. 0 = meia-noite, 0.25 = amanhecer, " +
+                    "0.5 = MEIO-DIA, 0.75 = entardecer.",
+                    new AcceptableValueRange<float>(0f, 1f)));
+
+            ForceWeather = cfg.Bind("03 - Visual", "ForceWeather", "",
+                "Trava o clima. Vazio = normal do bioma. Ex.: Clear, Misty, Rain, " +
+                "ThunderStorm, SnowStorm. Tambem local.");
 
             // --- Destravar qualidade alem do menu (custo de GPU, que aqui sobra) ---
             ShadowResolution = cfg.Bind("03 - Visual", "ShadowResolution", 0,

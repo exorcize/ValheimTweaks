@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.13.0";
+        public const string VERSION = "0.14.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -149,6 +149,7 @@ namespace ValheimTweaks
                 Patches.AntiAliasingPatch.Apply();
                 Patches.FovPatch.Apply();
                 Patches.DisplayModePatch.Apply();
+                Patches.ScenePatch.Apply();
                 Patches.GcPatch.Apply();
                 Patches.TimeoutPatch.Apply();
                 Patches.SimulationDistancePatch.Apply();
