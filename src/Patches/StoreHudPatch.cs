@@ -33,6 +33,7 @@ namespace ValheimTweaks.Patches
         private static GameObject _raiz;
         private static readonly List<Linha> Linhas = new List<Linha>();
         private static TMP_FontAsset _fonte;
+        private static Material _material;
 
         // ------------------------------------------------------------------
         // Nome proprio do bau, ou null
@@ -63,12 +64,23 @@ namespace ValheimTweaks.Patches
         {
             if (_raiz != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
 
-            // Reaproveita a fonte de algum texto ja existente na HUD: criar TMP sem
-            // font asset valido renderiza em branco.
+            // Copia fonte E material de um texto CONHECIDO da HUD. Pegar o primeiro
+            // TMP_Text que aparecesse trazia uma fonte qualquer, e sem o material
+            // o TextMeshPro cai no fallback -- foi o que deixou o texto feio.
             if (_fonte == null)
             {
-                var qualquer = Hud.instance.GetComponentInChildren<TMP_Text>(true);
-                if (qualquer != null) _fonte = qualquer.font;
+                TMP_Text molde = Hud.instance.m_healthText
+                              ?? Hud.instance.m_staminaText
+                              ?? Hud.instance.m_actionName;
+
+                if (molde == null && MessageHud.instance != null)
+                    molde = MessageHud.instance.m_messageCenterText;
+
+                if (molde != null)
+                {
+                    _fonte = molde.font;
+                    _material = molde.fontSharedMaterial;
+                }
             }
 
             _raiz = new GameObject("VT_ItensGuardados", typeof(RectTransform));
@@ -129,12 +141,15 @@ namespace ValheimTweaks.Patches
             txtGo.transform.SetParent(go.transform, worldPositionStays: false);
             var txt = txtGo.AddComponent<TextMeshProUGUI>();
             if (_fonte != null) txt.font = _fonte;
+            if (_material != null) txt.fontSharedMaterial = _material;
             txt.fontSize = ModConfig.StoreHudFontSize.Value;
             txt.alignment = TextAlignmentOptions.MidlineLeft;
             txt.enableWordWrapping = false;
             txt.raycastTarget = false;
 
-            string nome = item.m_shared.m_name;
+            // m_name e um token de localizacao ("$item_feathers"); sem Localize
+            // o token cru aparece na tela.
+            string nome = Localization.instance.Localize(item.m_shared.m_name);
             txt.text = string.IsNullOrEmpty(nomeBau)
                 ? $"<color=#E8DDC4>{nome} x{quantidade}</color>"
                 : $"<color=#E8DDC4>{nome} x{quantidade}</color> <color=#A8996F>→</color> <color=#D8C48A>{nomeBau}</color>";

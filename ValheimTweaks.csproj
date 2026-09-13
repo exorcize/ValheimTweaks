@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.23.0</Version>
+    <Version>0.23.1</Version>
     <LangVersion>latest</LangVersion>
     <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -66,6 +66,11 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- Localization: m_name de item e um token ("$item_feathers"). -->
+    <Reference Include="assembly_guiutils">
+      <HintPath>$(ManagedDir)\assembly_guiutils.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <!-- TextAnchor, usado pelos layout groups. -->

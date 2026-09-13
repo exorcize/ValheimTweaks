@@ -378,7 +378,7 @@ namespace ValheimTweaks
                     "da HUD de vida e comida; ajuste se ficar sobreposto na sua resolucao.",
                     new AcceptableValueRange<float>(0f, 900f)));
 
-            StoreHudSeconds = cfg.Bind("05 - Conveniencia", "StoreHudSeconds", 4f,
+            StoreHudSeconds = cfg.Bind("05 - Conveniencia", "StoreHudSeconds", 7f,
                 new ConfigDescription("Quanto tempo cada linha fica na tela.",
                     new AcceptableValueRange<float>(1f, 20f)));
 
