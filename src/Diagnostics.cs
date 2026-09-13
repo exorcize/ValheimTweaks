@@ -99,10 +99,7 @@ namespace ValheimTweaks
                               (zs.LocationsGenerated ? "" : "   <- mundo NOVO: o jogo usa orcamento de 100ms/frame"));
                 sb.AppendLine($"  orcamento de geracao de zona = {Patches.ZoneGenBudgetPatch.CurrentBudgetMs:0.##} ms/frame");
             }
-            sb.AppendLine($"  teto de objetos/frame = " +
-                          (ModConfig.MaxObjectsPerFrame.Value > 0
-                              ? ModConfig.MaxObjectsPerFrame.Value.ToString()
-                              : "sem limite (vanilla: Max(pendentes/100, 10), cresce sozinho)"));
+            sb.AppendLine($"  intervalo de posse de ZDO = {ModConfig.ZdoReleaseIntervalSec.Value:0.#}s");
 
             DumpWorldRates(sb);
 

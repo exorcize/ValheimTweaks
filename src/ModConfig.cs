@@ -66,7 +66,6 @@ namespace ValheimTweaks
 
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<int> MaxQueuedFrames;
-        internal static ConfigEntry<int> MaxObjectsPerFrame;
         internal static ConfigEntry<float> ZoneGenBudgetMs;
         internal static ConfigEntry<float> ZdoReleaseIntervalSec;
         internal static ConfigEntry<float> GcSliceMs;
@@ -335,11 +334,6 @@ namespace ValheimTweaks
                 "Ao bater no limite, some primeiro com a fumaça mais distante em vez da mais " +
                 "antiga, que costuma ser justamente a que está na sua frente.");
 
-            MaxObjectsPerFrame = cfg.Bind("04 - Performance", "MaxObjectsPerFrame", 0,
-                new ConfigDescription(
-                    "Limite de objetos criados por quadro ao carregar uma região. Valores " +
-                    "baixos trocam travada por objetos aparecendo aos poucos. 0 não mexe.",
-                    new AcceptableValueRange<int>(0, 200)));
 
             ZoneGenBudgetMs = cfg.Bind("04 - Performance", "ZoneGenBudgetMs", 0f,
                 new ConfigDescription(

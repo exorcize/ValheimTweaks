@@ -64,6 +64,18 @@ Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afeta
 o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
 cena.
 
+## Sobre desempenho
+
+Este mod não tenta otimizar o motor do jogo. Para isso vale instalar o
+**ValheimPerformanceOptimizations**, que faz esse trabalho a fundo — streaming
+de objetos, colisão de terreno, culling de luzes e de som, integridade
+estrutural — sem alterar o comportamento do jogo. Os dois convivem: um cuida do
+visual e da rede, o outro do motor.
+
+Os poucos ajustes de desempenho daqui vêm todos no padrão do jogo e existem para
+casos específicos (fumaça em base com muitas fogueiras, intervalo de rede em
+servidor cheio).
+
 ## Alterando as opções
 
 Pelo **F1** em jogo, ou editando direto:
