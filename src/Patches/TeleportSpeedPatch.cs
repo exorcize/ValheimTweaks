@@ -39,6 +39,35 @@ namespace ValheimTweaks.Patches
         private static int _framesEsperandoArea;
         private static int _framesTotal;
 
+        /// <summary>
+        /// Lido pelo SimulationDistancePatch para reduzir a distancia so enquanto
+        /// dura o teleporte.
+        /// </summary>
+        internal static bool EmTeleporte => _teleportando;
+
+        /// <summary>
+        /// Faz o ZoneSystem reler a distancia. ApplySettings() apenas copia o valor
+        /// de ZNet.GetSyncedSimulationDistance(), que por sua vez le o "desejado"
+        /// que o nosso patch acabou de alterar.
+        ///
+        /// De proposito NAO chama ZNet.ApplySimulationDistance nem o handshake:
+        /// aqueles mexem no TETO que o host envia aos peers, e baixar isso a cada
+        /// portal derrubaria a distancia de simulacao dos amigos junto. Aqui muda
+        /// so o lado local.
+        /// </summary>
+        private static void ReaplicarDistancia(bool restaurando)
+        {
+            if (ZoneSystem.instance != null) ZoneSystem.instance.ApplySettings();
+
+            // Alcance visual de agua e terreno tambem deriva da distancia. Durante
+            // o teleporte a tela esta preta, entao so vale corrigir na volta.
+            if (restaurando)
+            {
+                Water.ApplySettingsOnAll();
+                Heightmap.ApplySettingsOnAll();
+            }
+        }
+
         [HarmonyPatch(typeof(Player), "UpdateTeleport")]
         internal static class UpdateTeleportHook
         {
@@ -60,6 +89,7 @@ namespace ValheimTweaks.Patches
                     _inicio = Time.realtimeSinceStartup;
                     _framesEsperandoArea = 0;
                     _framesTotal = 0;
+                    ReaplicarDistancia(restaurando: false);
                 }
                 else if (agora)
                 {
@@ -77,6 +107,8 @@ namespace ValheimTweaks.Patches
                 else if (_teleportando)
                 {
                     _teleportando = false;
+                    ReaplicarDistancia(restaurando: true);
+
                     float total = Time.realtimeSinceStartup - _inicio;
                     float pctArea = _framesTotal > 0
                         ? 100f * _framesEsperandoArea / _framesTotal

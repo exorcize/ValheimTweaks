@@ -37,6 +37,17 @@ namespace ValheimTweaks.Patches
                 if (!ModConfig.SimDistanceEnabled.Value) return;
 
                 int near = ModConfig.SimDistanceNear.Value;
+
+                // Durante o teleporte, usa um valor reduzido: o destino so fica
+                // pronto quando a zona central termina de carregar os assets, e com
+                // 121 zonas pedindo asset ao mesmo tempo ela fica na fila.
+                // Medido: 14,7s e 16,8s com near=5 contra 3,7s e 1,5s com near=2.
+                if (TeleportSpeedPatch.EmTeleporte)
+                {
+                    int reduzido = ModConfig.TeleportSimDistance.Value;
+                    if (reduzido > 0) near = System.Math.Min(near, reduzido);
+                }
+
                 if (near == __result.NearSimulationDistance) return;
 
                 __result = new SimulationDistance(near, ModConfig.SimDistanceFar.Value);

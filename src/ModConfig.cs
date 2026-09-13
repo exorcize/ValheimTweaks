@@ -72,6 +72,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
         internal static ConfigEntry<float> TeleportSpeed;
+        internal static ConfigEntry<int> TeleportSimDistance;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -314,6 +315,15 @@ namespace ValheimTweaks
                     "segundos. A verificacao de destino pronto continua valendo, entao some " +
                     "so a espera artificial, nunca a real. 1 mantem o padrao.",
                     new AcceptableValueRange<float>(1f, 8f)));
+
+            TeleportSimDistance = cfg.Bind("05 - Conveniencia", "TeleportSimDistance", 2,
+                new ConfigDescription(
+                    "Reduz a distancia de simulacao SO durante a travessia do portal e " +
+                    "restaura ao chegar. O destino so libera quando a zona central termina " +
+                    "de carregar, e com a distancia alta ela disputa a fila com mais de cem " +
+                    "zonas. Medido neste mundo: 15s com 5 contra 1,5-3,7s com 2. " +
+                    "0 desliga. Nao afeta os outros jogadores.",
+                    new AcceptableValueRange<int>(0, 8)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
