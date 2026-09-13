@@ -35,6 +35,36 @@ namespace ValheimTweaks.Patches
         private static TMP_FontAsset _fonte;
         private static Material _material;
 
+        /// <summary>
+        /// Fonte e material de um texto CONHECIDO da HUD. Pegar o primeiro TMP_Text
+        /// que aparecesse trazia uma fonte qualquer, e sem o fontSharedMaterial o
+        /// TextMeshPro cai no fallback -- foi o que deixou o texto com cara de
+        /// console na primeira tentativa.
+        /// </summary>
+        internal static void AplicarFonte(TMP_Text alvo)
+        {
+            if (alvo == null) return;
+
+            if (_fonte == null && Hud.instance != null)
+            {
+                TMP_Text molde = Hud.instance.m_healthText
+                              ?? Hud.instance.m_staminaText
+                              ?? Hud.instance.m_actionName;
+
+                if (molde == null && MessageHud.instance != null)
+                    molde = MessageHud.instance.m_messageCenterText;
+
+                if (molde != null)
+                {
+                    _fonte = molde.font;
+                    _material = molde.fontSharedMaterial;
+                }
+            }
+
+            if (_fonte != null) alvo.font = _fonte;
+            if (_material != null) alvo.fontSharedMaterial = _material;
+        }
+
         // ------------------------------------------------------------------
         // Nome proprio do bau, ou null
         // ------------------------------------------------------------------
@@ -63,25 +93,6 @@ namespace ValheimTweaks.Patches
         private static void Garantir()
         {
             if (_raiz != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
-
-            // Copia fonte E material de um texto CONHECIDO da HUD. Pegar o primeiro
-            // TMP_Text que aparecesse trazia uma fonte qualquer, e sem o material
-            // o TextMeshPro cai no fallback -- foi o que deixou o texto feio.
-            if (_fonte == null)
-            {
-                TMP_Text molde = Hud.instance.m_healthText
-                              ?? Hud.instance.m_staminaText
-                              ?? Hud.instance.m_actionName;
-
-                if (molde == null && MessageHud.instance != null)
-                    molde = MessageHud.instance.m_messageCenterText;
-
-                if (molde != null)
-                {
-                    _fonte = molde.font;
-                    _material = molde.fontSharedMaterial;
-                }
-            }
 
             _raiz = new GameObject("VT_ItensGuardados", typeof(RectTransform));
             _raiz.transform.SetParent(Hud.instance.m_rootObject.transform, worldPositionStays: false);
@@ -140,8 +151,7 @@ namespace ValheimTweaks.Patches
             var txtGo = new GameObject("txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, worldPositionStays: false);
             var txt = txtGo.AddComponent<TextMeshProUGUI>();
-            if (_fonte != null) txt.font = _fonte;
-            if (_material != null) txt.fontSharedMaterial = _material;
+            AplicarFonte(txt);
             txt.fontSize = ModConfig.StoreHudFontSize.Value;
             txt.alignment = TextAlignmentOptions.MidlineLeft;
             txt.enableWordWrapping = false;

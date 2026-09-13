@@ -85,6 +85,10 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> StoreHudSeconds;
         internal static ConfigEntry<int> StoreHudMaxLines;
         internal static ConfigEntry<float> StoreHudFontSize;
+        internal static ConfigEntry<bool> ChestPeekEnabled;
+        internal static ConfigEntry<float> ChestPeekDistance;
+        internal static ConfigEntry<float> ChestPeekHideDelay;
+        internal static ConfigEntry<float> ChestPeekX;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -389,6 +393,25 @@ namespace ValheimTweaks
             StoreHudFontSize = cfg.Bind("05 - Conveniencia", "StoreHudFontSize", 14f,
                 new ConfigDescription("Tamanho da fonte da lista.",
                     new AcceptableValueRange<float>(8f, 28f)));
+
+            ChestPeekEnabled = cfg.Bind("05 - Conveniencia", "ChestPeekEnabled", true,
+                "Ao mirar um bau de perto, mostra o conteudo dele no canto direito sem " +
+                "precisar abrir. Vale tambem para carroca e navio.");
+
+            ChestPeekDistance = cfg.Bind("05 - Conveniencia", "ChestPeekDistance", 5f,
+                new ConfigDescription(
+                    "Distancia maxima para espiar. Mirar de longe nao basta.",
+                    new AcceptableValueRange<float>(1f, 20f)));
+
+            ChestPeekHideDelay = cfg.Bind("05 - Conveniencia", "ChestPeekHideDelay", 0.3f,
+                new ConfigDescription(
+                    "Segundos que o painel fica depois que voce desvia a mira. Evita " +
+                    "piscar quando a mira passa raspando.",
+                    new AcceptableValueRange<float>(0f, 3f)));
+
+            ChestPeekX = cfg.Bind("05 - Conveniencia", "ChestPeekX", 20f,
+                new ConfigDescription("Distancia da borda direita, em pixels.",
+                    new AcceptableValueRange<float>(0f, 800f)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
