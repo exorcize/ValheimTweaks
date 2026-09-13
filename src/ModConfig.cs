@@ -21,6 +21,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> DumpNow;
         internal static ConfigEntry<bool> ProfileNow;
         internal static ConfigEntry<float> ProfileSeconds;
+        internal static ConfigEntry<bool> ProfileSystems;
 
         // ---------- 02 - Rede ----------
         internal static ConfigEntry<bool> TimeoutEnabled;
@@ -91,6 +92,11 @@ namespace ValheimTweaks
             ProfileSeconds = cfg.Bind("01 - Diagnostico", "ProfileSeconds", 20f,
                 new ConfigDescription("Duracao da medicao.",
                     new AcceptableValueRange<float>(5f, 120f)));
+
+            ProfileSystems = cfg.Bind("01 - Diagnostico", "ProfileSystems", true,
+                "Junto com o frametime, cronometra os sistemas do jogo (ZDOMan, streaming " +
+                "de objetos, ZoneSystem, grama, terreno) e mostra a reparticao do PIOR frame. " +
+                "E o que responde 'onde foram os 12ms' em vez de testar palpite por palpite.");
 
             // --- Rede ---
             // ZNet.Start() chama ZRpc.SetLongTimeout(false), que trava m_timeout em 30s.

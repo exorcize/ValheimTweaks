@@ -34,6 +34,7 @@ namespace ValheimTweaks
             _tag = tag;
             _running = true;
             _endsAt = Time.realtimeSinceStartup + seconds;
+            SystemProfiler.SetEnabled(ModConfig.ProfileSystems.Value);
             Plugin.Log.LogInfo($"[PROFILER] capturando {seconds:0}s como '{tag}'...");
         }
 
@@ -94,6 +95,12 @@ namespace ValheimTweaks
                           $"({(100f * engasgos / Samples.Count):0.00}% dos frames, " +
                           $"{engasgos / Mathf.Max(duracao, 0.001f):0.0}/s)");
             sb.AppendLine("==================================================");
+
+            if (SystemProfiler.Enabled)
+            {
+                sb.Append(SystemProfiler.Report());
+                SystemProfiler.SetEnabled(false);
+            }
 
             Plugin.Log.LogInfo(sb.ToString());
             Samples.Clear();
