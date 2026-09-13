@@ -21,7 +21,11 @@
     <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
     <ProfileDir Condition="'$(ProfileDir)' == ''">$(AppData)\r2modmanPlus-local\Valheim\profiles\Default</ProfileDir>
     <BepInExCore>$(ProfileDir)\BepInEx\core</BepInExCore>
-    <PluginDir>$(ProfileDir)\BepInEx\plugins\ValheimTweaks</PluginDir>
+    <!-- Pasta criada pelo r2modman ao importar o zip como "local mod". O autor sai
+         como "Unknown" porque manifest local nao tem namespace do Thunderstore.
+         Precisa apontar AQUI: se o deploy for para uma pasta propria, o BepInEx
+         carrega as duas e a gente edita uma copia enquanto o jogo roda a outra. -->
+    <PluginDir>$(ProfileDir)\BepInEx\plugins\Unknown-ValheimTweaks</PluginDir>
   </PropertyGroup>
 
   <ItemGroup>
