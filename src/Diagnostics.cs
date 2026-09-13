@@ -89,6 +89,21 @@ namespace ValheimTweaks
                 sb.AppendLine("  (fora de mundo)");
             }
 
+            // ---- Fontes de engasgo ----
+            sb.AppendLine("[ENGASGO]");
+            sb.AppendLine($"  GC: {Patches.GcPatch.Describe()}");
+            var zs = ZoneSystem.instance;
+            if (zs != null)
+            {
+                sb.AppendLine($"  LocationsGenerated = {zs.LocationsGenerated}" +
+                              (zs.LocationsGenerated ? "" : "   <- mundo NOVO: o jogo usa orcamento de 100ms/frame"));
+                sb.AppendLine($"  orcamento de geracao de zona = {Patches.ZoneGenBudgetPatch.CurrentBudgetMs:0.##} ms/frame");
+            }
+            sb.AppendLine($"  teto de objetos/frame = " +
+                          (ModConfig.MaxObjectsPerFrame.Value > 0
+                              ? ModConfig.MaxObjectsPerFrame.Value.ToString()
+                              : "sem limite (vanilla: Max(pendentes/100, 10), cresce sozinho)"));
+
             // ---- Tela ----
             sb.AppendLine("[TELA]");
             sb.AppendLine($"  {Screen.width}x{Screen.height} @ {Screen.currentResolution.refreshRateRatio.value:0.##}Hz  " +

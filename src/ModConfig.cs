@@ -58,6 +58,8 @@ namespace ValheimTweaks
         // ---------- 04 - Performance ----------
         internal static ConfigEntry<int> MaxQueuedFrames;
         internal static ConfigEntry<int> MaxObjectsPerFrame;
+        internal static ConfigEntry<float> ZoneGenBudgetMs;
+        internal static ConfigEntry<float> GcSliceMs;
         internal static ConfigEntry<int> MaxSmoke;
         internal static ConfigEntry<bool> FadeDistantSmokeFirst;
 
@@ -270,6 +272,22 @@ namespace ValheimTweaks
                     "muita coisa pendente, que e exatamente o que acontece ao atravessar " +
                     "zona. 0 = nao limitar (vanilla). 10-30 troca engasgo por pop-in.",
                     new AcceptableValueRange<int>(0, 200)));
+
+            // Mundo novo: o servidor troca o orcamento de geracao de 10ms por 100ms.
+            // Ver ZoneGenBudgetPatch.
+            ZoneGenBudgetMs = cfg.Bind("04 - Performance", "ZoneGenBudgetMs", 0f,
+                new ConfigDescription(
+                    "Teto de tempo por frame gerando mundo. Enquanto as locations de um " +
+                    "mundo NOVO nao terminam, o jogo usa 100 ms -- uma travada visivel a " +
+                    "cada frame afetado. 0 = nao mexer. 4-8 troca travada por geracao mais lenta.",
+                    new AcceptableValueRange<float>(0f, 100f)));
+
+            GcSliceMs = cfg.Bind("04 - Performance", "GcSliceMs", 0f,
+                new ConfigDescription(
+                    "Fatia do coletor de lixo incremental. O boot.config do jogo usa 3 ms, " +
+                    "que ainda e quase um frame inteiro a 240 fps. Menor = coleta espalhada " +
+                    "por mais frames. 0 = nao mexer.",
+                    new AcceptableValueRange<float>(0f, 10f)));
 
             // Cada fumaca e um Rigidbody de verdade. Ver SmokePatch.
             MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
