@@ -189,6 +189,8 @@ namespace ValheimTweaks.Patches
                     if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
 
                     int qtd = item.m_stack;
+                    // Tira a marca antes de mover: ela vale so enquanto o item e seu.
+                    item.m_customData?.Remove(ChaveMarca);
                     if (__instance.AddItem(item))
                     {
                         fromInventory.RemoveItem(item);
@@ -239,6 +241,18 @@ namespace ValheimTweaks.Patches
             {
                 var inv = __instance.GetInventory();
                 if (inv == null) return;
+
+                // A marca vive no proprio item (m_customData), entao viaja junto
+                // quando ele vai para o bau -- e ficava azul la dentro. A marca so
+                // faz sentido no SEU inventario: fora dele, nem tinge.
+                var gui = InventoryGui.instance;
+                bool ehGradeDoJogador = gui != null && __instance == gui.m_playerGrid;
+                if (!ehGradeDoJogador)
+                {
+                    foreach (var el in __instance.GetComponentsInChildren<InventoryElement>(true))
+                        if (el.m_icon != null) el.m_icon.color = Color.white;
+                    return;
+                }
 
                 foreach (var el in __instance.GetComponentsInChildren<InventoryElement>(true))
                 {

@@ -89,6 +89,8 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> ChestPeekDistance;
         internal static ConfigEntry<float> ChestPeekHideDelay;
         internal static ConfigEntry<float> ChestPeekX;
+        internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> AutoMineKey;
+        internal static ConfigEntry<float> AutoMineDistance;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -412,6 +414,17 @@ namespace ValheimTweaks
             ChestPeekX = cfg.Bind("05 - Conveniencia", "ChestPeekX", 20f,
                 new ConfigDescription("Distancia da borda direita, em pixels.",
                     new AcceptableValueRange<float>(0f, 800f)));
+
+            AutoMineKey = cfg.Bind("05 - Conveniencia", "AutoMineKey",
+                new KeyboardShortcut(KeyCode.CapsLock),
+                "Liga e desliga a mineracao automatica. Com a picareta na mao e o minerio " +
+                "sob a mira, o personagem bate sozinho ate quebrar e para. Desviar a mira, " +
+                "trocar de item ou o alvo quebrar interrompe na hora.");
+
+            AutoMineDistance = cfg.Bind("05 - Conveniencia", "AutoMineDistance", 6f,
+                new ConfigDescription(
+                    "Distancia maxima ate o alvo para continuar minerando.",
+                    new AcceptableValueRange<float>(2f, 15f)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +

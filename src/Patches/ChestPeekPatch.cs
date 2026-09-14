@@ -207,10 +207,10 @@ namespace ValheimTweaks.Patches
             // nao tomar a tela. Colunas sobem junto, senao viraria uma coluna alta.
             float lado;
             int colunas;
-            if (itens.Count <= 10) { lado = 34f; colunas = 5; }
-            else if (itens.Count <= 24) { lado = 28f; colunas = 6; }
-            else if (itens.Count <= 40) { lado = 24f; colunas = 8; }
-            else { lado = 20f; colunas = 10; }
+            if (itens.Count <= 10) { lado = 68f; colunas = 5; }
+            else if (itens.Count <= 24) { lado = 56f; colunas = 6; }
+            else if (itens.Count <= 40) { lado = 48f; colunas = 8; }
+            else { lado = 40f; colunas = 10; }
 
             var g = _grade.GetComponent<GridLayoutGroup>();
             g.cellSize = new Vector2(lado, lado);
