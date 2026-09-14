@@ -90,7 +90,9 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> ChestPeekHideDelay;
         internal static ConfigEntry<float> ChestPeekX;
         internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> AutoMineKey;
-        internal static ConfigEntry<float> AutoMineDistance;
+        internal static ConfigEntry<string> AutoMineOres;
+        internal static ConfigEntry<float> AutoMineRangeScale;
+        internal static ConfigEntry<float> AutoMineHudY;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -416,15 +418,28 @@ namespace ValheimTweaks
                     new AcceptableValueRange<float>(0f, 800f)));
 
             AutoMineKey = cfg.Bind("05 - Conveniencia", "AutoMineKey",
-                new KeyboardShortcut(KeyCode.CapsLock),
+                new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftAlt),
                 "Liga e desliga a mineracao automatica. Com a picareta na mao e o minerio " +
                 "sob a mira, o personagem bate sozinho ate quebrar e para. Desviar a mira, " +
                 "trocar de item ou o alvo quebrar interrompe na hora.");
 
-            AutoMineDistance = cfg.Bind("05 - Conveniencia", "AutoMineDistance", 6f,
+            AutoMineOres = cfg.Bind("05 - Conveniencia", "AutoMineOres",
+                "copper,tin,silver,iron,obsidian,meteorite,flametal,blackmetal",
+                "O que conta como minerio. O mod olha o que o alvo SOLTA e compara com " +
+                "esta lista, entao pedra comum (que solta Stone) fica de fora. Separe por " +
+                "virgula; para minerio de outro mod, acrescente um pedaco do nome dele.");
+
+            AutoMineRangeScale = cfg.Bind("05 - Conveniencia", "AutoMineRangeScale", 1f,
                 new ConfigDescription(
-                    "Distancia maxima ate o alvo para continuar minerando.",
-                    new AcceptableValueRange<float>(2f, 15f)));
+                    "Multiplica o alcance real da picareta equipada. A distancia e medida " +
+                    "ate o ponto mais proximo do minerio, nao ate o centro dele. Abaixo de 1 " +
+                    "exige chegar mais perto; acima, aceita de um pouco mais longe.",
+                    new AcceptableValueRange<float>(0.5f, 2f)));
+
+            AutoMineHudY = cfg.Bind("05 - Conveniencia", "AutoMineHudY", 120f,
+                new ConfigDescription(
+                    "Altura do aviso de 'minerar automatico' na tela, a partir de baixo.",
+                    new AcceptableValueRange<float>(0f, 900f)));
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
