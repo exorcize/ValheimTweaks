@@ -94,6 +94,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> AutoMineRangeScale;
         internal static ConfigEntry<float> AutoMineHudY;
         internal static ConfigEntry<bool> AutoMineDebug;
+        internal static ConfigEntry<float> AutoMineToggleSeconds;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -441,6 +442,12 @@ namespace ValheimTweaks
                 new ConfigDescription(
                     "Altura do aviso de 'minerar automatico' na tela, a partir de baixo.",
                     new AcceptableValueRange<float>(0f, 900f)));
+
+            AutoMineToggleSeconds = cfg.Bind("05 - Conveniencia", "AutoMineToggleSeconds", 1.5f,
+                new ConfigDescription(
+                    "Quanto tempo o aviso destaca LIGADO/DESLIGADO depois de apertar a tecla. " +
+                    "Passado isso, enquanto ligado, fica so o rotulo discreto.",
+                    new AcceptableValueRange<float>(0.3f, 6f)));
 
             AutoMineDebug = cfg.Bind("05 - Conveniencia", "AutoMineDebug", true,
                 "Quando o auto-minerar recusa um alvo, anota no log qual componente ele usa " +

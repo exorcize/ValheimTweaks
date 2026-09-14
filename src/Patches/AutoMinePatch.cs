@@ -38,6 +38,7 @@ namespace ValheimTweaks.Patches
             AccessTools.Field(typeof(Player), "m_queuedAttackTimer");
 
         private static bool _ligado;
+        private static float _avisoAte;
         private static GameObject _aviso;
         private static TextMeshProUGUI _avisoTxt;
 
@@ -170,11 +171,15 @@ namespace ValheimTweaks.Patches
             if (!digitando && ModConfig.AutoMineKey.Value.IsDown())
             {
                 _ligado = !_ligado;
-                player.Message(MessageHud.MessageType.Center,
-                    _ligado ? "Minerar automático LIGADO" : "Minerar automático desligado");
+                // De proposito NAO usa MessageHud: a duracao dele e do jogo e vale
+                // para todas as mensagens. O proprio indicador da o retorno, com
+                // tempo que a gente controla.
+                _avisoAte = Time.realtimeSinceStartup + ModConfig.AutoMineToggleSeconds.Value;
             }
 
-            MostrarAviso(_ligado);
+            // Fica visivel enquanto ligado; ao desligar, ainda aparece pelo tempo
+            // do aviso para voce ver que desligou.
+            MostrarAviso(_ligado || Time.realtimeSinceStartup < _avisoAte);
 
             if (!_ligado || QueuedAttackField == null) return;
             if (InventoryGui.IsVisible() || Minimap.IsOpen()) return;
@@ -219,13 +224,21 @@ namespace ValheimTweaks.Patches
                 _avisoTxt.fontSize = 15f;
                 _avisoTxt.alignment = TextAlignmentOptions.Center;
                 _avisoTxt.raycastTarget = false;
-                // Sem emoji: a fonte do Valheim nao tem esses glifos e sai quadradinho.
-                _avisoTxt.text = "<color=#D8C48A>Minerar automático</color>";
             }
 
             // Reaplica a cada exibicao: se a HUD ainda nao estava pronta quando o
             // objeto foi criado, a fonte teria ficado no fallback para sempre.
             StoreHudPatch.AplicarFonte(_avisoTxt);
+
+            // Logo apos alternar, destaca o estado; depois volta ao rotulo discreto.
+            // Sem emoji: a fonte do Valheim nao tem esses glifos e sai quadradinho.
+            bool recemAlternado = Time.realtimeSinceStartup < _avisoAte;
+            if (recemAlternado)
+                _avisoTxt.text = _ligado
+                    ? "<color=#B8DD97>Minerar automático LIGADO</color>"
+                    : "<color=#C08080>Minerar automático desligado</color>";
+            else
+                _avisoTxt.text = "<color=#D8C48A>Minerar automático</color>";
 
             if (!_aviso.activeSelf) _aviso.SetActive(true);
         }

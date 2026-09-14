@@ -44,6 +44,17 @@ segundos para menos de 2. Vale só para você, não muda nada para os outros.
 
 **Campo de visão** — fixo em 65 no jogo, ajustável aqui.
 
+**Minerar automático** — uma tecla liga e desliga; com a picareta na mão e o
+minério sob a mira, o personagem bate sozinho até quebrar e para. Só minério, não
+pedra: o mod olha o que o alvo solta.
+
+**Guardar nos baús** — marque itens no inventário e uma tecla despeja tudo nos
+baús próximos, encaixando nas pilhas que já existem. Uma lista no canto mostra o
+que foi guardado e onde.
+
+**Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
+sem precisar abrir.
+
 **Reparo automático** — conserta todo o equipamento gasto ao abrir o inventário
 perto de uma bancada ou forja, em vez de um item por clique. Reparo no Valheim
 não consome material, então isso só poupa cliques.
