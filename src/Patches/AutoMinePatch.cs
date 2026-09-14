@@ -75,19 +75,73 @@ namespace ValheimTweaks.Patches
             var go = HoveringField.GetValue(player) as GameObject;
             if (go == null) return null;
 
-            var rock5 = go.GetComponentInParent<MineRock5>();
-            if (rock5 != null && !SoltaMinerio(rock5.m_dropItems)) return null;
+            // Tres formas diferentes de um alvo minerável carregar sua tabela de
+            // drop. O estanho nao usa MineRock: e um Destructible com o componente
+            // separado DropOnDestroyed, e por isso a versao anterior o ignorava.
+            bool ehMinerio = false;
 
-            if (rock5 == null)
+            var rock5 = go.GetComponentInParent<MineRock5>();
+            if (rock5 != null) ehMinerio = SoltaMinerio(rock5.m_dropItems);
+
+            if (!ehMinerio)
             {
                 var rock = go.GetComponentInParent<MineRock>();
-                if (rock == null) return null;                      // nem minerável
-                if (!SoltaMinerio(rock.m_dropItems)) return null;   // minerável, mas é pedra
+                if (rock != null) ehMinerio = SoltaMinerio(rock.m_dropItems);
+            }
+
+            if (!ehMinerio)
+            {
+                var drop = go.GetComponentInParent<DropOnDestroyed>();
+                if (drop != null) ehMinerio = SoltaMinerio(drop.m_dropWhenDestroyed);
+            }
+
+            if (!ehMinerio)
+            {
+                Diagnosticar(go);
+                return null;
             }
 
             // O collider mirado e o pedaco exato: MineRock5 e dividido em varias
             // areas, e usar o do objeto raiz mediria distancia errada.
             return go.GetComponent<Collider>() ?? go.GetComponentInParent<Collider>();
+        }
+
+        private static string _ultimoDiagnostico;
+
+        /// <summary>
+        /// Loga o que foi recusado e por que. Sem isso, "nao funciona no estanho"
+        /// vira tentativa e erro; com isso o proprio log diz qual componente o
+        /// alvo usa e o que ele solta.
+        /// </summary>
+        private static void Diagnosticar(GameObject go)
+        {
+            if (!ModConfig.AutoMineDebug.Value) return;
+
+            string nome = go.name;
+            if (nome == _ultimoDiagnostico) return; // nao repete todo frame
+            _ultimoDiagnostico = nome;
+
+            var partes = new System.Text.StringBuilder();
+            partes.Append($"[AUTO-MINERAR] alvo recusado: {nome}");
+
+            var r5 = go.GetComponentInParent<MineRock5>();
+            var r = go.GetComponentInParent<MineRock>();
+            var dd = go.GetComponentInParent<DropOnDestroyed>();
+            var de = go.GetComponentInParent<Destructible>();
+
+            partes.Append($" | MineRock5={r5 != null} MineRock={r != null} " +
+                          $"DropOnDestroyed={dd != null} Destructible={de != null}");
+
+            var tabela = r5?.m_dropItems ?? r?.m_dropItems ?? dd?.m_dropWhenDestroyed;
+            if (tabela?.m_drops != null)
+            {
+                partes.Append(" | solta:");
+                foreach (var d in tabela.m_drops)
+                    if (d.m_item != null) partes.Append(' ').Append(d.m_item.name);
+            }
+            else partes.Append(" | sem tabela de drop");
+
+            Plugin.Log.LogInfo(partes.ToString());
         }
 
         private static float AlcanceDaArma(Player player)
@@ -162,12 +216,16 @@ namespace ValheimTweaks.Patches
                 rt.sizeDelta = new Vector2(400f, 26f);
 
                 _avisoTxt = _aviso.AddComponent<TextMeshProUGUI>();
-                StoreHudPatch.AplicarFonte(_avisoTxt);
                 _avisoTxt.fontSize = 15f;
                 _avisoTxt.alignment = TextAlignmentOptions.Center;
                 _avisoTxt.raycastTarget = false;
-                _avisoTxt.text = "<color=#D8C48A>⛏ minerar automático</color>";
+                // Sem emoji: a fonte do Valheim nao tem esses glifos e sai quadradinho.
+                _avisoTxt.text = "<color=#D8C48A>Minerar automático</color>";
             }
+
+            // Reaplica a cada exibicao: se a HUD ainda nao estava pronta quando o
+            // objeto foi criado, a fonte teria ficado no fallback para sempre.
+            StoreHudPatch.AplicarFonte(_avisoTxt);
 
             if (!_aviso.activeSelf) _aviso.SetActive(true);
         }

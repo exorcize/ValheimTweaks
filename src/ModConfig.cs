@@ -93,6 +93,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<string> AutoMineOres;
         internal static ConfigEntry<float> AutoMineRangeScale;
         internal static ConfigEntry<float> AutoMineHudY;
+        internal static ConfigEntry<bool> AutoMineDebug;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -440,6 +441,11 @@ namespace ValheimTweaks
                 new ConfigDescription(
                     "Altura do aviso de 'minerar automatico' na tela, a partir de baixo.",
                     new AcceptableValueRange<float>(0f, 900f)));
+
+            AutoMineDebug = cfg.Bind("05 - Conveniencia", "AutoMineDebug", true,
+                "Quando o auto-minerar recusa um alvo, anota no log qual componente ele usa " +
+                "e o que ele solta. Serve para descobrir o nome de um minerio que ficou de " +
+                "fora da lista, em vez de ficar tentando no escuro.");
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
