@@ -1,131 +1,136 @@
 # ValheimTweaks
 
-Ajustes de vídeo e rede que o menu do Valheim não oferece.
+Video and network tweaks the Valheim menu does not offer.
 
-Tudo é opcional e vem desligado ou no padrão do jogo, menos o filtro anisotrópico
-e o anti-serrilhado, que são praticamente de graça.
+Everything is optional and ships off or at the game's default, except anisotropic
+filtering and anti-aliasing, which are practically free.
+
+> In-game text follows the language you picked in the game menu (English or
+> Portuguese). This is the main document; the Portuguese version is
+> [README.pt-BR.md](README.pt-BR.md).
 
 ---
 
-## Requisitos
+## Requirements
 
-- BepInEx (o r2modman instala junto)
-- Configuration Manager — é o que abre o menu de opções com **F1**
+- BepInEx (r2modman installs it for you)
+- Configuration Manager — it is what opens the options menu with **F1**
 
-## Principais opções
+## Main options
 
-**Filtro anisotrópico** — chão, estradas e pisos deixam de ficar borrados quando
-vistos de ângulo. É o ajuste com melhor retorno e custo quase zero.
+**Anisotropic filtering** — the ground, roads and floors stop looking blurry when
+seen at an angle. This is the tweak with the best payoff and almost no cost.
 
-**Névoa ajustável** — o Valheim desenha bastante névoa, e ela lava as cores ao
-longe. Baixar para 0.4 abre o horizonte sem tirar o clima. Não custa desempenho.
+**Adjustable fog** — Valheim draws a lot of fog, and it washes out distant colors.
+Lowering it to 0.4 opens up the horizon without removing the mood. No performance
+cost.
 
-**Anti-serrilhado com qualidade** — o jogo só liga e desliga. Aqui dá para
-escolher entre FXAA em cinco níveis ou TAA, que limpa muito melhor folhagem e
-cercas.
+**Quality anti-aliasing** — the game only turns it on and off. Here you can pick
+between five levels of FXAA or TAA, which cleans up foliage and fences far better.
 
-**Sombra de contato (SSAO)** — em resolução cheia e com mais qualidade do que o
-menu permite. É o que dá profundidade e tira o aspecto de objeto colado no chão.
+**Contact shadows (SSAO)** — at full resolution and with higher quality than the
+menu allows. This is what adds depth and removes the "pasted on the ground" look.
 
-**Tela cheia exclusiva** — o menu do jogo só alterna entre janela e sem bordas.
-A exclusiva costuma deixar o movimento mais suave, principalmente em monitor de
-alta taxa de atualização.
+**Exclusive fullscreen** — the game menu only toggles between windowed and
+borderless. Exclusive usually makes motion smoother, especially on a
+high-refresh monitor.
 
-**Timeout de rede** — o jogo desiste de uma conexão parada em 30 segundos, o que
-derruba gente com internet instável. Aqui dá para aumentar.
+**Network timeout** — the game gives up on a stalled connection after 30 seconds,
+which drops people with unstable internet. Here you can raise it.
 
-**Distância de simulação** — permite ir além do limite do menu, para ver
-inimigos e animais de mais longe. Pesa em quem hospeda.
+**Simulation distance** — lets you go past the menu's limit, to see enemies and
+animals from farther away. It weighs on whoever is hosting.
 
-**Portal rápido** — a travessia demora porque o jogo espera a área de destino
-terminar de carregar, e ela disputa fila com mais de cem zonas ao redor. O mod
-reduz esse alcance só durante a passagem e restaura ao chegar. Medido: de 15
-segundos para menos de 2. Vale só para você, não muda nada para os outros.
+**Fast portal** — the crossing is slow because the game waits for the destination
+area to finish loading, and it competes for the queue with over a hundred
+surrounding zones. The mod shrinks that range only during the trip and restores it
+on arrival. Measured: from 15 seconds to under 2. It only applies to you and
+changes nothing for others.
 
-**Campo de visão** — fixo em 65 no jogo, ajustável aqui.
+**Field of view** — fixed at 65 in the game, adjustable here.
 
-**Minerar automático** — uma tecla liga e desliga; com a picareta na mão e o
-minério sob a mira, o personagem bate sozinho até quebrar e para. Só minério, não
-pedra: o mod olha o que o alvo solta.
+**Auto-mining** — one key toggles it; with the pickaxe in hand and ore under the
+crosshair, the character swings by itself until the target breaks and stops. Ore
+only, not stone: the mod looks at what the target drops.
 
-**Guardar nos baús (teclas)** — marque itens no inventário e uma tecla despeja
-tudo nos baús próximos, encaixando nas pilhas que já existem. Uma lista no canto
-mostra o que foi guardado e onde. Vem **sem teclas atribuídas**: o Ctrl+clique do
-painel cobre o mesmo caso. Quem preferir assim escolhe as teclas no F1
-(`StoreMarkKey`, `StoreMarkedKey`, `StoreHoveredKey`).
+**Store in chests (keys)** — mark items in your inventory and one key dumps
+everything into nearby chests, fitting into stacks that already exist. A list in
+the corner shows what was stored and where. It ships with **no keys assigned**:
+the panel's Ctrl+click covers the same case. If you prefer the keys, pick them in
+the F1 menu (`StoreMarkKey`, `StoreMarkedKey`, `StoreHoveredKey`).
 
-**Painel dos baús** — abra o inventário e clique em **Baús próximos** (ou
-configure uma tecla em `ChestSearchKey`). No lugar do painel de produção aparece
-tudo o que está nos baús ao redor, com busca por nome que ignora acento
-(`carvao` acha "Carvão"). Uma barra no topo mostra quantos slots ainda estão
-livres somando todos os baús.
+**Chest panel** — open your inventory and click **Nearby chests** (or bind a key
+to `ChestSearchKey`). In place of the crafting panel you get everything in the
+surrounding chests, with a name search that ignores accents. A bar at the top
+shows how many slots are still free across all chests.
 
-Clicar num item pega uma pilha, igual a pegar de um baú aberto. **Shift+clique**
-abre a telinha de dividir do próprio jogo para escolher a quantidade, e
-**Ctrl+clique** pega tudo. O rodapé também traz atalhos de 1, 10, uma pilha ou
-tudo, com `-/+` e um campo para digitar o número exato.
+Clicking an item takes one stack, just like taking from an open chest.
+**Shift+click** opens the game's own split dialog to choose the amount, and
+**Ctrl+click** takes everything. The footer also has shortcuts for 1, 10, one
+stack or all, with `-/+` and a field to type the exact number.
 
-Para guardar, **Ctrl+clique** num item do inventário manda ele direto para os
-baús. (Sem o painel aberto, esse mesmo atalho larga o item no chão — é o
-comportamento do jogo.) Ou pegue o item como faria normalmente e clique no
-painel. Antes de confirmar ele mostra para onde cada parte vai e por quê:
-primeiro completando pilhas que já existem, depois nos baús que já têm aquele
-item, e só então em espaço livre. Se algo não couber, ele diz quanto.
+To store, **Ctrl+click** an item in your inventory sends it straight to the
+chests. (With the panel closed, that same shortcut drops the item on the ground —
+the game's behavior.) Or pick the item up as you normally would and click the
+panel. Before confirming, it shows where each part goes and why: first topping off
+stacks that already exist, then chests that already hold that item, and only then
+free space. If something does not fit, it tells you how much.
 
-Enquanto o painel está aberto o personagem não anda, para digitar na busca não
-sair mexendo com ele. Fecha pelo botão ou com Esc. Quem preferir andar com ele
-aberto desliga em `ChestSearchBlockMove`.
+While the panel is open the character cannot walk, so typing in the search does
+not make him move. Close it with the button or with Esc. If you would rather walk
+with it open, turn off `ChestSearchBlockMove`.
 
-**Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
-sem precisar abrir.
+**Peek chest** — aiming at a nearby chest shows its contents on the right side
+without opening it.
 
-**Reparo automático** — conserta todo o equipamento gasto ao abrir o inventário
-perto de uma bancada ou forja, em vez de um item por clique. Reparo no Valheim
-não consome material, então isso só poupa cliques.
+**Auto-repair** — repairs all worn equipment when you open your inventory near a
+workbench or forge, instead of one item per click. Repair in Valheim costs no
+material, so this only saves clicks.
 
-Além desses, há controle de sombras, densidade e alcance da grama, limite de
-luzes de tocha, tesselação do terreno e alguns ajustes de desempenho.
+Beyond those, there is control over shadows, grass density and range, torch light
+limits, terrain tessellation and a few performance tweaks.
 
-## Em multijogador
+## In multiplayer
 
-A maior parte das opções é visual e vale só para quem as configurou — o seu
-ajuste não muda nada na tela dos outros.
+Most options are visual and apply only to whoever set them — your tweak changes
+nothing on other people's screens.
 
-Duas exceções:
+Two exceptions:
 
-- **Timeout de rede**: cada jogador encerra a própria conexão, então todos
-  precisam ter o mod e o mesmo valor. Basta um sem o mod para derrubar.
-- **Distância de simulação**: quem hospeda define o teto. Os outros podem usar
-  menos, nunca mais.
+- **Network timeout**: each player closes their own connection, so everyone needs
+  the mod and the same value. A single person without the mod is enough to drop
+  it.
+- **Simulation distance**: whoever hosts sets the ceiling. Others can use less,
+  never more.
 
-## Ferramentas
+## Tools
 
-Há uma seção de diagnóstico que escreve no log um resumo das configurações de
-vídeo em uso e mede o desempenho por alguns segundos, com média, percentis e
-contagem de engasgos. Útil para comparar ajustes com número em vez de impressão.
+There is a diagnostics section that writes a summary of the active video settings
+to the log and measures performance for a few seconds, with average, percentiles
+and a stutter count. Useful to compare tweaks with numbers instead of impressions.
 
-Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afetar
-o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
-cena.
+It comes with an option to freeze the time of day and the weather on your screen,
+without affecting the world or other players, so you can compare two tweaks in the
+same scene.
 
-## Sobre desempenho
+## About performance
 
-Este mod não tenta otimizar o motor do jogo. Para isso vale instalar o
-**ValheimPerformanceOptimizations**, que faz esse trabalho a fundo — streaming
-de objetos, colisão de terreno, culling de luzes e de som, integridade
-estrutural — sem alterar o comportamento do jogo. Os dois convivem: um cuida do
-visual e da rede, o outro do motor.
+This mod does not try to optimize the game engine. For that, install
+**ValheimPerformanceOptimizations**, which does that work in depth — object
+streaming, terrain collision, light and sound culling, structural integrity —
+without changing the game's behavior. The two coexist: one handles the visuals and
+the network, the other the engine.
 
-Os poucos ajustes de desempenho daqui vêm todos no padrão do jogo e existem para
-casos específicos (fumaça em base com muitas fogueiras, intervalo de rede em
-servidor cheio).
+The few performance tweaks here all ship at the game's default and exist for
+specific cases (smoke in a base with many campfires, network interval on a full
+server).
 
-## Alterando as opções
+## Changing the options
 
-Pelo **F1** em jogo, ou editando direto:
+Through **F1** in game, or by editing directly:
 
 ```
 BepInEx/config/com.kyoka.valheimtweaks.cfg
 ```
 
-As mudanças valem na hora, sem reiniciar.
+Changes take effect immediately, no restart needed.
