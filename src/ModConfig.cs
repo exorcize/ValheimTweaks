@@ -81,6 +81,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreHoveredKey;
         internal static ConfigEntry<float> StoreRadius;
         internal static ConfigEntry<bool> StoreFallbackAnyChest;
+        internal static ConfigEntry<bool> StoreOnlyOwnedChests;
         internal static ConfigEntry<bool> StoreHudEnabled;
         internal static ConfigEntry<float> StoreHudX;
         internal static ConfigEntry<float> StoreHudY;
@@ -410,6 +411,13 @@ namespace ValheimTweaks
                 "By default an item only goes into a chest that ALREADY has that item, to avoid " +
                 "messing up the organization. With this on, whatever is left goes into any " +
                 "chest with space.");
+
+            StoreOnlyOwnedChests = cfg.Bind("05 - Convenience", "StoreOnlyOwnedChests", true,
+                "Stores only into chests you own. A chest owned by the other player's client " +
+                "has to be handed over by the network before it can receive items; if the two " +
+                "sides disagree about who owns it, one version overwrites the other and items " +
+                "vanish. Skipping those chests costs nothing -- there is always another one " +
+                "around. Turn this off to use the handshake again.");
 
             StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
                 "Shows a list in the bottom-left corner of what was stored, with the item's " +

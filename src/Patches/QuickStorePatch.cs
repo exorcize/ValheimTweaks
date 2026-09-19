@@ -128,6 +128,10 @@ namespace ValheimTweaks.Patches
                 var nview = cont.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
 
+                // Leave the other player's chests alone when asked to: their handshake can
+                // overwrite the contents and make items vanish.
+                if (ModConfig.StoreOnlyOwnedChests.Value && !Chests.Usable(cont)) continue;
+
                 found.Add(cont);
             }
             return found;

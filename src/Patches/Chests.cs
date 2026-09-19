@@ -40,6 +40,29 @@ namespace ValheimTweaks.Patches
             return Buffer;
         }
 
+        /// <summary>
+        /// True when the local player can safely change this chest's contents: it is ours
+        /// (not owned by the other player's client), nobody is using it, and the guard
+        /// stone allows access.
+        ///
+        /// Storing into a chest we do not own goes through an RPC handshake. If the two
+        /// sides disagree about ownership, one version overwrites the other and items
+        /// vanish -- which is exactly the "my item disappeared" report. Nothing is lost
+        /// by skipping those chests: there is always another one around.
+        /// </summary>
+        internal static bool Usable(Container chest)
+        {
+            if (chest == null) return false;
+
+            var nview = chest.GetComponent<ZNetView>();
+            if (nview == null || !nview.IsValid() || !nview.IsOwner()) return false;
+            if (chest.IsInUse()) return false;
+            if (chest.m_checkGuardStone
+                && !PrivateArea.CheckAccess(chest.transform.position, 0f, false)) return false;
+
+            return true;
+        }
+
         /// <summary>The chest's proper name, or the type's name. Never empty.</summary>
         internal static string VisibleName(Container chest)
         {

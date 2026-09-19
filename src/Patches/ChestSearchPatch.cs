@@ -498,15 +498,7 @@ namespace ValheimTweaks.Patches
         /// Am I already the ZDO owner? Then I can touch the inventory directly -- it's
         /// the same condition the game itself requires before granting the request.
         /// </summary>
-        private static bool IsOwner(Container chest)
-        {
-            var nview = chest.GetComponent<ZNetView>();
-            if (nview == null || !nview.IsValid() || !nview.IsOwner()) return false;
-            if (chest.IsInUse()) return false;
-            if (chest.m_checkGuardStone && !PrivateArea.CheckAccess(chest.transform.position, 0f, false))
-                return false;
-            return true;
-        }
+        private static bool IsOwner(Container chest) => Chests.Usable(chest);
 
         /// <summary>
         /// Takes <paramref name="amount"/> units of the item, gathering from as
@@ -845,10 +837,16 @@ namespace ValheimTweaks.Patches
                 return inv != null && inv.ContainsItemByName(name);
             }
 
+            // With StoreOnlyOwnedChests on, a chest the other player's client owns is left
+            // out of the plan entirely, so the store never goes through the RPC handshake.
+            bool DontUse(Container chest)
+                => ModConfig.StoreOnlyOwnedChests.Value && !Chests.Usable(chest);
+
             // 1) top off existing stacks
             foreach (var b in _chests)
             {
                 if (left <= 0) break;
+                if (DontUse(b.Chest)) continue;
                 var inv = b.Chest.GetInventory();
                 if (inv == null) continue;
                 int fits = inv.FindFreeStackSpace(name, level);
@@ -859,6 +857,7 @@ namespace ValheimTweaks.Patches
             foreach (var b in _chests)
             {
                 if (left <= 0) break;
+                if (DontUse(b.Chest)) continue;
                 if (free[b.Chest] <= 0 || !HasItem(b.Chest)) continue;
                 int fits = Mathf.Min(free[b.Chest] * stack, left);
                 free[b.Chest] -= Mathf.CeilToInt(fits / (float)stack);
@@ -869,6 +868,7 @@ namespace ValheimTweaks.Patches
             foreach (var b in _chests)
             {
                 if (left <= 0) break;
+                if (DontUse(b.Chest)) continue;
                 if (free[b.Chest] <= 0) continue;
                 int fits = Mathf.Min(free[b.Chest] * stack, left);
                 free[b.Chest] -= Mathf.CeilToInt(fits / (float)stack);

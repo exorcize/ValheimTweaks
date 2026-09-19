@@ -80,6 +80,12 @@ While the panel is open the character cannot walk, so typing in the search does
 not make him move. Close it with the button or with Esc. If you would rather walk
 with it open, turn off `ChestSearchBlockMove`.
 
+By default it stores only into chests **you own** (`StoreOnlyOwnedChests`). A
+chest the other player's client currently owns is skipped: writing into it needs a
+network handshake, and if the two sides disagree about who owns it, one version
+overwrites the other and items vanish. There is always another chest around, so
+nothing is lost by skipping them.
+
 **Peek chest** — aiming at a nearby chest shows its contents on the right side
 without opening it.
 

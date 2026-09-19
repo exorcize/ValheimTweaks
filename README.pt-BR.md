@@ -80,6 +80,12 @@ Enquanto o painel está aberto o personagem não anda, para digitar na busca nã
 sair mexendo com ele. Fecha pelo botão ou com Esc. Quem preferir andar com ele
 aberto desliga em `ChestSearchBlockMove`.
 
+Por padrão ele guarda só em baús **seus** (`StoreOnlyOwnedChests`). Um baú que o
+cliente do outro jogador está tomando conta no momento é ignorado: escrever nele
+exige um handshake de rede e, se os dois lados discordarem de quem é o dono, uma
+versão sobrescreve a outra e o item some. Sempre há outro baú por perto, então
+ignorá-los não custa nada.
+
 **Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
 sem precisar abrir.
 

@@ -100,15 +100,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        private static bool Eligible(Container cont)
-        {
-            var nview = cont.GetComponent<ZNetView>();
-            if (nview == null || !nview.IsValid() || !nview.IsOwner()) return false;
-            if (cont.IsInUse()) return false;
-            if (cont.m_checkGuardStone
-                && !PrivateArea.CheckAccess(cont.transform.position, 0f, false)) return false;
-            return true;
-        }
+        private static bool Eligible(Container cont) => Chests.Usable(cont);
 
         /// <summary>How much of <paramref name="name"/> the nearby chests hold.</summary>
         private static int ContainerCount(string name, int quality, bool matchWorldLevel)
