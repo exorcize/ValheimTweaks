@@ -30,19 +30,19 @@ namespace ValheimTweaks.Patches
         private static readonly FieldInfo HoveringField =
             AccessTools.Field(typeof(Player), "m_hovering");
 
-        private static GameObject _painel;
-        private static RectTransform _grade;
-        private static TextMeshProUGUI _titulo;
-        private static TextMeshProUGUI _rodape;
+        private static GameObject _panel;
+        private static RectTransform _grid;
+        private static TextMeshProUGUI _title;
+        private static TextMeshProUGUI _footer;
 
-        private static Container _atual;
-        private static long _revisaoVista = -1;
-        private static float _perdeuMiraEm = -1f;
+        private static Container _current;
+        private static long _seenRevision = -1;
+        private static float _lostAimAt = -1f;
 
         // ------------------------------------------------------------------
         // Detection
         // ------------------------------------------------------------------
-        private static Container BauMirado()
+        private static Container AimedChest()
         {
             var player = Player.m_localPlayer;
             if (player == null || HoveringField == null) return null;
@@ -50,112 +50,112 @@ namespace ValheimTweaks.Patches
             var go = HoveringField.GetValue(player) as GameObject;
             if (go == null) return null;
 
-            var bau = go.GetComponentInParent<Container>();
-            if (bau == null) return null;
+            var chest = go.GetComponentInParent<Container>();
+            if (chest == null) return null;
 
-            float d = Vector3.Distance(player.transform.position, bau.transform.position);
+            float d = Vector3.Distance(player.transform.position, chest.transform.position);
             if (d > ModConfig.ChestPeekDistance.Value) return null;
 
-            return bau;
+            return chest;
         }
 
         internal static void Update()
         {
-            if (!ModConfig.ChestPeekEnabled.Value) { Esconder(); return; }
-            if (InventoryGui.IsVisible() || Minimap.IsOpen()) { Esconder(); return; }
+            if (!ModConfig.ChestPeekEnabled.Value) { Hide(); return; }
+            if (InventoryGui.IsVisible() || Minimap.IsOpen()) { Hide(); return; }
 
-            var bau = BauMirado();
+            var chest = AimedChest();
 
-            if (bau == null)
+            if (chest == null)
             {
                 // Delay before hiding: a crosshair that grazes past would make the panel blink.
-                if (_painel != null && _painel.activeSelf)
+                if (_panel != null && _panel.activeSelf)
                 {
-                    if (_perdeuMiraEm < 0f) _perdeuMiraEm = Time.realtimeSinceStartup;
-                    else if (Time.realtimeSinceStartup - _perdeuMiraEm >= ModConfig.ChestPeekHideDelay.Value)
-                        Esconder();
+                    if (_lostAimAt < 0f) _lostAimAt = Time.realtimeSinceStartup;
+                    else if (Time.realtimeSinceStartup - _lostAimAt >= ModConfig.ChestPeekHideDelay.Value)
+                        Hide();
                 }
                 return;
             }
 
-            _perdeuMiraEm = -1f;
+            _lostAimAt = -1f;
 
-            var nview = bau.GetComponent<ZNetView>();
-            long revisao = nview?.GetZDO() != null ? nview.GetZDO().DataRevision : 0;
+            var nview = chest.GetComponent<ZNetView>();
+            long revision = nview?.GetZDO() != null ? nview.GetZDO().DataRevision : 0;
 
             // Only rebuilds when the chest changes or the contents actually change.
-            if (bau != _atual || revisao != _revisaoVista)
+            if (chest != _current || revision != _seenRevision)
             {
-                _atual = bau;
-                _revisaoVista = revisao;
-                Montar(bau);
+                _current = chest;
+                _seenRevision = revision;
+                Build(chest);
             }
         }
 
-        private static void Esconder()
+        private static void Hide()
         {
-            if (_painel != null && _painel.activeSelf) _painel.SetActive(false);
-            _atual = null;
-            _revisaoVista = -1;
-            _perdeuMiraEm = -1f;
+            if (_panel != null && _panel.activeSelf) _panel.SetActive(false);
+            _current = null;
+            _seenRevision = -1;
+            _lostAimAt = -1f;
         }
 
         // ------------------------------------------------------------------
         // Grouped and sorted contents
         // ------------------------------------------------------------------
-        private class Entrada
+        private class Entry
         {
-            internal Sprite Icone;
+            internal Sprite Icon;
             internal int Total;
         }
 
-        private static List<Entrada> Agrupar(Inventory inv)
+        private static List<Entry> Group(Inventory inv)
         {
-            var mapa = new Dictionary<string, Entrada>();
+            var map = new Dictionary<string, Entry>();
 
             foreach (var item in inv.GetAllItems())
             {
-                string chave = item.m_shared.m_name;
-                if (!mapa.TryGetValue(chave, out var e))
+                string key = item.m_shared.m_name;
+                if (!map.TryGetValue(key, out var e))
                 {
-                    var icones = item.m_shared.m_icons;
-                    e = new Entrada
+                    var icons = item.m_shared.m_icons;
+                    e = new Entry
                     {
-                        Icone = (icones != null && icones.Length > 0)
-                            ? icones[Mathf.Clamp(item.m_variant, 0, icones.Length - 1)]
+                        Icon = (icons != null && icons.Length > 0)
+                            ? icons[Mathf.Clamp(item.m_variant, 0, icons.Length - 1)]
                             : null
                     };
-                    mapa[chave] = e;
+                    map[key] = e;
                 }
                 e.Total += item.m_stack;
             }
 
-            var lista = new List<Entrada>(mapa.Values);
-            lista.Sort((a, b) => b.Total.CompareTo(a.Total));
-            return lista;
+            var list = new List<Entry>(map.Values);
+            list.Sort((a, b) => b.Total.CompareTo(a.Total));
+            return list;
         }
 
         // ------------------------------------------------------------------
         // UI
         // ------------------------------------------------------------------
-        private static void Garantir()
+        private static void Ensure()
         {
-            if (_painel != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
+            if (_panel != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
 
-            _painel = new GameObject("VT_EspiarBau", typeof(RectTransform));
-            _painel.transform.SetParent(Hud.instance.m_rootObject.transform, worldPositionStays: false);
+            _panel = new GameObject("VT_EspiarBau", typeof(RectTransform));
+            _panel.transform.SetParent(Hud.instance.m_rootObject.transform, worldPositionStays: false);
 
-            var rt = _painel.GetComponent<RectTransform>();
+            var rt = _panel.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
             rt.anchoredPosition = new Vector2(-ModConfig.ChestPeekX.Value, 0f);
 
             // Same wood as the game's panels, instead of a plain rectangle of mine.
-            EstiloJogo.Descobrir();
-            var fundo = _painel.AddComponent<Image>();
-            EstiloJogo.AplicarFundo(fundo);
-            fundo.raycastTarget = false;
+            GameStyle.Discover();
+            var background = _panel.AddComponent<Image>();
+            GameStyle.ApplyBackground(background);
+            background.raycastTarget = false;
 
-            var col = _painel.AddComponent<VerticalLayoutGroup>();
+            var col = _panel.AddComponent<VerticalLayoutGroup>();
             // More padding than before: the wood frame has its own border, and
             // content pressed against it looks cramped.
             col.padding = new RectOffset(18, 18, 14, 16);
@@ -166,80 +166,80 @@ namespace ValheimTweaks.Patches
             col.childControlWidth = true;
             col.childControlHeight = true;
 
-            var fit = _painel.AddComponent<ContentSizeFitter>();
+            var fit = _panel.AddComponent<ContentSizeFitter>();
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _titulo = NovoTexto(_painel.transform, 17f, "#E6D3A2");
-            EstiloJogo.AplicarTitulo(_titulo);
-            _titulo.alignment = TextAlignmentOptions.Center;
+            _title = NewText(_panel.transform, 17f, "#E6D3A2");
+            GameStyle.ApplyTitle(_title);
+            _title.alignment = TextAlignmentOptions.Center;
 
-            var gradeGo = new GameObject("grade", typeof(RectTransform));
-            gradeGo.transform.SetParent(_painel.transform, worldPositionStays: false);
-            _grade = gradeGo.GetComponent<RectTransform>();
-            var g = gradeGo.AddComponent<GridLayoutGroup>();
+            var gridGo = new GameObject("grade", typeof(RectTransform));
+            gridGo.transform.SetParent(_panel.transform, worldPositionStays: false);
+            _grid = gridGo.GetComponent<RectTransform>();
+            var g = gridGo.AddComponent<GridLayoutGroup>();
             g.spacing = new Vector2(4f, 4f);
-            var gf = gradeGo.AddComponent<ContentSizeFitter>();
+            var gf = gridGo.AddComponent<ContentSizeFitter>();
             gf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             gf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _rodape = NovoTexto(_painel.transform, 12f, "#9A8F70");
+            _footer = NewText(_panel.transform, 12f, "#9A8F70");
         }
 
-        private static TextMeshProUGUI NovoTexto(Transform pai, float tamanho, string cor)
+        private static TextMeshProUGUI NewText(Transform parent, float size, string color)
         {
             var go = new GameObject("txt", typeof(RectTransform));
-            go.transform.SetParent(pai, worldPositionStays: false);
+            go.transform.SetParent(parent, worldPositionStays: false);
             var t = go.AddComponent<TextMeshProUGUI>();
-            StoreHudPatch.AplicarFonte(t);
-            t.fontSize = tamanho;
+            StoreHudPatch.ApplyFont(t);
+            t.fontSize = size;
             t.alignment = TextAlignmentOptions.MidlineLeft;
             t.enableWordWrapping = false;
             t.raycastTarget = false;
-            t.color = ColorUtility.TryParseHtmlString(cor, out var c) ? c : Color.white;
+            t.color = ColorUtility.TryParseHtmlString(color, out var c) ? c : Color.white;
             return t;
         }
 
-        private static void Montar(Container bau)
+        private static void Build(Container chest)
         {
-            Garantir();
-            if (_painel == null) return;
+            Ensure();
+            if (_panel == null) return;
 
-            var inv = bau.GetInventory();
-            if (inv == null) { Esconder(); return; }
+            var inv = chest.GetInventory();
+            if (inv == null) { Hide(); return; }
 
-            var itens = Agrupar(inv);
+            var items = Group(inv);
 
             // Shows EVERYTHING, but shrinks the slot as the number of types grows
             // so it doesn't take over the screen. Columns increase along with it,
             // otherwise it would become one tall column.
-            float lado;
-            int colunas;
-            if (itens.Count <= 10) { lado = 68f; colunas = 5; }
-            else if (itens.Count <= 24) { lado = 56f; colunas = 6; }
-            else if (itens.Count <= 40) { lado = 48f; colunas = 8; }
-            else { lado = 40f; colunas = 10; }
+            float side;
+            int columns;
+            if (items.Count <= 10) { side = 68f; columns = 5; }
+            else if (items.Count <= 24) { side = 56f; columns = 6; }
+            else if (items.Count <= 40) { side = 48f; columns = 8; }
+            else { side = 40f; columns = 10; }
 
-            var g = _grade.GetComponent<GridLayoutGroup>();
-            g.cellSize = new Vector2(lado, lado);
+            var g = _grid.GetComponent<GridLayoutGroup>();
+            g.cellSize = new Vector2(side, side);
             g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            g.constraintCount = colunas;
+            g.constraintCount = columns;
 
-            for (int i = _grade.childCount - 1; i >= 0; i--)
-                Object.Destroy(_grade.GetChild(i).gameObject);
+            for (int i = _grid.childCount - 1; i >= 0; i--)
+                Object.Destroy(_grid.GetChild(i).gameObject);
 
-            foreach (var e in itens) NovoSlot(lado, e);
+            foreach (var e in items) NewSlot(side, e);
 
-            string nome = StoreHudPatch.NomeDoBau(bau);
-            _titulo.text = string.IsNullOrEmpty(nome)
-                ? Localization.instance.Localize(bau.m_name)
-                : nome;
+            string name = StoreHudPatch.ChestName(chest);
+            _title.text = string.IsNullOrEmpty(name)
+                ? Localization.instance.Localize(chest.m_name)
+                : name;
 
-            _rodape.text = string.Format(
+            _footer.text = string.Format(
                 Lang.T("{0} kinds · {1} / {2} slots", "{0} tipos · {1} / {2} espaços"),
-                itens.Count, inv.NrOfItems(), inv.GetWidth() * inv.GetHeight());
+                items.Count, inv.NrOfItems(), inv.GetWidth() * inv.GetHeight());
 
-            _painel.SetActive(true);
+            _panel.SetActive(true);
         }
 
         /// <summary>
@@ -248,22 +248,22 @@ namespace ValheimTweaks.Patches
         /// position are exactly the game's, and the panel stops looking like
         /// something foreign.
         /// </summary>
-        private static void NovoSlot(float lado, Entrada e)
+        private static void NewSlot(float side, Entry e)
         {
             var prefab = InventoryGui.instance?.m_playerGrid?.m_elementPrefab;
 
             if (prefab == null)
             {
-                SlotSimples(lado, e);   // before the inventory exists
+                SimpleSlot(side, e);   // before the inventory exists
                 return;
             }
 
-            var slotGo = Object.Instantiate(prefab, _grade);
+            var slotGo = Object.Instantiate(prefab, _grid);
             slotGo.SetActive(true);
 
             var el = slotGo.GetComponent<InventoryElement>();
-            el.m_icon.enabled = e.Icone != null;
-            el.m_icon.sprite = e.Icone;
+            el.m_icon.enabled = e.Icon != null;
+            el.m_icon.sprite = e.Icon;
             el.m_icon.color = Color.white;
 
             el.m_amount.enabled = true;
@@ -290,21 +290,21 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        private static void SlotSimples(float lado, Entrada e)
+        private static void SimpleSlot(float side, Entry e)
         {
             var slot = new GameObject("slot", typeof(RectTransform));
-            slot.transform.SetParent(_grade, worldPositionStays: false);
+            slot.transform.SetParent(_grid, worldPositionStays: false);
 
-            var fundo = slot.AddComponent<Image>();
-            fundo.color = new Color(0.10f, 0.10f, 0.09f, 0.95f);
-            fundo.raycastTarget = false;
+            var background = slot.AddComponent<Image>();
+            background.color = new Color(0.10f, 0.10f, 0.09f, 0.95f);
+            background.raycastTarget = false;
 
-            if (e.Icone != null)
+            if (e.Icon != null)
             {
                 var icoGo = new GameObject("ico", typeof(RectTransform));
                 icoGo.transform.SetParent(slot.transform, worldPositionStays: false);
                 var img = icoGo.AddComponent<Image>();
-                img.sprite = e.Icone;
+                img.sprite = e.Icon;
                 img.preserveAspect = true;
                 img.raycastTarget = false;
                 var r = icoGo.GetComponent<RectTransform>();
@@ -314,10 +314,10 @@ namespace ValheimTweaks.Patches
                 r.offsetMax = new Vector2(-3f, -3f);
             }
 
-            var qtd = NovoTexto(slot.transform, Mathf.Max(9f, lado * 0.34f), "#FFFFFF");
-            qtd.text = e.Total.ToString();
-            qtd.alignment = TextAlignmentOptions.BottomRight;
-            var qr = qtd.GetComponent<RectTransform>();
+            var amount = NewText(slot.transform, Mathf.Max(9f, side * 0.34f), "#FFFFFF");
+            amount.text = e.Total.ToString();
+            amount.alignment = TextAlignmentOptions.BottomRight;
+            var qr = amount.GetComponent<RectTransform>();
             qr.anchorMin = Vector2.zero;
             qr.anchorMax = Vector2.one;
             qr.offsetMin = Vector2.zero;

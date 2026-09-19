@@ -63,38 +63,38 @@ namespace ValheimTweaks
             var sorted = new List<float>(Samples);
             sorted.Sort();
 
-            float soma = 0f;
-            foreach (var s in Samples) soma += s;
-            float media = soma / Samples.Count;
+            float sum = 0f;
+            foreach (var s in Samples) sum += s;
+            float average = sum / Samples.Count;
             float p50 = Pct(sorted, 0.50f);
 
             // Stutter = a frame that took more than twice the median. It's what a
             // person feels as a hitch, and it vanishes completely in the average.
-            float limiar = p50 * 2f;
-            int engasgos = 0;
-            float piorSeq = 0f;
+            float threshold = p50 * 2f;
+            int stutters = 0;
+            float worstSeq = 0f;
             foreach (var s in Samples)
             {
-                if (s > limiar) engasgos++;
-                if (s > piorSeq) piorSeq = s;
+                if (s > threshold) stutters++;
+                if (s > worstSeq) worstSeq = s;
             }
 
-            float duracao = soma / 1000f;
+            float duration = sum / 1000f;
 
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine($"=============== PROFILER :: {_tag} ===============");
-            sb.AppendLine($"  {Samples.Count} frames in {duracao:0.0}s");
-            sb.AppendLine($"  average  {media,6:0.00} ms  ({1000f / media:0} fps)");
+            sb.AppendLine($"  {Samples.Count} frames in {duration:0.0}s");
+            sb.AppendLine($"  average  {average,6:0.00} ms  ({1000f / average:0} fps)");
             sb.AppendLine($"  P50      {p50,6:0.00} ms  ({1000f / p50:0} fps)");
             sb.AppendLine($"  P95      {Pct(sorted, 0.95f),6:0.00} ms");
             sb.AppendLine($"  P99      {Pct(sorted, 0.99f),6:0.00} ms  <- what you feel");
             sb.AppendLine($"  P99.9    {Pct(sorted, 0.999f),6:0.00} ms");
-            sb.AppendLine($"  MAX      {piorSeq,6:0.00} ms");
+            sb.AppendLine($"  MAX      {worstSeq,6:0.00} ms");
             sb.AppendLine($"  1% low   {1000f / Pct(sorted, 0.99f),6:0} fps");
-            sb.AppendLine($"  stutters {engasgos} frames above {limiar:0.0}ms " +
-                          $"({(100f * engasgos / Samples.Count):0.00}% of frames, " +
-                          $"{engasgos / Mathf.Max(duracao, 0.001f):0.0}/s)");
+            sb.AppendLine($"  stutters {stutters} frames above {threshold:0.0}ms " +
+                          $"({(100f * stutters / Samples.Count):0.00}% of frames, " +
+                          $"{stutters / Mathf.Max(duration, 0.001f):0.0}/s)");
             sb.AppendLine("==================================================");
 
             if (SystemProfiler.Enabled)

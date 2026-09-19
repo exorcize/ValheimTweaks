@@ -12,41 +12,41 @@ namespace ValheimTweaks.Patches
     /// Outside that it isn't in memory and there's nothing to count -- hence
     /// "chests around" and not "all the chests in the base".
     /// </summary>
-    internal static class Baus
+    internal static class Chests
     {
         private static readonly List<Container> Buffer = new List<Container>();
 
-        internal static List<Container> Proximos(float raio)
+        internal static List<Container> Nearby(float radius)
         {
             Buffer.Clear();
 
             var player = Player.m_localPlayer;
             if (player == null) return Buffer;
 
-            int mascara = LayerMask.GetMask("piece", "piece_nonsolid");
-            var colisores = Physics.OverlapSphere(player.transform.position, raio, mascara);
+            int mask = LayerMask.GetMask("piece", "piece_nonsolid");
+            var colliders = Physics.OverlapSphere(player.transform.position, radius, mask);
 
-            foreach (var c in colisores)
+            foreach (var c in colliders)
             {
-                var cont = c.GetComponentInParent<Container>();
-                if (cont == null || Buffer.Contains(cont)) continue;
+                var container = c.GetComponentInParent<Container>();
+                if (container == null || Buffer.Contains(container)) continue;
 
                 // Without a valid ZDO it's still loading: skipping avoids a lost RPC.
-                var nview = cont.GetComponent<ZNetView>();
+                var nview = container.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
 
-                Buffer.Add(cont);
+                Buffer.Add(container);
             }
             return Buffer;
         }
 
         /// <summary>The chest's proper name, or the type's name. Never empty.</summary>
-        internal static string NomeVisivel(Container bau)
+        internal static string VisibleName(Container chest)
         {
-            if (bau == null) return "";
-            string proprio = StoreHudPatch.NomeDoBau(bau);
-            if (!string.IsNullOrEmpty(proprio)) return proprio;
-            return Localization.instance.Localize(bau.m_name);
+            if (chest == null) return "";
+            string custom = StoreHudPatch.ChestName(chest);
+            if (!string.IsNullOrEmpty(custom)) return custom;
+            return Localization.instance.Localize(chest.m_name);
         }
     }
 }

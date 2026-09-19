@@ -45,9 +45,9 @@ namespace ValheimTweaks.Patches
                 float ms = ModConfig.ZoneGenBudgetMs.Value;
                 if (ms <= 0f || BudgetField == null) return;
 
-                float desejado = ms / 1000f;
-                float atual = (float)BudgetField.GetValue(__instance);
-                if (atual > desejado) BudgetField.SetValue(__instance, desejado);
+                float desired = ms / 1000f;
+                float current = (float)BudgetField.GetValue(__instance);
+                if (current > desired) BudgetField.SetValue(__instance, desired);
             }
         }
 

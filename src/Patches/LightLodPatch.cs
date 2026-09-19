@@ -69,12 +69,12 @@ namespace ValheimTweaks.Patches
             // High->amount; m_amountScale multiplies on top of that and is public.
             // Changing the value requires clearing the already generated patches, otherwise
             // the new density only shows up on new terrain -- hence the ClearAll.
-            float escala = ModConfig.ClutterAmountScale.Value;
-            if (escala > 0f && !Mathf.Approximately(clutter.m_amountScale, escala))
+            float scale = ModConfig.ClutterAmountScale.Value;
+            if (scale > 0f && !Mathf.Approximately(clutter.m_amountScale, scale))
             {
-                clutter.m_amountScale = escala;
+                clutter.m_amountScale = scale;
                 AccessTools.Method(typeof(ClutterSystem), "ClearAll")?.Invoke(clutter, null);
-                Plugin.Log.LogInfo($"ClutterSystem.m_amountScale -> {escala} (patches regenerated)");
+                Plugin.Log.LogInfo($"ClutterSystem.m_amountScale -> {scale} (patches regenerated)");
             }
         }
     }

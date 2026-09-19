@@ -60,9 +60,9 @@ namespace ValheimTweaks.Patches
             int shadowRes = ModConfig.ShadowResolution.Value;
             if (shadowRes > 0)
             {
-                var alvo = (ShadowResolution)(shadowRes - 1);
-                if (QualitySettings.shadowResolution != alvo)
-                    QualitySettings.shadowResolution = alvo;
+                var target = (ShadowResolution)(shadowRes - 1);
+                if (QualitySettings.shadowResolution != target)
+                    QualitySettings.shadowResolution = target;
             }
 
             // --- Tesselation: REAL geometry displacement on the terrain, not a normal map.

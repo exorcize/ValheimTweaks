@@ -32,7 +32,7 @@ namespace ValheimTweaks.Patches
     /// ---- The filter ----
     /// Inventory.StackAll moves everything the destination already contains. To
     /// respect the marking, a Prefix replaces the loop -- but ONLY while our
-    /// operation is in progress (s_filtroAte). Outside of it, the game's quick-stack
+    /// operation is in progress (s_filterUntil). Outside of it, the game's quick-stack
     /// and that of other mods stays intact. That's how conflicts are avoided.
     ///
     /// Since the RPC is asynchronous, the filter lasts for a time window instead of
@@ -41,7 +41,7 @@ namespace ValheimTweaks.Patches
     /// </summary>
     internal static class QuickStorePatch
     {
-        private const string ChaveMarca = "vt_store";
+        private const string MarkKey = "vt_store";
 
         private static readonly MethodInfo GetHoveredElementMethod =
             AccessTools.Method(typeof(InventoryGrid), "GetHoveredElement");
@@ -50,51 +50,51 @@ namespace ValheimTweaks.Patches
         private static readonly MethodInfo ChangedMethod =
             AccessTools.Method(typeof(Inventory), "Changed", new[] { typeof(bool), typeof(bool) });
 
-        private static void Notificar(Inventory inv)
+        private static void Notify(Inventory inv)
         {
             if (inv != null) ChangedMethod?.Invoke(inv, new object[] { false, false });
         }
 
         // Filter active during the operation. null = normal game behavior.
-        private static System.Func<ItemDrop.ItemData, bool> s_filtro;
-        private static float s_filtroAte;
-        private static int s_movidos;
+        private static System.Func<ItemDrop.ItemData, bool> s_filter;
+        private static float s_filterUntil;
+        private static int s_moved;
 
-        private static bool FiltroAtivo => s_filtro != null && Time.realtimeSinceStartup < s_filtroAte;
+        private static bool FilterActive => s_filter != null && Time.realtimeSinceStartup < s_filterUntil;
 
         // ------------------------------------------------------------------
         // Marking (persisted on the item, survives a save and inventory swaps)
         // ------------------------------------------------------------------
-        internal static bool EstaMarcado(ItemDrop.ItemData item)
-            => item?.m_customData != null && item.m_customData.ContainsKey(ChaveMarca);
+        internal static bool IsMarked(ItemDrop.ItemData item)
+            => item?.m_customData != null && item.m_customData.ContainsKey(MarkKey);
 
-        private static void AlternarMarca(ItemDrop.ItemData item)
+        private static void ToggleMark(ItemDrop.ItemData item)
         {
             if (item?.m_customData == null) return;
 
-            if (item.m_customData.Remove(ChaveMarca))
+            if (item.m_customData.Remove(MarkKey))
             {
-                Aviso($"{item.m_shared.m_name} " + Lang.T("unmarked", "desmarcado"));
+                Toast($"{item.m_shared.m_name} " + Lang.T("unmarked", "desmarcado"));
             }
             else
             {
-                item.m_customData[ChaveMarca] = "1";
-                Aviso($"{item.m_shared.m_name} " + Lang.T("marked to store", "marcado para guardar"));
+                item.m_customData[MarkKey] = "1";
+                Toast($"{item.m_shared.m_name} " + Lang.T("marked to store", "marcado para guardar"));
             }
-            Notificar(Player.m_localPlayer?.GetInventory());
+            Notify(Player.m_localPlayer?.GetInventory());
         }
 
-        private static void Aviso(string texto)
+        private static void Toast(string text)
         {
             if (Player.m_localPlayer != null)
                 Player.m_localPlayer.Message(MessageHud.MessageType.Center,
-                    texto);
+                    text);
         }
 
         // ------------------------------------------------------------------
         // Item under the cursor
         // ------------------------------------------------------------------
-        private static ItemDrop.ItemData ItemSobCursor()
+        private static ItemDrop.ItemData ItemUnderCursor()
         {
             var gui = InventoryGui.instance;
             if (gui == null || gui.m_playerGrid == null || GetHoveredElementMethod == null) return null;
@@ -109,59 +109,59 @@ namespace ValheimTweaks.Patches
         // ------------------------------------------------------------------
         // Dump
         // ------------------------------------------------------------------
-        private static List<Container> BausProximos()
+        private static List<Container> NearbyChests()
         {
-            var achados = new List<Container>();
+            var found = new List<Container>();
             var player = Player.m_localPlayer;
-            if (player == null) return achados;
+            if (player == null) return found;
 
-            int mascara = LayerMask.GetMask("piece", "piece_nonsolid");
-            var colisores = Physics.OverlapSphere(
-                player.transform.position, ModConfig.StoreRadius.Value, mascara);
+            int mask = LayerMask.GetMask("piece", "piece_nonsolid");
+            var colliders = Physics.OverlapSphere(
+                player.transform.position, ModConfig.StoreRadius.Value, mask);
 
-            foreach (var c in colisores)
+            foreach (var c in colliders)
             {
                 var cont = c.GetComponentInParent<Container>();
-                if (cont == null || achados.Contains(cont)) continue;
+                if (cont == null || found.Contains(cont)) continue;
 
                 // A chest without a valid ZDO is still loading; skipping avoids a lost RPC.
                 var nview = cont.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
 
-                achados.Add(cont);
+                found.Add(cont);
             }
-            return achados;
+            return found;
         }
 
         // Inventory -> Container. The StackAll Prefix only receives the inventory, and
         // we need the Container to find out the chest's name.
-        private static readonly Dictionary<Inventory, Container> Dono =
+        private static readonly Dictionary<Inventory, Container> Owner =
             new Dictionary<Inventory, Container>();
 
-        private static void Despejar(System.Func<ItemDrop.ItemData, bool> filtro, string oQue)
+        private static void Dump(System.Func<ItemDrop.ItemData, bool> filter, string what)
         {
-            var baus = BausProximos();
-            if (baus.Count == 0)
+            var chests = NearbyChests();
+            if (chests.Count == 0)
             {
-                Aviso(Lang.T("No chest nearby", "Nenhum baú por perto"));
+                Toast(Lang.T("No chest nearby", "Nenhum baú por perto"));
                 return;
             }
 
-            Dono.Clear();
-            foreach (var b in baus)
+            Owner.Clear();
+            foreach (var b in chests)
             {
                 var inv = b.GetInventory();
-                if (inv != null) Dono[inv] = b;
+                if (inv != null) Owner[inv] = b;
             }
 
-            s_filtro = filtro;
-            s_movidos = 0;
+            s_filter = filter;
+            s_moved = 0;
             // Generous window: each chest responds on its own frame.
-            s_filtroAte = Time.realtimeSinceStartup + 3f;
+            s_filterUntil = Time.realtimeSinceStartup + 3f;
 
-            foreach (var bau in baus) bau.StackAll();
+            foreach (var chest in chests) chest.StackAll();
 
-            Plugin.Log.LogInfo($"[STORE] {oQue} -> {baus.Count} chest(s) in {ModConfig.StoreRadius.Value}m");
+            Plugin.Log.LogInfo($"[STORE] {what} -> {chests.Count} chest(s) in {ModConfig.StoreRadius.Value}m");
         }
 
         // ------------------------------------------------------------------
@@ -173,31 +173,31 @@ namespace ValheimTweaks.Patches
             private static bool Prefix(Inventory __instance, Inventory fromInventory,
                                        ref int __result)
             {
-                if (!FiltroAtivo) return true; // normal game, we don't interfere
+                if (!FilterActive) return true; // normal game, we don't interfere
 
                 var player = Player.m_localPlayer;
                 if (player == null) return true;
 
-                int movidos = 0;
-                var itens = new List<ItemDrop.ItemData>(fromInventory.GetAllItems());
+                int moved = 0;
+                var items = new List<ItemDrop.ItemData>(fromInventory.GetAllItems());
 
-                Dono.TryGetValue(__instance, out var bau);
-                string nomeBau = StoreHudPatch.NomeDoBau(bau);
+                Owner.TryGetValue(__instance, out var chest);
+                string chestName = StoreHudPatch.ChestName(chest);
 
                 // 1st pass: only where the chest ALREADY has the item (game behavior).
-                foreach (var item in itens)
+                foreach (var item in items)
                 {
-                    if (!s_filtro(item) || player.IsItemEquiped(item)) continue;
+                    if (!s_filter(item) || player.IsItemEquiped(item)) continue;
                     if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
 
-                    int qtd = item.m_stack;
+                    int amount = item.m_stack;
                     // Remove the mark before moving: it's only valid while the item is yours.
-                    item.m_customData?.Remove(ChaveMarca);
+                    item.m_customData?.Remove(MarkKey);
                     if (__instance.AddItem(item))
                     {
                         fromInventory.RemoveItem(item);
-                        movidos++;
-                        StoreHudPatch.Adicionar(item, qtd, nomeBau);
+                        moved++;
+                        StoreHudPatch.Add(item, amount, chestName);
                     }
                 }
 
@@ -206,28 +206,28 @@ namespace ValheimTweaks.Patches
                 {
                     foreach (var item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
                     {
-                        if (!s_filtro(item) || player.IsItemEquiped(item)) continue;
+                        if (!s_filter(item) || player.IsItemEquiped(item)) continue;
 
-                        int qtd = item.m_stack;
+                        int amount = item.m_stack;
                         if (__instance.AddItem(item))
                         {
                             fromInventory.RemoveItem(item);
-                            movidos++;
-                            StoreHudPatch.Adicionar(item, qtd, nomeBau);
+                            moved++;
+                            StoreHudPatch.Add(item, amount, chestName);
                         }
                     }
                 }
 
-                if (movidos > 0)
+                if (moved > 0)
                 {
-                    Notificar(__instance);
-                    Notificar(fromInventory);
-                    s_movidos += movidos;
-                    Aviso(string.Format(
-                        Lang.T("{0} item(s) stored", "{0} item(ns) guardado(s)"), s_movidos));
+                    Notify(__instance);
+                    Notify(fromInventory);
+                    s_moved += moved;
+                    Toast(string.Format(
+                        Lang.T("{0} item(s) stored", "{0} item(ns) guardado(s)"), s_moved));
                 }
 
-                __result = movidos;
+                __result = moved;
                 return false; // skips the original
             }
         }
@@ -238,7 +238,7 @@ namespace ValheimTweaks.Patches
         [HarmonyPatch(typeof(InventoryGrid), "UpdateGui")]
         internal static class UpdateGuiHook
         {
-            private static readonly Color Tom = new Color(0.55f, 0.85f, 1f, 1f);
+            private static readonly Color Tint = new Color(0.55f, 0.85f, 1f, 1f);
 
             private static void Postfix(InventoryGrid __instance)
             {
@@ -249,8 +249,8 @@ namespace ValheimTweaks.Patches
                 // when it goes to the chest -- and it turned blue in there. The mark only
                 // makes sense in YOUR inventory: outside of it, don't even tint.
                 var gui = InventoryGui.instance;
-                bool ehGradeDoJogador = gui != null && __instance == gui.m_playerGrid;
-                if (!ehGradeDoJogador)
+                bool isPlayerGrid = gui != null && __instance == gui.m_playerGrid;
+                if (!isPlayerGrid)
                 {
                     foreach (var el in __instance.GetComponentsInChildren<InventoryElement>(true))
                         if (el.m_icon != null) el.m_icon.color = Color.white;
@@ -264,7 +264,7 @@ namespace ValheimTweaks.Patches
                     var item = inv.GetItemAt(el.Position.x, el.Position.y);
                     // Always rewrite, both ways: the game reuses the elements between
                     // openings and a tinted icon would get stuck.
-                    el.m_icon.color = (item != null && EstaMarcado(item)) ? Tom : Color.white;
+                    el.m_icon.color = (item != null && IsMarked(item)) ? Tint : Color.white;
                 }
             }
         }
@@ -280,19 +280,19 @@ namespace ValheimTweaks.Patches
 
             if (ModConfig.StoreMarkKey.Value.IsDown())
             {
-                var item = ItemSobCursor();
-                if (item != null) AlternarMarca(item);
+                var item = ItemUnderCursor();
+                if (item != null) ToggleMark(item);
             }
 
             if (ModConfig.StoreHoveredKey.Value.IsDown())
             {
-                var item = ItemSobCursor();
-                if (item != null) Despejar(i => i == item, item.m_shared.m_name);
+                var item = ItemUnderCursor();
+                if (item != null) Dump(i => i == item, item.m_shared.m_name);
             }
 
             if (ModConfig.StoreMarkedKey.Value.IsDown())
             {
-                Despejar(EstaMarcado, "marked items");
+                Dump(IsMarked, "marked items");
             }
         }
     }

@@ -24,16 +24,16 @@ namespace ValheimTweaks.Patches
     /// </summary>
     internal static class StoreHudPatch
     {
-        private class Linha
+        private class Line
         {
             internal GameObject Go;
             internal CanvasGroup Fade;
-            internal float Nasceu;
+            internal float BornAt;
         }
 
-        private static GameObject _raiz;
-        private static readonly List<Linha> Linhas = new List<Linha>();
-        private static TMP_FontAsset _fonte;
+        private static GameObject _root;
+        private static readonly List<Line> Lines = new List<Line>();
+        private static TMP_FontAsset _font;
         private static Material _material;
 
         /// <summary>
@@ -42,44 +42,44 @@ namespace ValheimTweaks.Patches
         /// fontSharedMaterial TextMeshPro falls back -- that's what made the text
         /// look like a console on the first attempt.
         /// </summary>
-        internal static bool AplicarFonte(TMP_Text alvo)
+        internal static bool ApplyFont(TMP_Text target)
         {
-            if (alvo == null) return false;
+            if (target == null) return false;
 
-            if (_fonte == null && Hud.instance != null)
+            if (_font == null && Hud.instance != null)
             {
-                TMP_Text molde = Hud.instance.m_healthText
+                TMP_Text template = Hud.instance.m_healthText
                               ?? Hud.instance.m_staminaText
                               ?? Hud.instance.m_actionName;
 
-                if (molde == null && MessageHud.instance != null)
-                    molde = MessageHud.instance.m_messageCenterText;
+                if (template == null && MessageHud.instance != null)
+                    template = MessageHud.instance.m_messageCenterText;
 
-                if (molde != null)
+                if (template != null)
                 {
-                    _fonte = molde.font;
-                    _material = molde.fontSharedMaterial;
+                    _font = template.font;
+                    _material = template.fontSharedMaterial;
                 }
             }
 
-            if (_fonte == null) return false;   // HUD not ready yet: try again later
+            if (_font == null) return false;   // HUD not ready yet: try again later
 
-            alvo.font = _fonte;
-            if (_material != null) alvo.fontSharedMaterial = _material;
+            target.font = _font;
+            if (_material != null) target.fontSharedMaterial = _material;
             return true;
         }
 
         // ------------------------------------------------------------------
         // Chest's custom name, or null
         // ------------------------------------------------------------------
-        internal static string NomeDoBau(Container bau)
+        internal static string ChestName(Container chest)
         {
-            if (bau == null) return null;
+            if (chest == null) return null;
 
-            string atual = bau.GetHoverName();
-            if (string.IsNullOrEmpty(atual)) return null;
+            string current = chest.GetHoverName();
+            if (string.IsNullOrEmpty(current)) return null;
 
-            var nview = bau.GetComponent<ZNetView>();
+            var nview = chest.GetComponent<ZNetView>();
             var zdo = nview != null ? nview.GetZDO() : null;
             if (zdo == null || ZNetScene.instance == null) return null;
 
@@ -88,26 +88,26 @@ namespace ValheimTweaks.Patches
             if (original == null) return null;
 
             // Same as the piece's default = no one renamed it.
-            return atual == original.m_name ? null : atual;
+            return current == original.m_name ? null : current;
         }
 
         // ------------------------------------------------------------------
         // UI construction
         // ------------------------------------------------------------------
-        private static void Garantir()
+        private static void Ensure()
         {
-            if (_raiz != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
+            if (_root != null || Hud.instance == null || Hud.instance.m_rootObject == null) return;
 
-            _raiz = new GameObject("VT_ItensGuardados", typeof(RectTransform));
-            _raiz.transform.SetParent(Hud.instance.m_rootObject.transform, worldPositionStays: false);
+            _root = new GameObject("VT_ItensGuardados", typeof(RectTransform));
+            _root.transform.SetParent(Hud.instance.m_rootObject.transform, worldPositionStays: false);
 
-            var rt = _raiz.GetComponent<RectTransform>();
+            var rt = _root.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
             rt.anchoredPosition = new Vector2(
                 ModConfig.StoreHudX.Value, ModConfig.StoreHudY.Value);
             rt.sizeDelta = new Vector2(400f, 0f);
 
-            var layout = _raiz.AddComponent<VerticalLayoutGroup>();
+            var layout = _root.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.LowerLeft;
             layout.spacing = 3f;
             layout.childForceExpandWidth = false;
@@ -115,19 +115,19 @@ namespace ValheimTweaks.Patches
             layout.childControlWidth = true;
             layout.childControlHeight = true;
 
-            var fitter = _raiz.AddComponent<ContentSizeFitter>();
+            var fitter = _root.AddComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
 
-        internal static void Adicionar(ItemDrop.ItemData item, int quantidade, string nomeBau)
+        internal static void Add(ItemDrop.ItemData item, int amount, string chestName)
         {
             if (!ModConfig.StoreHudEnabled.Value || item == null) return;
-            Garantir();
-            if (_raiz == null) return;
+            Ensure();
+            if (_root == null) return;
 
             var go = new GameObject("linha", typeof(RectTransform));
-            go.transform.SetParent(_raiz.transform, worldPositionStays: false);
+            go.transform.SetParent(_root.transform, worldPositionStays: false);
 
             var fade = go.AddComponent<CanvasGroup>();
             var h = go.AddComponent<HorizontalLayoutGroup>();
@@ -139,13 +139,13 @@ namespace ValheimTweaks.Patches
             h.childControlHeight = true;
 
             // Icon
-            var icones = item.m_shared.m_icons;
-            if (icones != null && icones.Length > 0)
+            var icons = item.m_shared.m_icons;
+            if (icons != null && icons.Length > 0)
             {
                 var icoGo = new GameObject("ico", typeof(RectTransform));
                 icoGo.transform.SetParent(go.transform, worldPositionStays: false);
                 var img = icoGo.AddComponent<Image>();
-                img.sprite = icones[Mathf.Clamp(item.m_variant, 0, icones.Length - 1)];
+                img.sprite = icons[Mathf.Clamp(item.m_variant, 0, icons.Length - 1)];
                 img.preserveAspect = true;
                 var le = icoGo.AddComponent<LayoutElement>();
                 le.preferredWidth = le.preferredHeight = 20f;
@@ -155,7 +155,7 @@ namespace ValheimTweaks.Patches
             var txtGo = new GameObject("txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, worldPositionStays: false);
             var txt = txtGo.AddComponent<TextMeshProUGUI>();
-            AplicarFonte(txt);
+            ApplyFont(txt);
             txt.fontSize = ModConfig.StoreHudFontSize.Value;
             txt.alignment = TextAlignmentOptions.MidlineLeft;
             txt.enableWordWrapping = false;
@@ -163,22 +163,22 @@ namespace ValheimTweaks.Patches
 
             // m_name is a localization token ("$item_feathers"); without Localize
             // the raw token appears on screen.
-            string nome = Localization.instance.Localize(item.m_shared.m_name);
-            txt.text = string.IsNullOrEmpty(nomeBau)
-                ? $"<color=#E8DDC4>{nome} x{quantidade}</color>"
-                : $"<color=#E8DDC4>{nome} x{quantidade}</color> <color=#A8996F>→</color> <color=#D8C48A>{nomeBau}</color>";
+            string name = Localization.instance.Localize(item.m_shared.m_name);
+            txt.text = string.IsNullOrEmpty(chestName)
+                ? $"<color=#E8DDC4>{name} x{amount}</color>"
+                : $"<color=#E8DDC4>{name} x{amount}</color> <color=#A8996F>→</color> <color=#D8C48A>{chestName}</color>";
 
-            Linhas.Add(new Linha { Go = go, Fade = fade, Nasceu = Time.realtimeSinceStartup });
+            Lines.Add(new Line { Go = go, Fade = fade, BornAt = Time.realtimeSinceStartup });
 
             // Line cap: a big dump would become a wall of text.
-            while (Linhas.Count > ModConfig.StoreHudMaxLines.Value) Remover(0);
+            while (Lines.Count > ModConfig.StoreHudMaxLines.Value) Remove(0);
         }
 
-        private static void Remover(int i)
+        private static void Remove(int i)
         {
-            if (i < 0 || i >= Linhas.Count) return;
-            if (Linhas[i].Go != null) Object.Destroy(Linhas[i].Go);
-            Linhas.RemoveAt(i);
+            if (i < 0 || i >= Lines.Count) return;
+            if (Lines[i].Go != null) Object.Destroy(Lines[i].Go);
+            Lines.RemoveAt(i);
         }
 
         // ------------------------------------------------------------------
@@ -186,22 +186,22 @@ namespace ValheimTweaks.Patches
         // ------------------------------------------------------------------
         internal static void Update()
         {
-            if (Linhas.Count == 0) return;
+            if (Lines.Count == 0) return;
 
-            float agora = Time.realtimeSinceStartup;
-            float vida = ModConfig.StoreHudSeconds.Value;
+            float now = Time.realtimeSinceStartup;
+            float life = ModConfig.StoreHudSeconds.Value;
             const float Fade = 1f;
 
-            for (int i = Linhas.Count - 1; i >= 0; i--)
+            for (int i = Lines.Count - 1; i >= 0; i--)
             {
-                var l = Linhas[i];
-                if (l.Go == null) { Linhas.RemoveAt(i); continue; }
+                var l = Lines[i];
+                if (l.Go == null) { Lines.RemoveAt(i); continue; }
 
-                float idade = agora - l.Nasceu;
-                if (idade >= vida) { Remover(i); continue; }
+                float age = now - l.BornAt;
+                if (age >= life) { Remove(i); continue; }
 
-                l.Fade.alpha = idade > vida - Fade
-                    ? Mathf.Clamp01((vida - idade) / Fade)
+                l.Fade.alpha = age > life - Fade
+                    ? Mathf.Clamp01((life - age) / Fade)
                     : 1f;
             }
         }

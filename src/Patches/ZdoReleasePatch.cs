@@ -54,20 +54,20 @@ namespace ValheimTweaks.Patches
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 var getter = AccessTools.Method(typeof(ZdoReleasePatch), nameof(GetInterval));
-                bool trocado = false;
+                bool swapped = false;
 
                 foreach (var ins in instructions)
                 {
-                    if (!trocado && ins.opcode == OpCodes.Ldc_R4 && ins.operand is float f && f == 2f)
+                    if (!swapped && ins.opcode == OpCodes.Ldc_R4 && ins.operand is float f && f == 2f)
                     {
                         yield return new CodeInstruction(OpCodes.Call, getter);
-                        trocado = true;
+                        swapped = true;
                         continue;
                     }
                     yield return ins;
                 }
 
-                if (!trocado)
+                if (!swapped)
                 {
                     Plugin.Log.LogError(
                         "ZdoReleasePatch: constant 2f not found in ReleaseZDOS. " +

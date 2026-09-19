@@ -42,10 +42,10 @@ namespace ValheimTweaks.Patches
                 // ready when the central zone finishes loading assets, and with
                 // 121 zones requesting assets at the same time it gets stuck in the queue.
                 // Measured: 14.7s and 16.8s with near=5 versus 3.7s and 1.5s with near=2.
-                if (TeleportSpeedPatch.EmTeleporte)
+                if (TeleportSpeedPatch.IsTeleporting)
                 {
-                    int reduzido = ModConfig.TeleportSimDistance.Value;
-                    if (reduzido > 0) near = System.Math.Min(near, reduzido);
+                    int reduced = ModConfig.TeleportSimDistance.Value;
+                    if (reduced > 0) near = System.Math.Min(near, reduced);
                 }
 
                 if (near == __result.NearSimulationDistance) return;
@@ -67,10 +67,10 @@ namespace ValheimTweaks.Patches
             znet.SimulationDistanceServerHandshake();
 
             var sim = znet.GetSyncedSimulationDistance();
-            int zonas = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
+            int zones = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
             Plugin.Log.LogInfo(
                 $"SimulationDistance: near={sim.NearSimulationDistance} far={sim.FarSimulationDistance} " +
-                $"-> {zonas} zones ({(znet.IsServer() ? "host: ceiling for everyone" : "client: limited by host")})");
+                $"-> {zones} zones ({(znet.IsServer() ? "host: ceiling for everyone" : "client: limited by host")})");
         }
     }
 }

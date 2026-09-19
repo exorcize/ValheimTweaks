@@ -39,17 +39,17 @@ namespace ValheimTweaks.Patches
     {
         internal static void Apply()
         {
-            int modo = ModConfig.DisplayMode.Value;
-            if (modo <= 0) return; // 0 = do not touch
+            int mode = ModConfig.DisplayMode.Value;
+            if (mode <= 0) return; // 0 = do not touch
 
-            FullScreenMode alvo = modo switch
+            FullScreenMode target = mode switch
             {
                 1 => FullScreenMode.ExclusiveFullScreen,
                 2 => FullScreenMode.FullScreenWindow,
                 _ => FullScreenMode.Windowed,
             };
 
-            if (Screen.fullScreenMode == alvo) return;
+            if (Screen.fullScreenMode == target) return;
 
             // In exclusive, the resolution must be a real monitor mode. The current
             // window (e.g. 1267x1048) is not -- so we use the desktop one.
@@ -59,9 +59,9 @@ namespace ValheimTweaks.Patches
 
             Plugin.Log.LogInfo(
                 $"Display mode: {Screen.fullScreenMode} ({Screen.width}x{Screen.height}) " +
-                $"-> {alvo} ({w}x{h} @ {res.refreshRateRatio.value:0.##}Hz)");
+                $"-> {target} ({w}x{h} @ {res.refreshRateRatio.value:0.##}Hz)");
 
-            Screen.SetResolution(w, h, alvo, res.refreshRateRatio);
+            Screen.SetResolution(w, h, target, res.refreshRateRatio);
         }
     }
 }

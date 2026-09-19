@@ -22,28 +22,28 @@ namespace ValheimTweaks.Patches
     /// </summary>
     internal static class ScenePatch
     {
-        private static string _climaAplicado;
+        private static string _appliedWeather;
 
         internal static void Apply()
         {
             var env = EnvMan.instance;
             if (env == null) return; // out of world; reapplies on the next load
 
-            bool travar = ModConfig.FreezeTimeOfDay.Value;
-            if (env.m_debugTimeOfDay != travar)
+            bool freeze = ModConfig.FreezeTimeOfDay.Value;
+            if (env.m_debugTimeOfDay != freeze)
             {
-                env.m_debugTimeOfDay = travar;
-                Plugin.Log.LogInfo($"Time of day {(travar ? "FROZEN" : "released")}");
+                env.m_debugTimeOfDay = freeze;
+                Plugin.Log.LogInfo($"Time of day {(freeze ? "FROZEN" : "released")}");
             }
-            if (travar) env.m_debugTime = ModConfig.TimeOfDay.Value;
+            if (freeze) env.m_debugTime = ModConfig.TimeOfDay.Value;
 
-            string clima = ModConfig.ForceWeather.Value?.Trim() ?? "";
-            if (clima != _climaAplicado)
+            string weather = ModConfig.ForceWeather.Value?.Trim() ?? "";
+            if (weather != _appliedWeather)
             {
-                _climaAplicado = clima;
-                env.SetForceEnvironment(clima);
-                Plugin.Log.LogInfo(clima.Length > 0
-                    ? $"Weather forced: {clima}"
+                _appliedWeather = weather;
+                env.SetForceEnvironment(weather);
+                Plugin.Log.LogInfo(weather.Length > 0
+                    ? $"Weather forced: {weather}"
                     : "Weather released (back to the biome's normal)");
             }
         }

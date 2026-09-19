@@ -73,15 +73,15 @@ namespace ValheimTweaks
             if (znet != null)
             {
                 var sim = znet.GetSyncedSimulationDistance();
-                int zonas = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
+                int zones = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
                 float zoneSize = ZoneSystem.instance != null ? ZoneSystem.instance.m_zoneSize : 64f;
-                float distCriaturas = sim.NearSimulationDistance * zoneSize + zoneSize * 0.5f;
-                float distCenario = sim.TotalSimulationDistance * zoneSize + zoneSize * 0.5f;
+                float creatureDist = sim.NearSimulationDistance * zoneSize + zoneSize * 0.5f;
+                float sceneryDist = sim.TotalSimulationDistance * zoneSize + zoneSize * 0.5f;
                 sb.AppendLine($"  IsServer = {znet.IsServer()}");
                 sb.AppendLine($"  SimulationDistance: near = {sim.NearSimulationDistance}  far = {sim.FarSimulationDistance}  classic = {sim.IsClassic}");
-                sb.AppendLine($"    -> {zonas} simulated zones (vanilla near=2 -> 25 zones)");
-                sb.AppendLine($"    -> CREATURES (enemies/animals) visible up to ~{distCriaturas:0} m   [= near]");
-                sb.AppendLine($"    -> distant scenery up to ~{distCenario:0} m   [= near+far, the number the menu shows]");
+                sb.AppendLine($"    -> {zones} simulated zones (vanilla near=2 -> 25 zones)");
+                sb.AppendLine($"    -> CREATURES (enemies/animals) visible up to ~{creatureDist:0} m   [= near]");
+                sb.AppendLine($"    -> distant scenery up to ~{sceneryDist:0} m   [= near+far, the number the menu shows]");
                 sb.AppendLine($"  ZRpc timeout atual = {Patches.TimeoutPatch.Current}s");
             }
             else
@@ -131,9 +131,9 @@ namespace ValheimTweaks
         {
             sb.AppendLine("[WORLD: MULTIPLIERS]");
 
-            void Rate(string nome, float v)
+            void Rate(string name, float v)
             {
-                if (!Mathf.Approximately(v, 1f)) sb.AppendLine($"  {nome,-22} {v:0.##}  <- changed");
+                if (!Mathf.Approximately(v, 1f)) sb.AppendLine($"  {name,-22} {v:0.##}  <- changed");
             }
 
             Rate("PlayerDamage", Game.m_playerDamageRate);
@@ -160,7 +160,7 @@ namespace ValheimTweaks
 
             sb.AppendLine("[WORLD: ACTIVE FLAGS]");
             // Only those that change game rules -- the progress ones (defeated_*) are left out.
-            GlobalKeys[] interessantes =
+            GlobalKeys[] interesting =
             {
                 GlobalKeys.TeleportAll, GlobalKeys.NoPortals, GlobalKeys.NoBossPortals,
                 GlobalKeys.DeathKeepEquip, GlobalKeys.DeathKeepInventory,
@@ -172,12 +172,12 @@ namespace ValheimTweaks
                 GlobalKeys.NoHeavySnow, GlobalKeys.AllHeavySnow, GlobalKeys.NoPseudoDrops
             };
 
-            bool alguma = false;
-            foreach (var k in interessantes)
+            bool any = false;
+            foreach (var k in interesting)
             {
-                if (zs.GetGlobalKey(k)) { sb.AppendLine($"  {k}"); alguma = true; }
+                if (zs.GetGlobalKey(k)) { sb.AppendLine($"  {k}"); any = true; }
             }
-            if (!alguma) sb.AppendLine("  none (world at default)");
+            if (!any) sb.AppendLine("  none (world at default)");
         }
 
         /// <summary>
@@ -217,26 +217,26 @@ namespace ValheimTweaks
 
                 float dist = Vector3.Distance(origin, d.transform.position);
                 var lod = d.GetComponentInChildren<LODGroup>();
-                string nome = d.name.Replace("(Clone)", "");
+                string name = d.name.Replace("(Clone)", "");
 
                 if (lod == null)
                 {
-                    sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  no LODGroup (not LOD culling)");
+                    sb.AppendLine($"  {name,-24} {dist,6:0.0}m  no LODGroup (not LOD culling)");
                     continue;
                 }
 
                 var lods = lod.GetLODs();
-                float menorThreshold = 1f;
+                float minThreshold = 1f;
                 foreach (var l in lods)
-                    if (l.screenRelativeTransitionHeight < menorThreshold)
-                        menorThreshold = l.screenRelativeTransitionHeight;
+                    if (l.screenRelativeTransitionHeight < minThreshold)
+                        minThreshold = l.screenRelativeTransitionHeight;
 
-                float cull = menorThreshold > 0f
-                    ? (lod.size * bias) / (2f * menorThreshold * tanHalf)
+                float cull = minThreshold > 0f
+                    ? (lod.size * bias) / (2f * minThreshold * tanHalf)
                     : -1f;
 
-                sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  LODs={lods.Length} size={lod.size:0.00} " +
-                              $"cullAt={menorThreshold:0.0000} -> disappears at ~{cull:0}m");
+                sb.AppendLine($"  {name,-24} {dist,6:0.0}m  LODs={lods.Length} size={lod.size:0.00} " +
+                              $"cullAt={minThreshold:0.0000} -> disappears at ~{cull:0}m");
             }
 
             sb.AppendLine("  -> doubling lodBias doubles these distances (linear).");

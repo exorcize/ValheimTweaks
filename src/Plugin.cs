@@ -42,11 +42,11 @@ namespace ValheimTweaks
             // costs nothing and has already saved a whole round of trial and error.
             try
             {
-                var alvos = new System.Collections.Generic.List<string>();
+                var targets = new System.Collections.Generic.List<string>();
                 foreach (var m in _harmony.GetPatchedMethods())
-                    alvos.Add($"{m.DeclaringType?.Name}.{m.Name}");
-                alvos.Sort();
-                Log.LogInfo($"Patches applied ({alvos.Count}): {string.Join(", ", alvos.ToArray())}");
+                    targets.Add($"{m.DeclaringType?.Name}.{m.Name}");
+                targets.Sort();
+                Log.LogInfo($"Patches applied ({targets.Count}): {string.Join(", ", targets.ToArray())}");
             }
             catch (Exception e)
             {
@@ -158,7 +158,7 @@ namespace ValheimTweaks
             }
         }
 
-        private static string Liga(bool v) => v ? "ON" : "off";
+        private static string OnOff(bool v) => v ? "ON" : "off";
 
         /// <summary>Reapplies everything that is settable at runtime.</summary>
         internal static void ApplyAll(string reason)
@@ -181,10 +181,10 @@ namespace ValheimTweaks
                 // "is it on?" by reading the log, without having to open the F1 menu
                 // and describe it over the phone.
                 Log.LogInfo(
-                    "Features: chest panel=" + Liga(ModConfig.ChestSearchEnabled.Value)
-                  + " | chest peek=" + Liga(ModConfig.ChestPeekEnabled.Value)
-                  + " | store in chests=" + Liga(ModConfig.StoreHudEnabled.Value)
-                  + " | auto repair=" + Liga(ModConfig.AutoRepairOnOpen.Value)
+                    "Features: chest panel=" + OnOff(ModConfig.ChestSearchEnabled.Value)
+                  + " | chest peek=" + OnOff(ModConfig.ChestPeekEnabled.Value)
+                  + " | store in chests=" + OnOff(ModConfig.StoreHudEnabled.Value)
+                  + " | auto repair=" + OnOff(ModConfig.AutoRepairOnOpen.Value)
                   + " | network timeout=" + (ModConfig.TimeoutEnabled.Value
                         ? ModConfig.TimeoutSeconds.Value.ToString("0") + "s" : "off"));
                 // AmbientPatch doesn't need Apply: the Postfix on EnvMan.SetEnv

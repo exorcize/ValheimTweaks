@@ -42,7 +42,7 @@ namespace ValheimTweaks
         private static readonly double[] WorstMs = new double[(int)Sys.COUNT];
         private static readonly int[] Calls = new int[(int)Sys.COUNT];
 
-        private static int _zonesGeradas;
+        private static int _zonesGenerated;
 
         private static int _lastFrame = -1;
         private static int _frames;
@@ -70,14 +70,14 @@ namespace ValheimTweaks
             Array.Clear(WorstFrameBreakdown, 0, WorstFrameBreakdown.Length);
             _worstFrameMs = 0;
             _frames = 0;
-            _zonesGeradas = 0;
+            _zonesGenerated = 0;
         }
 
         /// <summary>
         /// Counts zones generated in the window. It separates "new world still warming up"
         /// (a cost that goes away on its own) from "permanent problem".
         /// </summary>
-        internal static void CountZoneSpawn() { if (_enabled) _zonesGeradas++; }
+        internal static void CountZoneSpawn() { if (_enabled) _zonesGenerated++; }
 
         internal static long Begin() => _enabled ? Stopwatch.GetTimestamp() : 0L;
 
@@ -103,11 +103,11 @@ namespace ValheimTweaks
 
             if (_lastFrame >= 0)
             {
-                double soma = 0;
-                for (int i = 0; i < (int)Sys.COUNT; i++) soma += FrameMs[i];
-                if (soma > _worstFrameMs)
+                double sum = 0;
+                for (int i = 0; i < (int)Sys.COUNT; i++) sum += FrameMs[i];
+                if (sum > _worstFrameMs)
                 {
-                    _worstFrameMs = soma;
+                    _worstFrameMs = sum;
                     Array.Copy(FrameMs, WorstFrameBreakdown, FrameMs.Length);
                 }
                 _frames++;
@@ -127,14 +127,14 @@ namespace ValheimTweaks
             sb.AppendLine($"  {_frames} instrumented frames");
             sb.AppendLine($"  {"system",-22} {"ms/frame",9} {"worst ms",9} {"calls",9}");
 
-            double somaMedia = 0;
+            double sumAverage = 0;
             for (int i = 0; i < (int)Sys.COUNT; i++)
             {
-                double porFrame = TotalMs[i] / _frames;
-                somaMedia += porFrame;
-                sb.AppendLine($"  {(Sys)i,-22} {porFrame,9:0.000} {WorstMs[i],9:0.00} {Calls[i],9}");
+                double perFrame = TotalMs[i] / _frames;
+                sumAverage += perFrame;
+                sb.AppendLine($"  {(Sys)i,-22} {perFrame,9:0.000} {WorstMs[i],9:0.00} {Calls[i],9}");
             }
-            sb.AppendLine($"  {"INSTRUMENTED SUM",-22} {somaMedia,9:0.000}");
+            sb.AppendLine($"  {"INSTRUMENTED SUM",-22} {sumAverage,9:0.000}");
             sb.AppendLine();
             sb.AppendLine($"  WORST FRAME: {_worstFrameMs:0.00} ms within the instrumented portion");
             for (int i = 0; i < (int)Sys.COUNT; i++)
@@ -143,8 +143,8 @@ namespace ValheimTweaks
                     sb.AppendLine($"     {(Sys)i,-22} {WorstFrameBreakdown[i],9:0.00} ms");
             }
             sb.AppendLine();
-            sb.AppendLine($"  zones GENERATED in this window: {_zonesGeradas}");
-            sb.AppendLine(_zonesGeradas > 0
+            sb.AppendLine($"  zones GENERATED in this window: {_zonesGenerated}");
+            sb.AppendLine(_zonesGenerated > 0
                 ? "     -> world still warming up here. This cost is paid ONCE per zone"
                 : "     -> no new zones: area already explored, generation cost = 0");
             sb.AppendLine($"  ZDOs in the world: {(ZDOMan.instance != null ? ZDOMan.instance.NrOfObjects() : -1)}");

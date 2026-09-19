@@ -43,7 +43,7 @@ namespace ValheimTweaks.Patches
             Buffer.Clear();
             player.GetInventory().GetWornItems(Buffer);
 
-            int reparados = 0;
+            int repaired = 0;
             foreach (var item in Buffer)
             {
                 if (!(bool)CanRepairMethod.Invoke(gui, new object[] { item })) continue;
@@ -52,18 +52,18 @@ namespace ValheimTweaks.Patches
                 player.RaiseSkill(Skills.SkillType.Crafting,
                     1f - item.m_durability / item.GetMaxDurability());
                 item.m_durability = item.GetMaxDurability();
-                reparados++;
+                repaired++;
             }
 
-            if (reparados > 0 && station != null)
+            if (repaired > 0 && station != null)
             {
                 station.m_repairItemDoneEffects.Create(station.transform.position, Quaternion.identity);
             }
 
-            return reparados;
+            return repaired;
         }
 
-        private static void Avisar(int n)
+        private static void Report(int n)
         {
             if (n <= 0 || Player.m_localPlayer == null) return;
             Player.m_localPlayer.Message(MessageHud.MessageType.Center,
@@ -79,7 +79,7 @@ namespace ValheimTweaks.Patches
             private static void Postfix(InventoryGui __instance)
             {
                 if (!ModConfig.AutoRepairOnOpen.Value) return;
-                Avisar(RepairAll(__instance));
+                Report(RepairAll(__instance));
             }
         }
 
@@ -92,7 +92,7 @@ namespace ValheimTweaks.Patches
                 if (!ModConfig.RepairButtonRepairsAll.Value) return true;
 
                 int n = RepairAll(__instance);
-                if (n > 0) Avisar(n);
+                if (n > 0) Report(n);
                 else if (Player.m_localPlayer != null)
                 {
                     // Keeps the game's return when there is nothing to do.

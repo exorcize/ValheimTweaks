@@ -22,35 +22,35 @@ namespace ValheimTweaks.Patches
     /// frame, and with no look at all. Hence the explicit preference for
     /// Sliced.
     /// </summary>
-    internal static class EstiloJogo
+    internal static class GameStyle
     {
-        internal static bool Pronto { get; private set; }
+        internal static bool Ready { get; private set; }
 
-        internal static Sprite FundoSprite;
-        internal static Image.Type FundoTipo = Image.Type.Sliced;
-        internal static Material FundoMat;
-        internal static Color FundoCor = Color.white;
-        internal static float FundoPpu = 1f;
+        internal static Sprite BackgroundSprite;
+        internal static Image.Type BackgroundType = Image.Type.Sliced;
+        internal static Material BackgroundMaterial;
+        internal static Color BackgroundColor = Color.white;
+        internal static float BackgroundPixelsPerUnit = 1f;
 
-        internal static TMP_FontAsset FonteTitulo;
-        internal static Material MatTitulo;
-        internal static Color CorTitulo = new Color(0.90f, 0.83f, 0.64f, 1f);
+        internal static TMP_FontAsset TitleFont;
+        internal static Material TitleMaterial;
+        internal static Color TitleColor = new Color(0.90f, 0.83f, 0.64f, 1f);
 
-        private static readonly Color FundoReserva = new Color(0.086f, 0.071f, 0.055f, 0.97f);
+        private static readonly Color FallbackBackground = new Color(0.086f, 0.071f, 0.055f, 0.97f);
 
-        internal static void Descobrir()
+        internal static void Discover()
         {
-            if (Pronto) return;
+            if (Ready) return;
 
             var gui = InventoryGui.instance;
-            var molde = gui != null ? gui.m_crafting : null;
-            if (molde == null) return;
+            var template = gui != null ? gui.m_crafting : null;
+            if (template == null) return;
 
-            Image melhorSliced = null, melhorQualquer = null;
-            float areaSliced = 0f, areaQualquer = 0f;
-            var candidatos = new System.Text.StringBuilder();
+            Image bestSliced = null, bestAny = null;
+            float slicedArea = 0f, anyArea = 0f;
+            var candidates = new System.Text.StringBuilder();
 
-            foreach (var img in molde.GetComponentsInChildren<Image>(true))
+            foreach (var img in template.GetComponentsInChildren<Image>(true))
             {
                 if (img.sprite == null) continue;
 
@@ -63,80 +63,80 @@ namespace ValheimTweaks.Patches
                 // 'woodpanel_crafting_240_mask', which won by area and painted
                 // everything yellow. A mask has a Mask component alongside --
                 // that's how we can tell.
-                bool ehMascara = img.GetComponent<Mask>() != null
+                bool isMask = img.GetComponent<Mask>() != null
                               || img.sprite.name.IndexOf("mask", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
-                candidatos.Append($"\n    {img.sprite.name} ({img.type}) {r.width:0}x{r.height:0}"
-                                + (ehMascara ? "  [mask, ignored]" : ""));
-                if (ehMascara) continue;
+                candidates.Append($"\n    {img.sprite.name} ({img.type}) {r.width:0}x{r.height:0}"
+                                + (isMask ? "  [mask, ignored]" : ""));
+                if (isMask) continue;
 
-                if (img.type == Image.Type.Sliced && area > areaSliced)
+                if (img.type == Image.Type.Sliced && area > slicedArea)
                 {
-                    areaSliced = area;
-                    melhorSliced = img;
+                    slicedArea = area;
+                    bestSliced = img;
                 }
-                if (area > areaQualquer)
+                if (area > anyArea)
                 {
-                    areaQualquer = area;
-                    melhorQualquer = img;
+                    anyArea = area;
+                    bestAny = img;
                 }
             }
             if (ModConfig.ChestSearchDebug.Value)
-                Plugin.Log.LogInfo($"[STYLE] background candidates:{candidatos}");
+                Plugin.Log.LogInfo($"[STYLE] background candidates:{candidates}");
 
-            var escolhido = melhorSliced ?? melhorQualquer;
-            if (escolhido != null)
+            var chosen = bestSliced ?? bestAny;
+            if (chosen != null)
             {
-                FundoSprite = escolhido.sprite;
-                FundoTipo = escolhido.type;
-                FundoMat = escolhido.material;
-                FundoCor = escolhido.color;
-                FundoPpu = escolhido.pixelsPerUnitMultiplier;
+                BackgroundSprite = chosen.sprite;
+                BackgroundType = chosen.type;
+                BackgroundMaterial = chosen.material;
+                BackgroundColor = chosen.color;
+                BackgroundPixelsPerUnit = chosen.pixelsPerUnitMultiplier;
             }
 
-            float maiorFonte = 0f;
-            foreach (var t in molde.GetComponentsInChildren<TMP_Text>(true))
+            float largestFont = 0f;
+            foreach (var t in template.GetComponentsInChildren<TMP_Text>(true))
             {
-                if (t.font == null || t.fontSize <= maiorFonte) continue;
-                maiorFonte = t.fontSize;
-                FonteTitulo = t.font;
-                MatTitulo = t.fontSharedMaterial;
-                CorTitulo = t.color;
+                if (t.font == null || t.fontSize <= largestFont) continue;
+                largestFont = t.fontSize;
+                TitleFont = t.font;
+                TitleMaterial = t.fontSharedMaterial;
+                TitleColor = t.color;
             }
 
-            Pronto = FundoSprite != null || FonteTitulo != null;
+            Ready = BackgroundSprite != null || TitleFont != null;
 
             Plugin.Log.LogInfo(
-                $"[STYLE] background='{FundoSprite?.name ?? "-"}' ({FundoTipo}) "
-              + $"| font='{FonteTitulo?.name ?? "-"}' {maiorFonte:0.#}px"
-              + (melhorSliced == null ? "  (no 9-slice; using the largest)" : ""));
+                $"[STYLE] background='{BackgroundSprite?.name ?? "-"}' ({BackgroundType}) "
+              + $"| font='{TitleFont?.name ?? "-"}' {largestFont:0.#}px"
+              + (bestSliced == null ? "  (no 9-slice; using the largest)" : ""));
         }
 
         /// <summary>Paints the game's wood onto an Image. Without a sprite, it falls back to a flat background.</summary>
-        internal static void AplicarFundo(Image alvo, float opacidade = 1f)
+        internal static void ApplyBackground(Image target, float opacity = 1f)
         {
-            if (alvo == null) return;
+            if (target == null) return;
 
-            if (FundoSprite == null)
+            if (BackgroundSprite == null)
             {
-                var c = FundoReserva;
-                alvo.color = new Color(c.r, c.g, c.b, c.a * opacidade);
+                var c = FallbackBackground;
+                target.color = new Color(c.r, c.g, c.b, c.a * opacity);
                 return;
             }
 
-            alvo.sprite = FundoSprite;
-            alvo.type = FundoTipo;
-            alvo.material = FundoMat;
-            alvo.pixelsPerUnitMultiplier = FundoPpu;
-            alvo.color = new Color(FundoCor.r, FundoCor.g, FundoCor.b, FundoCor.a * opacidade);
+            target.sprite = BackgroundSprite;
+            target.type = BackgroundType;
+            target.material = BackgroundMaterial;
+            target.pixelsPerUnitMultiplier = BackgroundPixelsPerUnit;
+            target.color = new Color(BackgroundColor.r, BackgroundColor.g, BackgroundColor.b, BackgroundColor.a * opacity);
         }
 
-        internal static void AplicarTitulo(TMP_Text alvo)
+        internal static void ApplyTitle(TMP_Text target)
         {
-            if (alvo == null || FonteTitulo == null) return;
-            alvo.font = FonteTitulo;
-            if (MatTitulo != null) alvo.fontSharedMaterial = MatTitulo;
-            alvo.color = CorTitulo;
+            if (target == null || TitleFont == null) return;
+            target.font = TitleFont;
+            if (TitleMaterial != null) target.fontSharedMaterial = TitleMaterial;
+            target.color = TitleColor;
         }
     }
 }

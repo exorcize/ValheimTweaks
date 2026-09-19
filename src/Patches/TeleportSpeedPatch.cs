@@ -35,16 +35,16 @@ namespace ValheimTweaks.Patches
         private static readonly FieldInfo TargetPosField =
             AccessTools.Field(typeof(Player), "m_teleportTargetPos");
 
-        private static bool _teleportando;
-        private static float _inicio;
-        private static int _framesEsperandoArea;
+        private static bool _teleporting;
+        private static float _startedAt;
+        private static int _framesWaitingArea;
         private static int _framesTotal;
 
         /// <summary>
         /// Read by SimulationDistancePatch to reduce the distance only while the
         /// teleport lasts.
         /// </summary>
-        internal static bool EmTeleporte => _teleportando;
+        internal static bool IsTeleporting => _teleporting;
 
         /// <summary>
         /// Makes ZoneSystem re-read the distance. ApplySettings() just copies the
@@ -56,14 +56,14 @@ namespace ValheimTweaks.Patches
         /// portal would drop our friends' simulation distance too. Here only the
         /// local side changes.
         /// </summary>
-        private static void ReaplicarDistancia(bool restaurando)
+        private static void ReapplyDistance(bool restoring)
         {
             if (ZoneSystem.instance != null) ZoneSystem.instance.ApplySettings();
 
             // The visual range of water and terrain also derives from the distance.
             // During the teleport the screen is black, so it's only worth fixing on
             // the way back.
-            if (restaurando)
+            if (restoring)
             {
                 Water.ApplySettingsOnAll();
                 Heightmap.ApplySettingsOnAll();
@@ -83,17 +83,17 @@ namespace ValheimTweaks.Patches
             {
                 if (__instance != Player.m_localPlayer) return;
 
-                bool agora = __instance.IsTeleporting();
+                bool now = __instance.IsTeleporting();
 
-                if (agora && !_teleportando)
+                if (now && !_teleporting)
                 {
-                    _teleportando = true;
-                    _inicio = Time.realtimeSinceStartup;
-                    _framesEsperandoArea = 0;
+                    _teleporting = true;
+                    _startedAt = Time.realtimeSinceStartup;
+                    _framesWaitingArea = 0;
                     _framesTotal = 0;
-                    ReaplicarDistancia(restaurando: false);
+                    ReapplyDistance(restoring: false);
                 }
-                else if (agora)
+                else if (now)
                 {
                     _framesTotal++;
 
@@ -102,18 +102,18 @@ namespace ValheimTweaks.Patches
                     // helps -- what's missing is loading.
                     if (TargetPosField != null && ZNetScene.instance != null)
                     {
-                        var alvo = (Vector3)TargetPosField.GetValue(__instance);
-                        if (!ZNetScene.instance.IsAreaReady(alvo)) _framesEsperandoArea++;
+                        var target = (Vector3)TargetPosField.GetValue(__instance);
+                        if (!ZNetScene.instance.IsAreaReady(target)) _framesWaitingArea++;
                     }
                 }
-                else if (_teleportando)
+                else if (_teleporting)
                 {
-                    _teleportando = false;
-                    ReaplicarDistancia(restaurando: true);
+                    _teleporting = false;
+                    ReapplyDistance(restoring: true);
 
-                    float total = Time.realtimeSinceStartup - _inicio;
+                    float total = Time.realtimeSinceStartup - _startedAt;
                     float pctArea = _framesTotal > 0
-                        ? 100f * _framesEsperandoArea / _framesTotal
+                        ? 100f * _framesWaitingArea / _framesTotal
                         : 0f;
 
                     Plugin.Log.LogInfo(
