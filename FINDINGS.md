@@ -176,3 +176,30 @@ só o anel imediato — o raio dela nunca foi o problema, e sim a fila compartil
 3. **Medir parado.** Andando a variação é ±50%; parado é ±1,5%.
 4. **Controle com a config original.** Foi o que derrubou a conclusão errada.
 5. **Instrumentar antes de otimizar.** Explicação mecânica convincente ≠ efeito real.
+
+## Construir a partir dos baús: onde o jogo cobra
+
+O martelo passa por `Player.UpdatePlacement`, que faz, nessa ordem:
+
+```
+HaveRequirements(piece, RequirementMode.CanBuild)   -> Inventory.CountItems / HaveItem
+ConsumeResources(piece.m_resources, 0, -1, 1)       -> Inventory.RemoveItem(nome, qtd, quality, true)
+```
+
+`RequirementMode` é aninhado em `Player` (`Player.RequirementMode`): `CanBuild=0`,
+`IsKnown=1`, `CanAlmostBuild=2`. A checagem de quantidade é
+`CountItems(nome, -1, true) < req.m_amount`; o consumo é
+`m_inventory.RemoveItem(nome, amount, itemQuality, true)` por `Requirement`.
+
+Implementação: não reescrevemos a regra. Durante essas chamadas os baús próximos
+"viram" parte da mochila — `CountItems`/`HaveItem` somam, `RemoveItem` tira a
+diferença dos baús. Assim estação, DLC e discovery continuam por conta do jogo.
+
+⚠️ `ConsumeResources` é pequeno e o Mono pode inlinar (mesmo problema do
+`ZInput.GetButton`). A janela de consumo por isso fica no `UpdatePlacement`, que é
+grande e nunca é inlinado — senão o patch não pegaria e o custo não sairia dos baús.
+
+Custo: um `OverlapSphere` a cada `BuildFromChestsRefresh` (ou ao andar ~2 m), com
+tabela nome → total reconstruída na hora; a checagem vira consulta O(1). Só baús
+que você possui e não estão em uso entram na conta, para não dessincronizar ZDO de
+outro jogador.

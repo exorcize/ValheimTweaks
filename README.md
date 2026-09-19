@@ -87,6 +87,13 @@ without opening it.
 workbench or forge, instead of one item per click. Repair in Valheim costs no
 material, so this only saves clicks.
 
+**Build from nearby chests** — while building with the hammer, the wood and stone
+in chests, carts and ships around you count as if they were in your backpack. The
+build menu marks a piece as buildable when the nearby storage covers it, and the
+materials are taken from there on placement. Building only: crafting at a station
+still uses your backpack. Useful to keep a cart of wood by the build site instead
+of a stack in every slot.
+
 Beyond those, there is control over shadows, grass density and range, torch light
 limits, terrain tessellation and a few performance tweaks.
 

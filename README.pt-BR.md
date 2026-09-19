@@ -87,6 +87,13 @@ sem precisar abrir.
 perto de uma bancada ou forja, em vez de um item por clique. Reparo no Valheim
 não consome material, então isso só poupa cliques.
 
+**Construir dos baús próximos** — ao construir com o martelo, a madeira e a pedra
+que estão nos baús, carroças e navios ao redor contam como se estivessem na
+mochila. O menu de construção marca a peça como construível quando o
+armazenamento por perto cobre o custo, e o material sai de lá na hora de colocar.
+Vale só para construção: fabricar em estação continua usando a mochila. Serve
+para deixar o carrinho de madeira perto da obra em vez de uma pilha em cada slot.
+
 Além desses, há controle de sombras, densidade e alcance da grama, limite de
 luzes de tocha, tesselação do terreno e alguns ajustes de desempenho.
 

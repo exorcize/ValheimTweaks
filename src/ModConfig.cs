@@ -116,6 +116,11 @@ namespace ValheimTweaks
         internal static ConfigEntry<int> SimDistanceNear;
         internal static ConfigEntry<int> SimDistanceFar;
 
+        // ---------- 06 - Building ----------
+        internal static ConfigEntry<bool> BuildFromChestsEnabled;
+        internal static ConfigEntry<float> BuildFromChestsRadius;
+        internal static ConfigEntry<float> BuildFromChestsRefresh;
+
         internal static void Init(ConfigFile cfg)
         {
             HotReload = cfg.Bind("00 - General", "HotReload", true,
@@ -603,6 +608,30 @@ namespace ValheimTweaks
                     "How much time per frame the game spends freeing memory. Lower values " +
                     "spread that work out instead of concentrating it. 0 leaves it alone.",
                     new AcceptableValueRange<float>(0f, 10f)));
+
+            // ------------------------------------------------------------------
+            // 06 - Building
+            // ------------------------------------------------------------------
+            BuildFromChestsEnabled = cfg.Bind("06 - Building", "BuildFromChestsEnabled", true,
+                "While building with the hammer, lets you use the materials stored in " +
+                "nearby chests instead of carrying them in the backpack. The build menu " +
+                "marks the piece as buildable when the chests cover the cost, and the " +
+                "materials are taken from them on placement. Applies only to building, " +
+                "not to crafting at a station.");
+
+            BuildFromChestsRadius = cfg.Bind("06 - Building", "BuildFromChestsRadius", 20f,
+                new ConfigDescription(
+                    "How far away a chest can be and still count. Carts and ships count " +
+                    "too. A chest the game has not loaded yet cannot be used, no matter " +
+                    "how high this is.",
+                    new AcceptableValueRange<float>(4f, 64f)));
+
+            BuildFromChestsRefresh = cfg.Bind("06 - Building", "BuildFromChestsRefresh", 0.5f,
+                new ConfigDescription(
+                    "How often the nearby chests are recounted while building. Lower is " +
+                    "more accurate right after you store something, at the cost of a " +
+                    "little more work.",
+                    new AcceptableValueRange<float>(0.2f, 3f)));
         }
     }
 }

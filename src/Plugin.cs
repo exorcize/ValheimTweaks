@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.32.2";
+        public const string VERSION = "0.33.0";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -176,6 +176,7 @@ namespace ValheimTweaks
                 Patches.GcPatch.Apply();
                 Patches.TimeoutPatch.Apply();
                 Patches.SimulationDistancePatch.Apply();
+                Patches.BuildFromChests.Invalidate();   // radius or toggle may have changed
 
                 // Feature state in the user's language. It answers
                 // "is it on?" by reading the log, without having to open the F1 menu
@@ -184,6 +185,7 @@ namespace ValheimTweaks
                     "Features: chest panel=" + OnOff(ModConfig.ChestSearchEnabled.Value)
                   + " | chest peek=" + OnOff(ModConfig.ChestPeekEnabled.Value)
                   + " | store in chests=" + OnOff(ModConfig.StoreHudEnabled.Value)
+                  + " | build from chests=" + OnOff(ModConfig.BuildFromChestsEnabled.Value)
                   + " | auto repair=" + OnOff(ModConfig.AutoRepairOnOpen.Value)
                   + " | network timeout=" + (ModConfig.TimeoutEnabled.Value
                         ? ModConfig.TimeoutSeconds.Value.ToString("0") + "s" : "off"));
