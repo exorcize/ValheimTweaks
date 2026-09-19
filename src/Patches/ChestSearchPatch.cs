@@ -1146,8 +1146,20 @@ namespace ValheimTweaks.Patches
             var plan = PlanDeposit(item, amount, out int leftover);
             if (plan.Count == 0)
             {
-                player.Message(MessageHud.MessageType.Center,
-                    Lang.T("No room in nearby chests", "Sem espaço nos baús por perto"));
+                // If the only chests with room are owned by the other player, they were
+                // skipped on purpose (StoreOnlyOwnedChests). Say so instead of the vague
+                // "no room", which read like a bug.
+                int skipped = 0;
+                foreach (var b in _chests)
+                    if (ModConfig.StoreOnlyOwnedChests.Value && !Chests.Usable(b.Chest)) skipped++;
+
+                player.Message(MessageHud.MessageType.Center, skipped > 0
+                    ? Lang.T("No room in your chests (the other player's are skipped)",
+                             "Sem espaço nos SEUS baús (os do outro jogador são ignorados)")
+                    : Lang.T("No room in nearby chests", "Sem espaço nos baús por perto"));
+
+                Plugin.Log.LogInfo($"[CHESTS] store '{Key(item)}': nothing stored, "
+                                 + $"leftover {leftover}, non-owned chests skipped {skipped}");
                 return;
             }
 
