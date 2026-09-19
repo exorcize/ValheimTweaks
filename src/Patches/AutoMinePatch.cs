@@ -266,10 +266,10 @@ namespace ValheimTweaks.Patches
             bool recemAlternado = Time.realtimeSinceStartup < _avisoAte;
             if (recemAlternado)
                 _avisoTxt.text = _ligado
-                    ? "<color=#B8DD97>Minerar automático LIGADO</color>"
-                    : "<color=#C08080>Minerar automático desligado</color>";
+                    ? "<color=#B8DD97>" + Lang.T("Auto-mining ON", "Minerar automático LIGADO") + "</color>"
+                    : "<color=#C08080>" + Lang.T("Auto-mining off", "Minerar automático desligado") + "</color>";
             else
-                _avisoTxt.text = "<color=#D8C48A>Minerar automático</color>";
+                _avisoTxt.text = "<color=#D8C48A>" + Lang.T("Auto-mining", "Minerar automático") + "</color>";
 
             if (!_aviso.activeSelf) _aviso.SetActive(true);
         }

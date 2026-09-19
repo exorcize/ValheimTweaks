@@ -233,7 +233,9 @@ namespace ValheimTweaks.Patches
                 ? Localization.instance.Localize(bau.m_name)
                 : nome;
 
-            _rodape.text = $"{itens.Count} tipos · {inv.NrOfItems()} / {inv.GetWidth() * inv.GetHeight()} espaços";
+            _rodape.text = string.Format(
+                Lang.T("{0} kinds · {1} / {2} slots", "{0} tipos · {1} / {2} espaços"),
+                itens.Count, inv.NrOfItems(), inv.GetWidth() * inv.GetHeight());
 
             _painel.SetActive(true);
         }

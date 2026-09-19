@@ -795,7 +795,7 @@ namespace ValheimTweaks.Patches
                 var inv = b.Bau.GetInventory();
                 if (inv == null) continue;
                 int cabe = inv.FindFreeStackSpace(nome, nivel);
-                Poe(b.Bau, b.Nome, Mathf.Min(cabe, resta), "completa pilha");
+                Poe(b.Bau, b.Nome, Mathf.Min(cabe, resta), Lang.T("tops off stack", "completa pilha"));
             }
 
             // 2) baús que já têm o item
@@ -805,7 +805,7 @@ namespace ValheimTweaks.Patches
                 if (livres[b.Bau] <= 0 || !TemOItem(b.Bau)) continue;
                 int cabe = Mathf.Min(livres[b.Bau] * pilha, resta);
                 livres[b.Bau] -= Mathf.CeilToInt(cabe / (float)pilha);
-                Poe(b.Bau, b.Nome, cabe, "junto do resto");
+                Poe(b.Bau, b.Nome, cabe, Lang.T("with the rest", "junto do resto"));
             }
 
             // 3) qualquer um com espaço
@@ -815,7 +815,7 @@ namespace ValheimTweaks.Patches
                 if (livres[b.Bau] <= 0) continue;
                 int cabe = Mathf.Min(livres[b.Bau] * pilha, resta);
                 livres[b.Bau] -= Mathf.CeilToInt(cabe / (float)pilha);
-                Poe(b.Bau, b.Nome, cabe, "espaço livre");
+                Poe(b.Bau, b.Nome, cabe, Lang.T("free space", "espaço livre"));
             }
 
             sobra = resta;
@@ -994,15 +994,18 @@ namespace ValheimTweaks.Patches
             var plano = PlanejarDeposito(item, qtd, out int sobra);
 
             _depTitulo.text = plano.Count > 0
-                ? $"Guardar {qtd} {nome}"
-                : $"Sem espaço para {nome}";
+                ? string.Format(Lang.T("Store {0} {1}", "Guardar {0} {1}"), qtd, nome)
+                : string.Format(Lang.T("No room for {0}", "Sem espaço para {0}"), nome);
 
             var sb = new StringBuilder();
             if (plano.Count == 0)
             {
-                sb.Append("<color=#C08080>Os baús a ")
-                  .Append(ModConfig.ChestSearchRadius.Value.ToString("0"))
-                  .Append(" m estão cheios.</color>");
+                sb.Append("<color=#C08080>")
+                  .Append(string.Format(
+                      Lang.T("The chests within {0} m are full.",
+                             "Os baús a {0} m estão cheios."),
+                      ModConfig.ChestSearchRadius.Value.ToString("0")))
+                  .Append("</color>");
             }
             else
             {
@@ -1011,9 +1014,13 @@ namespace ValheimTweaks.Patches
                       .Append($"   <color=#6F6353>{d.Motivo}</color>\n");
 
                 if (sobra > 0)
-                    sb.Append($"\n<color=#C08080>{sobra} não cabe</color>");
+                    sb.Append("\n<color=#C08080>"
+                            + string.Format(Lang.T("{0} won't fit", "{0} não cabe"), sobra)
+                            + "</color>");
                 else
-                    sb.Append("\n<color=#6F6353><i>clique para confirmar</i></color>");
+                    sb.Append("\n<color=#6F6353><i>"
+                            + Lang.T("click to confirm", "clique para confirmar")
+                            + "</i></color>");
             }
             _depPlano.text = sb.ToString();
         }
@@ -1060,7 +1067,8 @@ namespace ValheimTweaks.Patches
             var plano = PlanejarDeposito(item, quantidade, out int sobra);
             if (plano.Count == 0)
             {
-                player.Message(MessageHud.MessageType.Center, "Sem espaço nos baús por perto");
+                player.Message(MessageHud.MessageType.Center,
+                    Lang.T("No room in nearby chests", "Sem espaço nos baús por perto"));
                 return;
             }
 
@@ -1193,7 +1201,9 @@ namespace ValheimTweaks.Patches
         private static void AtualizarBotao()
         {
             if (_botaoTxt != null)
-                _botaoTxt.text = _aberto ? "Fechar baús" : "Baús próximos";
+                _botaoTxt.text = _aberto
+                    ? Lang.T("Close chests", "Fechar baús")
+                    : Lang.T("Nearby chests", "Baús próximos");
         }
 
         // ==================================================================
@@ -1278,7 +1288,7 @@ namespace ValheimTweaks.Patches
             float y = Pad;
 
             var titulo = NovoTexto(_painel.transform, 18f, Ouro);
-            titulo.text = "Baús próximos";
+            titulo.text = Lang.T("Nearby chests", "Baús próximos");
             EstiloJogo.AplicarTitulo(titulo);
             titulo.alignment = TextAlignmentOptions.Center;
             Por(titulo.gameObject, Pad, y, dentroLarg, AltTitulo);
@@ -1323,9 +1333,9 @@ namespace ValheimTweaks.Patches
 
             // ---- ordenação
             float x = Pad;
-            x += Chip(0, "Quantidade", x, y, () => { _ordemPorNome = false; Montar(); });
-            x += Chip(1, "Nome", x, y, () => { _ordemPorNome = true; Montar(); });
-            Chip(2, "Por baú", Pad + dentroLarg - 62f, y, () => { _porBau = !_porBau; Montar(); }, 62f);
+            x += Chip(0, Lang.T("Amount", "Quantidade"), x, y, () => { _ordemPorNome = false; Montar(); });
+            x += Chip(1, Lang.T("Name", "Nome"), x, y, () => { _ordemPorNome = true; Montar(); });
+            Chip(2, Lang.T("By chest", "Por baú"), Pad + dentroLarg - 62f, y, () => { _porBau = !_porBau; Montar(); }, 62f);
             y += AltChip + 7f;
 
             Divisor(Pad, y, dentroLarg);
@@ -1421,7 +1431,7 @@ namespace ValheimTweaks.Patches
             Esticar(txt.rectTransform);
             var ph = NovoTexto(area.transform, 12.5f, Apagado);
             Esticar(ph.rectTransform);
-            ph.text = "buscar item...";
+            ph.text = Lang.T("search item...", "buscar item...");
             ph.fontStyle = FontStyles.Italic;
 
             var campo = caixa.AddComponent<TMP_InputField>();
@@ -1447,7 +1457,9 @@ namespace ValheimTweaks.Patches
 
             int soma = 0;
             foreach (var a in _tudo) soma += a.Total;
-            _resumo.text = $"{_bausVistos} baús · {_tudo.Count} tipos · {soma} itens"
+            _resumo.text = string.Format(
+                Lang.T("{0} chests · {1} kinds · {2} items", "{0} baús · {1} tipos · {2} itens"),
+                _bausVistos, _tudo.Count, soma)
                          + $"   <color=#6F6353>{ModConfig.ChestSearchRadius.Value:0} m</color>";
 
             AtualizarOcupacao();
@@ -1475,8 +1487,10 @@ namespace ValheimTweaks.Patches
                 vazio.alignment = TextAlignmentOptions.Top;
                 vazio.enableWordWrapping = true;
                 vazio.text = _tudo.Count == 0
-                    ? $"Nenhum baú a {ModConfig.ChestSearchRadius.Value:0} m."
-                    : "Nada com esse nome nos baús por perto.";
+                    ? string.Format(Lang.T("No chest within {0} m.", "Nenhum baú a {0} m."),
+                                    ModConfig.ChestSearchRadius.Value.ToString("0"))
+                    : Lang.T("Nothing with that name in nearby chests.",
+                             "Nada com esse nome nos baús por perto.");
                 Por(vazio.gameObject, 0f, 22f, larg, 40f);
                 _descartar.Add(vazio.gameObject);
                 y = 70f;
@@ -1507,10 +1521,15 @@ namespace ValheimTweaks.Patches
                     var info = _baus.Find(x => x.Bau == bau);
                     string cap = info != null
                         ? $" · {info.Usados}/{info.Totais} slots"
-                          + (info.Livres > 0 ? $" · <color=#7E9C50>{info.Livres} livres</color>"
-                                             : " · <color=#B0603F>cheio</color>")
+                          + (info.Livres > 0
+                                ? " · <color=#7E9C50>"
+                                  + string.Format(Lang.T("{0} free", "{0} livres"), info.Livres)
+                                  + "</color>"
+                                : " · <color=#B0603F>" + Lang.T("full", "cheio") + "</color>")
                         : "";
-                    cab.text = $"{Baus.NomeVisivel(bau)}   <color=#6F6353>{doBau.Count} tipos{cap}</color>";
+                    cab.text = $"{Baus.NomeVisivel(bau)}   <color=#6F6353>"
+                             + string.Format(Lang.T("{0} kinds", "{0} tipos"), doBau.Count)
+                             + $"{cap}</color>";
                     Por(cab.gameObject, 0f, y, larg, 15f);
                     _descartar.Add(cab.gameObject);
                     y += 18f;
@@ -1668,7 +1687,7 @@ namespace ValheimTweaks.Patches
             _rotulosAtalho.Clear();
 
             var rot = NovoTexto(_linhaQtd.transform, 10.5f, Apagado);
-            rot.text = "PEGAR";
+            rot.text = Lang.T("TAKE", "PEGAR");
             rot.characterSpacing = 6f;
             Por(rot.gameObject, 0f, 6f, 42f, 14f);
 
@@ -1736,7 +1755,7 @@ namespace ValheimTweaks.Patches
             if (_qtdEscolhida < 1 || _qtdEscolhida > _focado.Total)
                 _qtdEscolhida = Mathf.Min(pilha, _focado.Total);
 
-            string[] textos = { "1", "10", pilha.ToString(), "Tudo" };
+            string[] textos = { "1", "10", pilha.ToString(), Lang.T("All", "Tudo") };
             int[] valores = { 1, 10, pilha, _focado.Total };
 
             for (int i = 0; i < _rotulosAtalho.Count && i < 4; i++)
@@ -1777,7 +1796,7 @@ namespace ValheimTweaks.Patches
                                             : Cor("#7E9C50");
 
             _ocupTxt.text = _slotsTotais > 0
-                ? $"<color=#E6D3A2>{livres}</color> slots livres"
+                ? $"<color=#E6D3A2>{livres}</color> " + Lang.T("free slots", "slots livres")
                 : "";
         }
 
@@ -1790,7 +1809,10 @@ namespace ValheimTweaks.Patches
                 _rodNome.text = "";
                 _rodTot.text = "";
                 _rodOndes.text = "";
-                _rodAcao.text = "<i>Clique num item para escolher quanto pegar.</i>";
+                _rodAcao.text = "<i>"
+                    + Lang.T("Click an item to choose how many to take.",
+                             "Clique num item para escolher quanto pegar.")
+                    + "</i>";
                 AtualizarLinhaQuantidade();
                 return;
             }
@@ -1799,7 +1821,9 @@ namespace ValheimTweaks.Patches
             ondes.Sort((a, b) => b.Qtd.CompareTo(a.Qtd));
 
             _rodNome.text = _focado.NomeLocal;
-            _rodTot.text = $"{_focado.Total} em {ondes.Count} " + (ondes.Count == 1 ? "baú" : "baús");
+            _rodTot.text = string.Format(
+                Lang.T("{0} in {1} chest(s)", "{0} em {1} baú(s)"),
+                _focado.Total, ondes.Count);
 
             var sb = new StringBuilder();
             for (int i = 0; i < ondes.Count && i < 5; i++)

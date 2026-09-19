@@ -72,12 +72,12 @@ namespace ValheimTweaks.Patches
 
             if (item.m_customData.Remove(ChaveMarca))
             {
-                Aviso($"{item.m_shared.m_name} desmarcado");
+                Aviso($"{item.m_shared.m_name} " + Lang.T("unmarked", "desmarcado"));
             }
             else
             {
                 item.m_customData[ChaveMarca] = "1";
-                Aviso($"{item.m_shared.m_name} marcado para guardar");
+                Aviso($"{item.m_shared.m_name} " + Lang.T("marked to store", "marcado para guardar"));
             }
             Notificar(Player.m_localPlayer?.GetInventory());
         }
@@ -141,7 +141,7 @@ namespace ValheimTweaks.Patches
             var baus = BausProximos();
             if (baus.Count == 0)
             {
-                Aviso("Nenhum bau por perto");
+                Aviso(Lang.T("No chest nearby", "Nenhum baú por perto"));
                 return;
             }
 
@@ -221,7 +221,8 @@ namespace ValheimTweaks.Patches
                     Notificar(__instance);
                     Notificar(fromInventory);
                     s_movidos += movidos;
-                    Aviso($"{s_movidos} item(ns) guardado(s)");
+                    Aviso(string.Format(
+                        Lang.T("{0} item(s) stored", "{0} item(ns) guardado(s)"), s_movidos));
                 }
 
                 __result = movidos;

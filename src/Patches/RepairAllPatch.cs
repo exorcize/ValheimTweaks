@@ -65,7 +65,9 @@ namespace ValheimTweaks.Patches
         {
             if (n <= 0 || Player.m_localPlayer == null) return;
             Player.m_localPlayer.Message(MessageHud.MessageType.Center,
-                n == 1 ? "1 item reparado" : $"{n} itens reparados");
+                n == 1
+                    ? Lang.T("1 item repaired", "1 item reparado")
+                    : string.Format(Lang.T("{0} items repaired", "{0} itens reparados"), n));
         }
 
         /// <summary>Repara ao abrir o painel perto de uma estação.</summary>
@@ -93,7 +95,7 @@ namespace ValheimTweaks.Patches
                 {
                     // Mantém o retorno do jogo quando não há nada a fazer.
                     Player.m_localPlayer.Message(MessageHud.MessageType.Center,
-                        "Nada para reparar");
+                        Lang.T("Nothing to repair", "Nada para reparar"));
                 }
                 return false; // pula o original
             }
