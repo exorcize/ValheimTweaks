@@ -7,22 +7,22 @@ namespace ValheimTweaks.Patches
     /// <summary>
     /// Anti-aliasing.
     ///
-    /// MSAA esta DESCARTADO nesta engine -- o diagnostico mediu a camera do jogo
-    /// como "path = DeferredShading, MSAA_ok = False". Em deferred o Unity ignora
-    /// MSAA. Entao a unica alavanca real e o post-processing.
+    /// MSAA is RULED OUT on this engine -- the diagnostic measured the game camera
+    /// as "path = DeferredShading, MSAA_ok = False". In deferred, Unity ignores
+    /// MSAA. So the only real lever is post-processing.
     ///
-    /// O Valheim usa o PostProcessing v1 e so faz isto:
+    /// Valheim uses PostProcessing v1 and only does this:
     ///     m_postProcessing.profile.antialiasing.enabled = enabled;
-    /// Nunca toca em .settings -- ou seja, nunca escolhe o METODO nem a qualidade.
-    /// Fica no FXAA preset Default para sempre.
+    /// It never touches .settings -- that is, it never chooses the METHOD or the quality.
+    /// It stays on the FXAA Default preset forever.
     ///
-    /// O que da para fazer:
-    ///   FXAA: 5 presets, de ExtremePerformance ate ExtremeQuality.
+    /// What can be done:
+    ///   FXAA: 5 presets, from ExtremePerformance to ExtremeQuality.
     ///   TAA:  jitterSpread / sharpen / stationaryBlending / motionBlending.
-    ///         E o certo em deferred, e resolve serrilhado de geometria fina
-    ///         (folhagem, corda de barco, cerca) que o FXAA so borra.
-    ///         Custa fantasma em movimento -- por isso sharpen e blending sao
-    ///         ajustaveis aqui em vez de fixos.
+    ///         It is the right choice in deferred, and it resolves aliasing on thin
+    ///         geometry (foliage, boat rope, fence) that FXAA merely blurs.
+    ///         It costs ghosting in motion -- which is why sharpen and blending are
+    ///         adjustable here instead of fixed.
     /// </summary>
     internal static class AntiAliasingPatch
     {
@@ -62,10 +62,10 @@ namespace ValheimTweaks.Patches
                 s.fxaaSettings.preset = (AntialiasingModel.FxaaPreset)ModConfig.FxaaPreset.Value;
             }
 
-            profile.antialiasing.settings = s;   // struct: precisa reatribuir
+            profile.antialiasing.settings = s;   // struct: must reassign
             profile.antialiasing.enabled = true;
 
-            Plugin.Log.LogInfo($"AA: metodo={s.method} " +
+            Plugin.Log.LogInfo($"AA: method={s.method} " +
                 (s.method == AntialiasingModel.Method.Taa
                     ? $"jitter={s.taaSettings.jitterSpread:0.##} sharpen={s.taaSettings.sharpen:0.##}"
                     : $"preset={s.fxaaSettings.preset}"));

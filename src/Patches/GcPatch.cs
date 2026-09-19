@@ -3,32 +3,32 @@ using UnityEngine.Scripting;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Coletor de lixo -- a outra fonte classica de engasgo em jogo Unity/Mono.
+    /// Garbage collector -- the other classic source of hitching in Unity/Mono games.
     ///
-    /// Quando o GC nao e incremental, ele para o mundo inteiro para coletar: um
-    /// frame normal de 4 ms vira um de 30-80 ms. Isso e sentido como travada, e
-    /// some completamente na media de fps.
+    /// When the GC is not incremental, it stops the whole world to collect: a
+    /// normal 4 ms frame becomes one of 30-80 ms. This is felt as a stutter, and it
+    /// disappears entirely in the average fps.
     ///
-    /// O boot.config do Valheim traz "gc-max-time-slice=3", o que indica GC
-    /// incremental com fatia de 3 ms. Mas 3 ms ainda e quase um frame inteiro
-    /// a 240 fps -- vale testar fatias menores, que espalham a coleta por mais
-    /// frames em vez de concentrar.
+    /// Valheim's boot.config ships with "gc-max-time-slice=3", which indicates
+    /// incremental GC with a 3 ms slice. But 3 ms is still almost an entire frame
+    /// at 240 fps -- it is worth testing smaller slices, which spread the collection
+    /// over more frames instead of concentrating it.
     ///
-    /// incrementalTimeSliceNanoseconds e settavel em runtime, entao isso entra
-    /// no A/B junto com o resto, sem reiniciar.
+    /// incrementalTimeSliceNanoseconds is settable at runtime, so this goes into
+    /// the A/B along with the rest, without restarting.
     /// </summary>
     internal static class GcPatch
     {
         internal static void Apply()
         {
             float ms = ModConfig.GcSliceMs.Value;
-            if (ms <= 0f) return; // 0 = nao mexer
+            if (ms <= 0f) return; // 0 = do not touch
 
             if (!GarbageCollector.isIncremental)
             {
                 Plugin.Log.LogWarning(
-                    "GC incremental esta DESLIGADO neste build -- a fatia nao tem efeito. " +
-                    "Coletas vao parar o mundo inteiro.");
+                    "Incremental GC is OFF in this build -- the slice has no effect. " +
+                    "Collections will stop the whole world.");
                 return;
             }
 
@@ -36,14 +36,14 @@ namespace ValheimTweaks.Patches
             if (GarbageCollector.incrementalTimeSliceNanoseconds == ns) return;
 
             GarbageCollector.incrementalTimeSliceNanoseconds = ns;
-            Plugin.Log.LogInfo($"GC: fatia incremental -> {ms:0.##} ms");
+            Plugin.Log.LogInfo($"GC: incremental slice -> {ms:0.##} ms");
         }
 
         internal static string Describe()
         {
             return GarbageCollector.isIncremental
-                ? $"incremental, fatia = {GarbageCollector.incrementalTimeSliceNanoseconds / 1_000_000f:0.##} ms, modo = {GarbageCollector.GCMode}"
-                : $"NAO incremental (para o mundo ao coletar), modo = {GarbageCollector.GCMode}";
+                ? $"incremental, slice = {GarbageCollector.incrementalTimeSliceNanoseconds / 1_000_000f:0.##} ms, mode = {GarbageCollector.GCMode}"
+                : $"NOT incremental (stops the world when collecting), mode = {GarbageCollector.GCMode}";
         }
     }
 }

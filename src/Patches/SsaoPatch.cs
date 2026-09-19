@@ -5,29 +5,29 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Oclusao de ambiente (SSAO) -- sombra de contato: canto de parede, base de
-    /// arvore, embaixo de movel. E o que tira o aspecto "chapado" da cena.
+    /// Ambient occlusion (SSAO) -- contact shadow: wall corner, tree base,
+    /// under furniture. It is what removes the "flat" look of the scene.
     ///
-    /// O Valheim usa Amplify Occlusion, mas entrega so dois niveis e TRAVA a
-    /// qualidade pela metade nos dois (CameraEffects.SetSSAO):
+    /// Valheim uses Amplify Occlusion, but delivers only two levels and LOCKS
+    /// the quality at half in both (CameraEffects.SetSSAO):
     ///
     ///     case 1:  m_amplifyOcclusion.Downsample = true;  SampleCount = Low;
     ///     default: m_amplifyOcclusion.Downsample = true;  SampleCount = Medium;
     ///
-    /// Downsample = true esta HARDCODED nos dois casos -- ou seja, mesmo no
-    /// "maximo" do menu o efeito roda em meia resolucao, e o teto de amostras e
-    /// Medium quando o efeito suporta VeryHigh.
+    /// Downsample = true is HARDCODED in both cases -- that is, even at the
+    /// menu's "maximum" the effect runs at half resolution, and the sample cap is
+    /// Medium when the effect supports VeryHigh.
     ///
-    /// Aqui a gente destrava: resolucao cheia e SampleCount ate VeryHigh.
-    /// Tambem permite LIGAR o efeito sem passar pelo menu, o que deixa o A/B
-    /// ser feito pelo arquivo de config, sem o jogador mexer em nada.
+    /// Here we unlock it: full resolution and SampleCount up to VeryHigh.
+    /// It also allows TURNING ON the effect without going through the menu, which lets the A/B
+    /// be done from the config file, without the player touching anything.
     /// </summary>
     internal static class SsaoPatch
     {
         private static readonly FieldInfo AoField =
             AccessTools.Field(typeof(CameraEffects), "m_amplifyOcclusion");
 
-        // O jogo reaplica os efeitos aqui; entramos logo depois.
+        // The game re-applies the effects here; we hook in right after.
         [HarmonyPatch(typeof(CameraEffects), "ApplySettings")]
         internal static class ApplySettingsHook
         {

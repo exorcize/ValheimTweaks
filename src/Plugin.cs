@@ -20,8 +20,8 @@ namespace ValheimTweaks
         private Harmony _harmony;
         private FileSystemWatcher _watcher;
 
-        // Escrito pela thread do FileSystemWatcher, lido pela thread principal.
-        // API do Unity so pode ser tocada na main thread -- por isso o pending.
+        // Written by the FileSystemWatcher thread, read by the main thread.
+        // Unity's API can only be touched on the main thread -- hence the pending flag.
         private volatile bool _reloadPending;
         private float _reloadAt;
 
@@ -37,27 +37,27 @@ namespace ValheimTweaks
             _harmony = new Harmony(GUID);
             _harmony.PatchAll();
 
-            // Um patch que não pega não dá erro: ele simplesmente não acontece, e o
-            // sintoma vira "não funciona". Listar o que de fato foi remendado no boot
-            // custa nada e já economizou uma rodada inteira de tentativa e erro.
+            // A patch that doesn't take throws no error: it simply doesn't happen, and the
+            // symptom becomes "it doesn't work". Listing what actually got patched at boot
+            // costs nothing and has already saved a whole round of trial and error.
             try
             {
                 var alvos = new System.Collections.Generic.List<string>();
                 foreach (var m in _harmony.GetPatchedMethods())
                     alvos.Add($"{m.DeclaringType?.Name}.{m.Name}");
                 alvos.Sort();
-                Log.LogInfo($"Patches aplicados ({alvos.Count}): {string.Join(", ", alvos.ToArray())}");
+                Log.LogInfo($"Patches applied ({alvos.Count}): {string.Join(", ", alvos.ToArray())}");
             }
             catch (Exception e)
             {
-                Log.LogWarning($"Nao consegui listar os patches: {e.Message}");
+                Log.LogWarning($"Couldn't list the patches: {e.Message}");
             }
 
             Config.SettingChanged += OnSettingChanged;
             SetupHotReload();
 
             ApplyAll("boot");
-            Log.LogInfo($"{NAME} {VERSION} carregado. Config: {Config.ConfigFilePath}");
+            Log.LogInfo($"{NAME} {VERSION} loaded. Config: {Config.ConfigFilePath}");
         }
 
         private void OnDestroy()
@@ -67,8 +67,8 @@ namespace ValheimTweaks
         }
 
         // ------------------------------------------------------------------
-        // Hot reload: editar o .cfg no disco aplica em jogo, sem reiniciar.
-        // E o que torna o ciclo de teste viavel (ver README).
+        // Hot reload: editing the .cfg on disk applies in-game, without restarting.
+        // This is what makes the test cycle viable (see README).
         // ------------------------------------------------------------------
         private void SetupHotReload()
         {
@@ -78,7 +78,7 @@ namespace ValheimTweaks
                 string dir = Path.GetDirectoryName(path);
                 if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
                 {
-                    Log.LogWarning("Hot reload desligado: diretorio de config nao encontrado.");
+                    Log.LogWarning("Hot reload disabled: config directory not found.");
                     return;
                 }
 
@@ -92,7 +92,7 @@ namespace ValheimTweaks
             }
             catch (Exception e)
             {
-                Log.LogWarning($"Hot reload indisponivel: {e.Message}");
+                Log.LogWarning($"Hot reload unavailable: {e.Message}");
             }
         }
 
@@ -107,7 +107,7 @@ namespace ValheimTweaks
 
             if (_reloadPending && ModConfig.HotReload.Value)
             {
-                // Debounce: editores gravam em varias etapas e disparam N eventos.
+                // Debounce: editors write in several stages and fire N events.
                 if (_reloadAt <= 0f) _reloadAt = Time.realtimeSinceStartup + 0.25f;
 
                 if (Time.realtimeSinceStartup >= _reloadAt)
@@ -121,18 +121,18 @@ namespace ValheimTweaks
                     }
                     catch (Exception e)
                     {
-                        Log.LogError($"Falha ao recarregar config: {e}");
+                        Log.LogError($"Failed to reload config: {e}");
                     }
                 }
             }
 
-            // Dump uma vez por mundo carregado, quando o player ja existe.
+            // Dump once per loaded world, when the player already exists.
             if (Player.m_localPlayer != null)
             {
                 if (!_dumpedThisWorld)
                 {
                     _dumpedThisWorld = true;
-                    if (ModConfig.DumpOnWorldLoad.Value) Diagnostics.Dump("mundo carregado");
+                    if (ModConfig.DumpOnWorldLoad.Value) Diagnostics.Dump("world loaded");
                 }
             }
             else
@@ -143,11 +143,11 @@ namespace ValheimTweaks
 
         private void OnSettingChanged(object sender, EventArgs e)
         {
-            // Dump sob demanda: marcar DumpNow=true no arquivo dispara e se auto-desmarca.
+            // On-demand dump: setting DumpNow=true in the file triggers it and it un-sets itself.
             if (ModConfig.DumpNow.Value)
             {
                 ModConfig.DumpNow.Value = false;
-                Diagnostics.Dump("pedido manual");
+                Diagnostics.Dump("manual request");
             }
 
             if (ModConfig.ProfileNow.Value)
@@ -158,9 +158,9 @@ namespace ValheimTweaks
             }
         }
 
-        private static string Liga(bool v) => v ? "LIGADO" : "desligado";
+        private static string Liga(bool v) => v ? "ON" : "off";
 
-        /// <summary>Reaplica tudo que e settavel em runtime.</summary>
+        /// <summary>Reapplies everything that is settable at runtime.</summary>
         internal static void ApplyAll(string reason)
         {
             try
@@ -177,23 +177,23 @@ namespace ValheimTweaks
                 Patches.TimeoutPatch.Apply();
                 Patches.SimulationDistancePatch.Apply();
 
-                // Estado das features na linguagem de quem usa. Serve para responder
-                // "está ligado aí?" lendo o log, sem ter que abrir o F1 e descrever
-                // menu por telefone.
+                // Feature state in the user's language. It answers
+                // "is it on?" by reading the log, without having to open the F1 menu
+                // and describe it over the phone.
                 Log.LogInfo(
-                    "Features: painel de baus=" + Liga(ModConfig.ChestSearchEnabled.Value)
-                  + " | espiar bau=" + Liga(ModConfig.ChestPeekEnabled.Value)
-                  + " | guardar nos baus=" + Liga(ModConfig.StoreHudEnabled.Value)
-                  + " | reparo automatico=" + Liga(ModConfig.AutoRepairOnOpen.Value)
-                  + " | timeout de rede=" + (ModConfig.TimeoutEnabled.Value
-                        ? ModConfig.TimeoutSeconds.Value.ToString("0") + "s" : "desligado"));
-                // AmbientPatch nao precisa de Apply: o Postfix em EnvMan.SetEnv
-                // le a config a cada troca de ambiente, entao o slider e continuo.
-                Log.LogInfo($"Configuracoes aplicadas ({reason}).");
+                    "Features: chest panel=" + Liga(ModConfig.ChestSearchEnabled.Value)
+                  + " | chest peek=" + Liga(ModConfig.ChestPeekEnabled.Value)
+                  + " | store in chests=" + Liga(ModConfig.StoreHudEnabled.Value)
+                  + " | auto repair=" + Liga(ModConfig.AutoRepairOnOpen.Value)
+                  + " | network timeout=" + (ModConfig.TimeoutEnabled.Value
+                        ? ModConfig.TimeoutSeconds.Value.ToString("0") + "s" : "off"));
+                // AmbientPatch doesn't need Apply: the Postfix on EnvMan.SetEnv
+                // reads the config on every environment change, so the slider is continuous.
+                Log.LogInfo($"Settings applied ({reason}).");
             }
             catch (Exception e)
             {
-                Log.LogError($"Erro aplicando configuracoes ({reason}): {e}");
+                Log.LogError($"Error applying settings ({reason}): {e}");
             }
         }
     }

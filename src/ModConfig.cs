@@ -4,26 +4,26 @@ using UnityEngine;
 namespace ValheimTweaks
 {
     /// <summary>
-    /// Opções do mod. As seções são numeradas porque o Configuration Manager
-    /// ordena alfabeticamente.
+    /// Mod options. Sections are numbered because the Configuration Manager
+    /// sorts alphabetically.
     ///
-    /// Convenções usadas nas opções:
-    ///   float 0   = não sobrescrever (usa o que o menu do jogo definir)
-    ///   int  -2   = não sobrescrever, -1 = sem limite (nas opções de luz)
+    /// Conventions used in the options:
+    ///   float 0   = do not override (use whatever the game menu sets)
+    ///   int  -2   = do not override, -1 = no limit (in the light options)
     /// </summary>
     internal static class ModConfig
     {
-        // ---------- 00 - Geral ----------
+        // ---------- 00 - General ----------
         internal static ConfigEntry<bool> HotReload;
 
-        // ---------- 01 - Diagnostico ----------
+        // ---------- 01 - Diagnostics ----------
         internal static ConfigEntry<bool> DumpOnWorldLoad;
         internal static ConfigEntry<bool> DumpNow;
         internal static ConfigEntry<bool> ProfileNow;
         internal static ConfigEntry<float> ProfileSeconds;
         internal static ConfigEntry<bool> ProfileSystems;
 
-        // ---------- 02 - Rede ----------
+        // ---------- 02 - Network ----------
         internal static ConfigEntry<bool> TimeoutEnabled;
         internal static ConfigEntry<float> TimeoutSeconds;
 
@@ -122,7 +122,7 @@ namespace ValheimTweaks
                 "Applies changes to this file on the fly, without needing to close the game.");
 
             // ------------------------------------------------------------------
-            // 01 - Diagnóstico
+            // 01 - Diagnostics
             // ------------------------------------------------------------------
             DumpOnWorldLoad = cfg.Bind("01 - Diagnostics", "DumpOnWorldLoad", true,
                 "When you enter a world, writes a summary of the active video settings to the log.");
@@ -142,7 +142,7 @@ namespace ValheimTweaks
                 "Includes in the measurement the time each part of the game spends per frame.");
 
             // ------------------------------------------------------------------
-            // 02 - Rede
+            // 02 - Network
             // ------------------------------------------------------------------
             TimeoutEnabled = cfg.Bind("02 - Network", "TimeoutEnabled", true,
                 "Adjusts how long the game tolerates an unresponsive connection before " +
@@ -343,7 +343,7 @@ namespace ValheimTweaks
             // 04 - Performance
             // ------------------------------------------------------------------
             // ------------------------------------------------------------------
-            // 05 - Conveniencia
+            // 05 - Convenience
             // ------------------------------------------------------------------
             TeleportSpeed = cfg.Bind("05 - Convenience", "TeleportSpeed", 4f,
                 new ConfigDescription(
@@ -364,10 +364,10 @@ namespace ValheimTweaks
                     "Does not affect other players.",
                     new AcceptableValueRange<int>(0, 8)));
 
-            // --- Guardar nos baus proximos ---
-            // As tres teclas abaixo vem SEM atalho desde que o painel de baus passou
-            // a aceitar Ctrl+clique. O LeftControl daqui, em especial, brigava com
-            // ele. Quem prefere o jeito antigo e so escolher uma tecla no F1.
+            // --- Store in nearby chests ---
+            // The three keys below ship with NO shortcut since the chest panel started
+            // accepting Ctrl+click. The LeftControl here in particular clashed with
+            // it. If you prefer the old way, just pick a key in the F1 menu.
             StoreMarkKey = cfg.Bind("05 - Convenience", "StoreMarkKey",
                 new KeyboardShortcut(KeyCode.None),
                 "With the inventory open, point at an item and press this key to mark it " +

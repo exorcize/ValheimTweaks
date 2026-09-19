@@ -3,19 +3,19 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Filtragem de textura.
+    /// Texture filtering.
     ///
-    /// ACHADO: o Valheim tem a opcao "texturas anisotropicas" no menu, le ela das prefs
-    /// (GraphicsSettingsManager linha 479), guarda no GraphicsSettingsState, salva de volta...
-    /// e NUNCA a aplica. Nao existe um unico "QualitySettings.anisotropicFiltering"
-    /// em toda a assembly_valheim.dll. O checkbox nao faz nada.
+    /// FINDING: Valheim has the "anisotropic textures" option in the menu, reads it from the prefs
+    /// (GraphicsSettingsManager line 479), stores it in GraphicsSettingsState, saves it back...
+    /// and NEVER applies it. There is not a single "QualitySettings.anisotropicFiltering"
+    /// in the whole assembly_valheim.dll. The checkbox does nothing.
     ///
-    /// Aqui a gente aplica de verdade. Ganho: chao, estrada, terreno e piso de madeira
-    /// param de borrar em angulo raso. Custo numa GPU moderna: desprezivel.
+    /// Here we apply it for real. Gain: ground, road, terrain and wooden floor
+    /// stop blurring at a shallow angle. Cost on a modern GPU: negligible.
     ///
-    /// Nao usa Harmony: o jogo expoe um evento publico para isso.
-    /// GraphicsSettingsManager.GraphicsSettingsChanged dispara toda vez que ele reaplica
-    /// as proprias settings -- entao a gente reaplica por cima depois dele.
+    /// Does not use Harmony: the game exposes a public event for this.
+    /// GraphicsSettingsManager.GraphicsSettingsChanged fires every time it re-applies
+    /// its own settings -- so we re-apply on top of it afterward.
     /// </summary>
     internal static class TextureFilterPatch
     {
@@ -32,7 +32,7 @@ namespace ValheimTweaks.Patches
             ApplyNow();
         }
 
-        // O jogo acabou de reescrever QualitySettings; poe o nosso por cima.
+        // The game just rewrote QualitySettings; put ours on top.
         private static void OnGameReapplied() => ApplyNow();
 
         private static void ApplyNow()
@@ -45,8 +45,8 @@ namespace ValheimTweaks.Patches
                     ? AnisotropicFiltering.ForceEnable
                     : AnisotropicFiltering.Disable;
 
-                // ForceEnable sozinho usa o nivel por-textura; os limites globais
-                // garantem que todo material realmente receba o nivel pedido.
+                // ForceEnable alone uses the per-texture level; the global limits
+                // ensure that every material actually receives the requested level.
                 Texture.SetGlobalAnisotropicFilteringLimits(level, level);
             }
 

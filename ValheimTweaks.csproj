@@ -6,30 +6,30 @@
     <RootNamespace>ValheimTweaks</RootNamespace>
     <Version>0.32.2</Version>
     <LangVersion>latest</LangVersion>
-    <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
+    <!-- The game loads the DLL; we don't want transitive deps or extra files. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <DebugType>portable</DebugType>
-    <!-- Unity/Mono nao entende nullable refs anotados; desliga o ruido. -->
+    <!-- Unity/Mono doesn't understand annotated nullable refs; turn off the noise. -->
     <Nullable>disable</Nullable>
     <NoWarn>$(NoWarn);CS0649;CS0169</NoWarn>
   </PropertyGroup>
 
-  <!-- Caminhos locais. Se o Steam/r2modman mudarem de lugar, e so ajustar aqui. -->
+  <!-- Local paths. If Steam/r2modman move, just adjust them here. -->
   <PropertyGroup>
     <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
     <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
     <ProfileDir Condition="'$(ProfileDir)' == ''">$(AppData)\r2modmanPlus-local\Valheim\profiles\Default</ProfileDir>
     <BepInExCore>$(ProfileDir)\BepInEx\core</BepInExCore>
-    <!-- Pasta criada pelo r2modman ao importar o zip como "local mod". O autor sai
-         como "Unknown" porque manifest local nao tem namespace do Thunderstore.
-         Precisa apontar AQUI: se o deploy for para uma pasta propria, o BepInEx
-         carrega as duas e a gente edita uma copia enquanto o jogo roda a outra. -->
+    <!-- Folder created by r2modman when importing the zip as a "local mod". The author
+         shows up as "Unknown" because a local manifest has no Thunderstore namespace.
+         It must point HERE: if the deploy went to its own folder, BepInEx would load
+         both and we'd be editing one copy while the game runs the other. -->
     <PluginDir>$(ProfileDir)\BepInEx\plugins\Unknown-ValheimTweaks</PluginDir>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- BepInEx + HarmonyX, direto do perfil do r2modman (sem NuGet). -->
+    <!-- BepInEx + HarmonyX, straight from the r2modman profile (no NuGet). -->
     <Reference Include="BepInEx">
       <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
       <Private>false</Private>
@@ -39,7 +39,7 @@
       <Private>false</Private>
     </Reference>
 
-    <!-- Codigo do jogo. Assembly-CSharp.dll e um stub de 23 KB: o jogo esta aqui. -->
+    <!-- Game code. Assembly-CSharp.dll is a 23 KB stub: the game is here. -->
     <Reference Include="assembly_valheim">
       <HintPath>$(ManagedDir)\assembly_valheim.dll</HintPath>
       <Private>false</Private>
@@ -48,14 +48,14 @@
       <HintPath>$(ManagedDir)\assembly_utils.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- PostProcessing v1 (FXAA/TAA/bloom). O jogo so liga/desliga; a gente configura. -->
+    <!-- PostProcessing v1 (FXAA/TAA/bloom). The game only toggles it; we configure it. -->
     <Reference Include="assembly_postprocessing">
       <HintPath>$(ManagedDir)\assembly_postprocessing.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
-    <!-- Unity. Compilar contra os DLLs reais do jogo = erro de compilacao
-         se a API nao existir nesta versao (Unity 6000.0.75f1). -->
+    <!-- Unity. Compiling against the game's real DLLs = a compile error
+         if the API doesn't exist in this version (Unity 6000.0.75f1). -->
     <Reference Include="UnityEngine">
       <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
       <Private>false</Private>
@@ -68,12 +68,12 @@
       <HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- Localization: m_name de item e um token ("$item_feathers"). -->
+    <!-- Localization: an item's m_name is a token ("$item_feathers"). -->
     <Reference Include="assembly_guiutils">
       <HintPath>$(ManagedDir)\assembly_guiutils.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- TextAnchor, usado pelos layout groups. -->
+    <!-- TextAnchor, used by the layout groups. -->
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
@@ -83,42 +83,42 @@
       <HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- Texto da lista de itens guardados. -->
+    <!-- Text of the stored items list. -->
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- Image/Button dos slots de inventario. -->
+    <!-- Image/Button of the inventory slots. -->
     <Reference Include="UnityEngine.UI">
       <HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
-  <!-- Build = deploy. Cai direto no perfil do r2modman.
+  <!-- Build = deploy. It drops straight into the r2modman profile.
 
-       O r2modman desabilita um mod renomeando TODO arquivo da pasta para .old
-       (visto em Azumatt-AzuCraftyBoxes: AzuCraftyBoxes.dll.old, manifest.json.old...).
-       Se copiassemos o DLL por cima disso, o mod voltaria a carregar em silencio
-       enquanto o gerenciador ainda mostra "desabilitado", e a pessoa ficaria
-       procurando por que o mod ressuscitou. Entao o deploy respeita o toggle. -->
+       r2modman disables a mod by renaming EVERY file in the folder to .old
+       (seen with Azumatt-AzuCraftyBoxes: AzuCraftyBoxes.dll.old, manifest.json.old...).
+       If we copied the DLL over that, the mod would silently start loading again
+       while the manager still shows "disabled", and the person would be left
+       wondering why the mod came back to life. So the deploy respects the toggle. -->
   <Target Name="DeployToProfile" AfterTargets="Build" Condition="Exists('$(ProfileDir)')">
     <PropertyGroup>
       <ModDisabled Condition="Exists('$(PluginDir)\$(AssemblyName).dll.old')">true</ModDisabled>
     </PropertyGroup>
 
     <Message Importance="high" Condition="'$(ModDisabled)' == 'true'"
-             Text="  -&gt; deploy PULADO: mod esta desabilitado no r2modman (encontrado $(AssemblyName).dll.old). Reabilite la para voltar a receber builds." />
+             Text="  -&gt; deploy SKIPPED: mod is disabled in r2modman (found $(AssemblyName).dll.old). Re-enable it there to start receiving builds again." />
 
     <MakeDir Directories="$(PluginDir)" Condition="'$(ModDisabled)' != 'true'" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)"
           ContinueOnError="true" Condition="'$(ModDisabled)' != 'true'" />
 
-    <!-- O r2modman mostra a versao do manifest.json, nao a do DLL. Copiando so o
-         DLL, a lista de mods ficava congelada na versao do primeiro import (0.15.0
-         aqui) enquanto o jogo rodava outra bem mais nova, e a diferenca entre as
-         duas telas virava suspeita de mod duplicado, que e um problema de verdade e
-         parecido. Reescrever o manifest no deploy mantem as duas honestas. -->
+    <!-- r2modman shows the version from manifest.json, not the DLL's. Copying only the
+         DLL left the mod list frozen at the version from the first import (0.15.0
+         here) while the game ran a much newer one, and the mismatch between the two
+         screens bred suspicion of a duplicate mod, which is a real and similar-looking
+         problem. Rewriting the manifest on deploy keeps both honest. -->
     <WriteLinesToFile File="$(PluginDir)\manifest.json" Overwrite="true" Encoding="UTF-8"
                       Condition="'$(ModDisabled)' != 'true'"
                       Lines="{&quot;name&quot;:&quot;ValheimTweaks&quot;,&quot;version_number&quot;:&quot;$(Version)&quot;,&quot;website_url&quot;:&quot;&quot;,&quot;description&quot;:&quot;Video, network and quality-of-life tweaks for Valheim.&quot;,&quot;dependencies&quot;:[&quot;denikson-BepInExPack_Valheim-5.4.2350&quot;,&quot;shudnal-ConfigurationManager-1.1.18&quot;]}" />

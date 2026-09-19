@@ -4,33 +4,33 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Orcamento de geracao de zonas -- candidato forte para engasgo em mundo novo.
+    /// Zone generation budget -- a strong candidate for hitching in a new world.
     ///
-    /// ZoneSystem tem um gerador fatiado no tempo. O default do campo e razoavel:
+    /// ZoneSystem has a time-sliced generator. The field default is reasonable:
     ///     private float m_timeSlicedGenerationTimeBudget = 0.01f;   // 10 ms
     ///
-    /// Mas o Update() do servidor sobrescreve isso enquanto as locations nao
-    /// terminaram de gerar:
+    /// But the server's Update() overrides it while the locations have not
+    /// finished generating:
     ///     if (ZNet.instance.IsServer() &amp;&amp; !LocationsGenerated) {
-    ///         if (intro/cinematica) budget = GetTimeBudgetForTargetFrameRate(.., 1/150);
-    ///         else                  budget = 0.1f;        // <-- 100 MILISSEGUNDOS
+    ///         if (intro/cinematic) budget = GetTimeBudgetForTargetFrameRate(.., 1/150);
+    ///         else                  budget = 0.1f;        // <-- 100 MILLISECONDS
     ///         return;
     ///     }
     ///
-    /// Esse valor e o limiar de "ja gastei tempo demais, paro por este frame",
-    /// checado em tres lacos de geracao. Ou seja: fora da tela de intro, o jogo
-    /// se permite queimar ate 100 ms num unico frame gerando mundo. A 240 fps o
-    /// frame dura 4 ms -- um frame de 100 ms e uma travada visivel de verdade.
+    /// This value is the threshold for "I have already spent too much time, I stop for
+    /// this frame", checked in three generation loops. That is: outside the intro
+    /// screen, the game allows itself to burn up to 100 ms in a single frame generating
+    /// world. At 240 fps the frame lasts 4 ms -- a 100 ms frame is a truly visible stutter.
     ///
-    /// Repare na ironia: durante a INTRO ele mira 150 fps (6,6 ms), e assim que
-    /// a intro acaba e voce comeca a jogar, ele afrouxa para 100 ms.
+    /// Notice the irony: during the INTRO it targets 150 fps (6.6 ms), and as soon as
+    /// the intro ends and you start playing, it loosens to 100 ms.
     ///
-    /// Vale so enquanto LocationsGenerated == false, ou seja, em mundo novo --
-    /// exatamente o caso do mundo LAB. Por isso o sintoma aparece agora.
+    /// It only holds while LocationsGenerated == false, that is, in a new world --
+    /// exactly the case of the LAB world. That is why the symptom appears now.
     ///
-    /// O patch reescreve o campo DEPOIS do Update do jogo, entao ganha da
-    /// atribuicao dele todo frame. Trade: as locations demoram mais para
-    /// terminar de gerar, mas em fatias que cabem dentro de um frame.
+    /// The patch rewrites the field AFTER the game's Update, so it beats its
+    /// assignment every frame. Trade-off: the locations take longer to
+    /// finish generating, but in slices that fit within a frame.
     /// </summary>
     internal static class ZoneGenBudgetPatch
     {
@@ -51,7 +51,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        /// <summary>Para o diagnostico: o valor que o jogo esta usando agora.</summary>
+        /// <summary>For diagnostics: the value the game is currently using.</summary>
         internal static float CurrentBudgetMs
         {
             get

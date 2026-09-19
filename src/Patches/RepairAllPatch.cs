@@ -6,29 +6,31 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Reparar tudo de uma vez.
+    /// Repair everything at once.
     ///
-    /// O jogo repara um item por clique: InventoryGui.RepairOneItem percorre as
-    /// peças gastas, conserta a primeira que puder e sai no return. Com equipamento
-    /// completo isso vira cinco ou seis cliques toda vez que se passa na bancada.
+    /// The game repairs one item per click: InventoryGui.RepairOneItem walks the
+    /// worn pieces, repairs the first one it can and exits on the return. With
+    /// full equipment that becomes five or six clicks every time you pass by the
+    /// workbench.
     ///
-    /// Reparo no Valheim não consome material -- só exige a estação certa. Então
-    /// fazer tudo de uma vez é conveniência, não vantagem: o resultado é o mesmo
-    /// que clicar até acabar.
+    /// Repairing in Valheim consumes no material -- it only requires the right
+    /// station. So doing everything at once is convenience, not an advantage: the
+    /// result is the same as clicking until you're done.
     ///
-    /// Tudo local: mexe na durabilidade do próprio inventário, nada vai para a rede.
+    /// All local: it touches the durability of your own inventory, nothing goes to
+    /// the network.
     /// </summary>
     internal static class RepairAllPatch
     {
-        // CanRepair é privado e concentra as regras (item reparável, estação certa,
-        // receita conhecida, world level). Reusar evita duplicar essa lógica e
-        // errar algum caso.
+        // CanRepair is private and concentrates the rules (repairable item, right
+        // station, known recipe, world level). Reusing it avoids duplicating that
+        // logic and getting some case wrong.
         private static readonly MethodInfo CanRepairMethod =
             AccessTools.Method(typeof(InventoryGui), "CanRepair", new[] { typeof(ItemDrop.ItemData) });
 
         private static readonly List<ItemDrop.ItemData> Buffer = new List<ItemDrop.ItemData>();
 
-        /// <summary>Repara tudo que der. Devolve quantos itens foram consertados.</summary>
+        /// <summary>Repairs everything it can. Returns how many items were repaired.</summary>
         private static int RepairAll(InventoryGui gui)
         {
             var player = Player.m_localPlayer;
@@ -46,7 +48,7 @@ namespace ValheimTweaks.Patches
             {
                 if (!(bool)CanRepairMethod.Invoke(gui, new object[] { item })) continue;
 
-                // Mesma progressão de Artesanato que o reparo normal daria.
+                // Same Crafting progression that a normal repair would give.
                 player.RaiseSkill(Skills.SkillType.Crafting,
                     1f - item.m_durability / item.GetMaxDurability());
                 item.m_durability = item.GetMaxDurability();
@@ -70,7 +72,7 @@ namespace ValheimTweaks.Patches
                     : string.Format(Lang.T("{0} items repaired", "{0} itens reparados"), n));
         }
 
-        /// <summary>Repara ao abrir o painel perto de uma estação.</summary>
+        /// <summary>Repairs when opening the panel near a station.</summary>
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
         internal static class ShowHook
         {
@@ -81,7 +83,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        /// <summary>Faz o botão de reparo consertar tudo em vez de um item.</summary>
+        /// <summary>Makes the repair button fix everything instead of one item.</summary>
         [HarmonyPatch(typeof(InventoryGui), "RepairOneItem")]
         internal static class RepairOneItemHook
         {
@@ -93,11 +95,11 @@ namespace ValheimTweaks.Patches
                 if (n > 0) Avisar(n);
                 else if (Player.m_localPlayer != null)
                 {
-                    // Mantém o retorno do jogo quando não há nada a fazer.
+                    // Keeps the game's return when there is nothing to do.
                     Player.m_localPlayer.Message(MessageHud.MessageType.Center,
                         Lang.T("Nothing to repair", "Nada para reparar"));
                 }
-                return false; // pula o original
+                return false; // skips the original
             }
         }
     }

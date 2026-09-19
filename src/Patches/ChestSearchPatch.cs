@@ -9,47 +9,48 @@ using UnityEngine.UI;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Painel de busca nos baús próximos, no lugar do painel de produção.
+    /// Search panel for nearby chests, in place of the crafting panel.
     ///
-    /// ---- Por que ele vive junto do inventário ----
-    /// Player.TakeInput e GameCamera.UpdateMouseCapture decidem se você anda e se o
-    /// cursor aparece consultando uma LISTA FIXA de telas do jogo -- não há ponto de
-    /// extensão. Um painel solto exigiria remendar os dois, senão o personagem anda
-    /// enquanto você digita. Abrindo junto do inventário, InventoryGui.IsVisible() já
-    /// é true: cursor solto, personagem parado, ESC fechando. Zero patch de input.
+    /// ---- Why it lives alongside the inventory ----
+    /// Player.TakeInput and GameCamera.UpdateMouseCapture decide whether you walk and
+    /// whether the cursor appears by consulting a FIXED LIST of game screens -- there
+    /// is no extension point. A standalone panel would require patching both, otherwise
+    /// the character walks while you type. Opening alongside the inventory,
+    /// InventoryGui.IsVisible() is already true: cursor free, character stopped, ESC
+    /// closing. Zero input patching.
     ///
-    /// ---- Por que ocupa o lugar da produção ----
-    /// O lado direito da tela de inventário JÁ é do painel de produção. Desenhar por
-    /// cima deixa os dois aparecendo um through the other. Em vez disso escondemos a
-    /// produção enquanto o painel está aberto e copiamos o RectTransform dela --
-    /// mesma posição, mesmo tamanho, encaixe exato. Fechou, a produção volta.
+    /// ---- Why it takes the crafting panel's place ----
+    /// The right side of the inventory screen ALREADY belongs to the crafting panel.
+    /// Drawing on top leaves the two showing through each other. Instead we hide
+    /// crafting while the panel is open and copy its RectTransform -- same position,
+    /// same size, exact fit. Closed, crafting comes back.
     ///
-    /// ---- Layout na mão, de propósito ----
-    /// A primeira versão usava VerticalLayoutGroup/GridLayoutGroup e saiu torta: os
-    /// botões de ordenação viraram caixas de 100px. Layout automático do uGUI depende
-    /// de rebuild na ordem certa, e num painel criado em runtime dentro de outro
-    /// canvas isso não é confiável. Painel de tamanho fixo não ganha nada com layout
-    /// automático -- posicionar na mão é determinístico e dá para conferir na tela.
+    /// ---- Hand-rolled layout, on purpose ----
+    /// The first version used VerticalLayoutGroup/GridLayoutGroup and came out crooked:
+    /// the sort buttons became 100px boxes. uGUI's automatic layout depends on
+    /// rebuilding in the right order, and in a panel created at runtime inside another
+    /// canvas that isn't reliable. A fixed-size panel gains nothing from automatic
+    /// layout -- positioning by hand is deterministic and you can check it on screen.
     ///
-    /// ---- Ler baú fechado é de graça ----
-    /// Container.Awake registra InvokeRepeating("CheckForChanges", 0f, 1f), e o Load()
-    /// sai na hora quando a DataRevision não mudou. O inventário de todo baú carregado
-    /// já está em memória e no máximo 1s atrasado.
+    /// ---- Reading a closed chest is free ----
+    /// Container.Awake registers InvokeRepeating("CheckForChanges", 0f, 1f), and Load()
+    /// bails immediately when the DataRevision hasn't changed. Every loaded chest's
+    /// inventory is already in memory and at most 1s stale.
     ///
-    /// ---- Pegar item ----
-    /// Quem manda nos dados de um baú é o dono do ZDO. Dois caminhos:
+    /// ---- Taking an item ----
+    /// The ZDO owner is who calls the shots on a chest's data. Two paths:
     ///
-    ///   já sou o dono  -> movo direto, sem RPC, instantâneo
-    ///   não sou        -> Container.TakeAll() e o aperto de mão do jogo
+    ///   already the owner -> move directly, no RPC, instant
+    ///   not the owner     -> Container.TakeAll() and the game's handshake
     ///
-    /// A distinção importa: RPC_RequestTakeAll recusa dois pedidos ao mesmo baú
-    /// dentro de 2s (m_lastTakeAllTime). Pelo caminho do dono esse limite não existe
-    /// -- e perto da própria base você é o dono de tudo, que era a lentidão relatada.
+    /// The distinction matters: RPC_RequestTakeAll refuses two requests to the same
+    /// chest within 2s (m_lastTakeAllTime). On the owner path that limit doesn't exist
+    /// -- and near your own base you own everything, which was the reported slowness.
     /// </summary>
     internal static class ChestSearchPatch
     {
         // ==================================================================
-        // Modelo
+        // Model
         // ==================================================================
         private class Onde
         {
@@ -67,7 +68,7 @@ namespace ValheimTweaks.Patches
             internal readonly List<Onde> Ondes = new List<Onde>();
         }
 
-        /// <summary>Capacidade de um baú, em slots (cada pilha ocupa um).</summary>
+        /// <summary>Capacity of a chest, in slots (each stack takes one).</summary>
         private class InfoBau
         {
             internal Container Bau;
@@ -78,7 +79,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Estado
+        // State
         // ==================================================================
         private static bool _aberto;
         private static readonly List<Agregado> _tudo = new List<Agregado>();
@@ -105,7 +106,7 @@ namespace ValheimTweaks.Patches
         private static readonly TMP_Text[] _chipTxt = new TMP_Text[3];
         private static readonly List<GameObject> _descartar = new List<GameObject>();
 
-        // ---- paleta
+        // ---- palette
         private static readonly Color Ouro = Cor("#E6D3A2");
         private static readonly Color Texto = Cor("#A2947C");
         private static readonly Color Apagado = Cor("#6F6353");
@@ -117,7 +118,7 @@ namespace ValheimTweaks.Patches
             => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
 
 
-        // ---- medidas do painel (tudo em pixels de canvas, do topo para baixo)
+        // ---- panel measurements (all in canvas pixels, top down)
         private const float Pad = 12f;
         private const float AltTitulo = 17f;
         private const float AltResumo = 14f;
@@ -129,7 +130,7 @@ namespace ValheimTweaks.Patches
         private const float AltRotulo = 15f;
 
         // ==================================================================
-        // Ciclo
+        // Cycle
         // ==================================================================
         internal static void Update()
         {
@@ -137,22 +138,22 @@ namespace ValheimTweaks.Patches
 
             if (!ModConfig.ChestSearchEnabled.Value)
             {
-                // Desligar no F1 tem que sumir com o botão também. Antes ele
-                // continuava na tela e clicável, dando a impressão de que a opção
-                // não fazia nada.
+                // Turning it off in F1 has to make the button disappear too. Before,
+                // it stayed on screen and clickable, giving the impression that the
+                // option did nothing.
                 Fechar();
                 if (_botao != null) { Object.Destroy(_botao.gameObject); _botao = null; _botaoTxt = null; }
                 return;
             }
 
-            // Tecla opcional: se o inventário estiver fechado, abre os dois de uma
-            // vez. Fica fora do bloco de IsVisible por isso.
+            // Optional key: if the inventory is closed, opens both at once. It stays
+            // outside the IsVisible block for that reason.
             if (TeclaDeAbrirFoiApertada())
             {
                 if (!InventoryGui.IsVisible())
                 {
                     InventoryGui.instance?.Show(null);
-                    _abrirAoMostrar = true;   // o painel só existe depois da tela montar
+                    _abrirAoMostrar = true;   // the panel only exists after the screen is built
                 }
                 else Alternar();
             }
@@ -171,27 +172,28 @@ namespace ValheimTweaks.Patches
                 if (!_aberto) Alternar();
             }
 
-            // Lido por um Prefix que roda dezenas de vezes por frame: calculamos uma
-            // vez aqui para que la seja so a leitura de um bool.
+            // Read by a Prefix that runs dozens of times per frame: we compute it
+            // once here so that over there it's just a bool read.
             bool antes = _buscaFocada;
             _buscaFocada = _aberto && BuscaTemFoco();
             if (antes != _buscaFocada && ModConfig.ChestSearchDebug.Value)
-                Plugin.Log.LogInfo($"[BAUS] foco na busca: {_buscaFocada}");
+                Plugin.Log.LogInfo($"[CHESTS] search focus: {_buscaFocada}");
 
             if (!_aberto) return;
 
-            // InventoryGui.Show reativa a producao. Se a tela foi reaberta por baixo
-            // de nos, ela voltaria por cima do painel -- reforcamos todo frame.
+            // InventoryGui.Show reactivates crafting. If the screen was reopened
+            // underneath us, it would come back on top of the panel -- we reassert
+            // every frame.
             MostrarProducao(false);
 
-            // Posicao e tamanho vem da config a cada frame, entao da para acertar o
-            // encaixe pelo F1 sem reiniciar o jogo.
+            // Position and size come from config every frame, so you can fine-tune
+            // the fit through F1 without restarting the game.
             PosicionarPainel();
 
             AtualizarDeposito();
 
-            // Redimensionar so muda a moldura: o miolo foi posicionado na mao para o
-            // tamanho antigo e ficaria encolhido num canto. Remonta quando mudar.
+            // Resizing only changes the frame: the innards were positioned by hand for
+            // the old size and would be shrunk into a corner. Rebuild when it changes.
             var tam = _painel.GetComponent<RectTransform>().rect.size;
             if ((tam - _tamanhoMontado).sqrMagnitude > 4f) Reconstruir();
 
@@ -200,9 +202,9 @@ namespace ValheimTweaks.Patches
                 _proximaVarredura = Time.realtimeSinceStartup + ModConfig.ChestSearchRefresh.Value;
                 Varrer();
 
-                // Remontar a grade duas vezes por segundo destruiria e recriaria
-                // dezenas de slots à toa, piscando o tooltip e perdendo o item sob o
-                // mouse. Só remonta quando o conteúdo dos baús mudou de verdade.
+                // Rebuilding the grid twice a second would destroy and recreate
+                // dozens of slots for nothing, flickering the tooltip and losing the
+                // item under the mouse. Only rebuild when chest contents truly changed.
                 string agora = Assinatura();
                 if (agora != _assinatura) { _assinatura = agora; Montar(); }
             }
@@ -211,9 +213,9 @@ namespace ValheimTweaks.Patches
         private static Vector2 _tamanhoMontado;
 
         /// <summary>
-        /// Refaz o painel inteiro preservando o que você já digitou. Só acontece
-        /// quando o tamanho muda (ajuste no F1, troca de resolução), então o custo
-        /// de recriar não importa.
+        /// Rebuilds the whole panel while preserving what you already typed. It only
+        /// happens when the size changes (F1 tweak, resolution change), so the cost of
+        /// recreating doesn't matter.
         /// </summary>
         private static void Reconstruir()
         {
@@ -221,8 +223,8 @@ namespace ValheimTweaks.Patches
 
             _painel.transform.SetParent(null, false);
             Object.Destroy(_painel);
-            // Tudo abaixo era filho do painel e morreu junto. Zerar as referências
-            // evita reusar objeto destruído depois do rebuild.
+            // Everything below was a child of the panel and died with it. Clearing the
+            // references avoids reusing a destroyed object after the rebuild.
             _painel = null;
             _busca = null;
             _rolo = null;
@@ -247,14 +249,14 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// TMP_InputField.isFocused sozinho não bastou na prática -- o campo é um
-        /// GuiInputField (subclasse do jogo) e o estado dele nem sempre bate. O
-        /// EventSystem é a fonte da verdade sobre quem está recebendo o teclado.
+        /// TMP_InputField.isFocused alone wasn't enough in practice -- the field is a
+        /// GuiInputField (a game subclass) and its state doesn't always match. The
+        /// EventSystem is the source of truth about who's receiving the keyboard.
         /// </summary>
         private static bool BuscaTemFoco()
         {
-            // Vale para os DOIS campos: digitar a quantidade tambem nao pode virar
-            // comando de movimento.
+            // Applies to BOTH fields: typing the quantity also can't turn into a
+            // movement command.
             if (_campoQtd != null && _campoQtd.isFocused) return true;
             if (_busca == null) return false;
             if (_busca.isFocused) return true;
@@ -269,8 +271,8 @@ namespace ValheimTweaks.Patches
         private static bool _abrirAoMostrar;
 
         /// <summary>
-        /// A tecla não pode disparar enquanto você digita na busca nem no chat --
-        /// senão a letra dela fecharia o painel no meio da pesquisa.
+        /// The key can't fire while you're typing in the search or in chat --
+        /// otherwise its letter would close the panel mid-search.
         /// </summary>
         private static bool TeclaDeAbrirFoiApertada()
         {
@@ -286,8 +288,8 @@ namespace ValheimTweaks.Patches
         {
             if (!_aberto && _painel == null) return;
 
-            // Fechar com o diálogo de dividir aberto deixaria os nossos ouvintes
-            // pendurados no objeto compartilhado do jogo.
+            // Closing with the split dialog open would leave our listeners hanging on
+            // the game's shared object.
             if (_meuSplit) { InventoryGui.instance?.m_splitDialog?.SetActive(false); LimparSplit(); }
 
             if (_painel != null && _painel.activeSelf) _painel.SetActive(false);
@@ -315,7 +317,7 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// O painel ocupa o lugar da produção em vez de desenhar por cima dela.
+        /// The panel takes the crafting panel's place instead of drawing on top of it.
         /// </summary>
         private static void MostrarProducao(bool visivel)
         {
@@ -326,12 +328,12 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Varredura
+        // Scan
         // ==================================================================
         private static string Chave(ItemDrop.ItemData item)
         {
-            // Qualidade entra na chave só quando o item tem níveis -- senão duas
-            // espadas de qualidade diferente virariam uma pilha só na tela.
+            // Quality only enters the key when the item has levels -- otherwise two
+            // swords of different quality would become a single stack on screen.
             return item.m_shared.m_maxQuality > 1
                 ? item.m_shared.m_name + "#" + item.m_quality
                 : item.m_shared.m_name;
@@ -355,8 +357,8 @@ namespace ValheimTweaks.Patches
 
                 string nomeBau = Baus.NomeVisivel(bau);
 
-                // Slot é por PILHA, não por unidade: NrOfItems devolve m_inventory.Count,
-                // que é o número de pilhas. 120 de madeira com pilha de 50 ocupa 3.
+                // A slot is per STACK, not per unit: NrOfItems returns m_inventory.Count,
+                // which is the number of stacks. 120 wood with a stack of 50 takes 3.
                 var info = new InfoBau
                 {
                     Bau = bau,
@@ -407,10 +409,10 @@ namespace ValheimTweaks.Patches
             return sb.ToString();
         }
 
-        // Buscar "carvao" tem que achar "Carvão", e "carvão" também. Tabela
-        // explícita em vez de String.Normalize(FormD): a decomposição Unicode
-        // depende da ICU, que no Mono do Unity nem sempre está completa -- e uma
-        // busca que falha calada é pior do que não ter busca.
+        // Searching "carvao" has to find "Carvão", and "carvão" too. An explicit
+        // table instead of String.Normalize(FormD): Unicode decomposition
+        // depends on ICU, which in Unity's Mono isn't always complete -- and a
+        // search that fails silently is worse than having no search.
         private const string ComAcento = "áàâãäéèêëíìîïóòôõöúùûüçñýÿ";
         private const string SemAcento = "aaaaaeeeeiiiiooooouuuucnyy";
 
@@ -418,8 +420,8 @@ namespace ValheimTweaks.Patches
         {
             if (string.IsNullOrEmpty(s)) return "";
 
-            // As duas tabelas andam em par pelo índice: se alguém editar uma e
-            // esquecer a outra, o erro seria silencioso e trocaria letra por letra.
+            // The two tables walk in pairs by index: if someone edits one and
+            // forgets the other, the error would be silent and swap letter by letter.
             if (ComAcento.Length != SemAcento.Length) return s.ToLowerInvariant();
 
             var sb = new StringBuilder(s.Length);
@@ -454,7 +456,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Pegar
+        // Take
         // ==================================================================
         private class Pedido
         {
@@ -462,7 +464,7 @@ namespace ValheimTweaks.Patches
             internal string Chave;
             internal int Qtd;
             internal string Nome;
-            /// <summary>true = mochila -> baú (guardar); false = baú -> mochila (pegar).</summary>
+            /// <summary>true = backpack -> chest (store); false = chest -> backpack (take).</summary>
             internal bool Guardando;
         }
 
@@ -478,8 +480,8 @@ namespace ValheimTweaks.Patches
         private static bool FiltroAtivo => _emVoo != null && Time.realtimeSinceStartup < _emVooAte;
 
         /// <summary>
-        /// Já sou dono do ZDO? Então posso mexer no inventário direto -- é a mesma
-        /// condição que o próprio jogo exige antes de conceder o pedido.
+        /// Am I already the ZDO owner? Then I can touch the inventory directly -- it's
+        /// the same condition the game itself requires before granting the request.
         /// </summary>
         private static bool SouDono(Container bau)
         {
@@ -492,8 +494,8 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Tira <paramref name="quantidade"/> unidades do item, juntando de quantos
-        /// baús for preciso. Passe int.MaxValue para "tudo".
+        /// Takes <paramref name="quantidade"/> units of the item, gathering from as
+        /// many chests as needed. Pass int.MaxValue for "all".
         /// </summary>
         private static void Pegar(Agregado ag, Container soDeste, int quantidade)
         {
@@ -501,7 +503,7 @@ namespace ValheimTweaks.Patches
 
             int querido = Mathf.Clamp(quantidade, 1, ag.Total);
 
-            // Do baú com mais primeiro: menos pedidos para a mesma quantidade.
+            // From the fullest chest first: fewer requests for the same amount.
             var ondes = new List<Onde>(ag.Ondes);
             ondes.Sort((a, b) => b.Qtd.CompareTo(a.Qtd));
 
@@ -521,7 +523,7 @@ namespace ValheimTweaks.Patches
 
                 if (SouDono(o.Bau))
                 {
-                    // Caminho rápido: sem RPC, sem espera, sem limite de 2s.
+                    // Fast path: no RPC, no wait, no 2s limit.
                     _levados += Mover(destino, o.Bau.GetInventory(), ag.Chave, n);
                 }
                 else
@@ -533,14 +535,14 @@ namespace ValheimTweaks.Patches
             Concluir();
         }
 
-        /// <summary>Move até <paramref name="qtd"/> do item, respeitando espaço.</summary>
+        /// <summary>Moves up to <paramref name="qtd"/> of the item, respecting space.</summary>
         private static readonly MethodInfo MetodoChanged =
             AccessTools.Method(typeof(Inventory), "Changed", new[] { typeof(bool), typeof(bool) });
 
         private static void Notificar(Inventory inv)
             => MetodoChanged?.Invoke(inv, new object[] { true, false });
 
-        /// <summary>Quantas unidades deste item existem no inventário.</summary>
+        /// <summary>How many units of this item exist in the inventory.</summary>
         private static int Contar(Inventory inv, string chave)
         {
             if (inv == null) return 0;
@@ -551,25 +553,25 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Move até <paramref name="qtd"/> unidades entre dois inventários.
+        /// Moves up to <paramref name="qtd"/> units between two inventories.
         ///
-        /// ---- Por que tira da origem ANTES de pôr no destino ----
-        /// Inventory.AddItem não é tudo-ou-nada. Para item empilhável ele vai
-        /// distribuindo unidade a unidade nas pilhas que já existem e, quando
-        /// precisa de um slot novo e o inventário está cheio, devolve false --
-        /// deixando lá as unidades que já tinham entrado:
+        /// ---- Why remove from the source BEFORE putting into the destination ----
+        /// Inventory.AddItem isn't all-or-nothing. For a stackable item it distributes
+        /// unit by unit into the stacks that already exist and, when it needs a new
+        /// slot and the inventory is full, returns false -- leaving behind the units
+        /// that already went in:
         ///
-        ///     itemData.m_stack++;  ... continue;      // ja entrou
+        ///     itemData.m_stack++;  ... continue;      // already went in
         ///     ...
-        ///     else { flag = false; ZLog.LogError(...); }   // e falha depois
+        ///     else { flag = false; ZLog.LogError(...); }   // and fails afterwards
         ///
-        /// A versão anterior fazia "se AddItem deu certo, remove da origem". No
-        /// caminho acima o AddItem falha, a origem NÃO é debitada, e as unidades que
-        /// entraram viram item DUPLICADO. O log deste mundo tem três
-        /// "Trying to add item to occupied slot -1, -1", ou seja: aconteceu.
+        /// The previous version did "if AddItem succeeded, remove from the source". On
+        /// the path above AddItem fails, the source is NOT debited, and the units that
+        /// went in become a DUPLICATED item. This world's log has three
+        /// "Trying to add item to occupied slot -1, -1", that is: it happened.
         ///
-        /// Agora debitamos primeiro e devolvemos o que não coube. Duplicar é pior que
-        /// falhar, e sumir é pior que os dois -- por isso a conferência abaixo.
+        /// Now we debit first and give back what didn't fit. Duplicating is worse than
+        /// failing, and vanishing is worse than both -- hence the check below.
         /// </summary>
         private static int Mover(Inventory destino, Inventory origem, string chave, int qtd)
         {
@@ -587,14 +589,14 @@ namespace ValheimTweaks.Patches
 
                 int n = Mathf.Min(item.m_stack, restante);
 
-                // Destaca o pedaço e já debita a origem.
+                // Detach the piece and debit the source right away.
                 var parte = item.Clone();
                 parte.m_stack = n;
                 origem.RemoveItem(item, n);
 
-                // AddItem reduz parte.m_stack conforme coloca; o que sobrar não entrou.
+                // AddItem reduces parte.m_stack as it places; whatever is left didn't go in.
                 if (!destino.AddItem(parte) && parte.m_stack > 0)
-                    origem.AddItem(parte);   // devolve o que não coube
+                    origem.AddItem(parte);   // give back what didn't fit
 
                 restante -= n;
             }
@@ -605,29 +607,29 @@ namespace ValheimTweaks.Patches
             int saiu = antesOrigem - Contar(origem, chave);
             int entrou = Contar(destino, chave) - antesDestino;
 
-            // Rede de segurança: se as duas pontas não baterem, alguém ganhou ou
-            // perdeu item. Não dá para desfazer com segurança aqui, mas gritar no log
-            // transforma "sumiu não sei como" em algo investigável.
+            // Safety net: if the two ends don't match, someone gained or
+            // lost an item. There's no safe way to undo it here, but yelling in the log
+            // turns "it vanished, I don't know how" into something investigable.
             if (saiu != entrou)
                 Plugin.Log.LogError(
-                    $"[BAUS] DESEQUILIBRIO em '{chave}': saiu {saiu} da origem mas "
-                  + $"entrou {entrou} no destino (pedido {qtd}). Avise o autor do mod.");
+                    $"[CHESTS] IMBALANCE in '{chave}': {saiu} left the source but "
+                  + $"{entrou} entered the destination (request {qtd}). Tell the mod author.");
             else if (entrou > 0 && entrou < qtd)
-                Plugin.Log.LogInfo($"[BAUS] moveu {entrou} de {qtd} (destino cheio?)");
+                Plugin.Log.LogInfo($"[CHESTS] moved {entrou} of {qtd} (destination full?)");
 
             return entrou;
         }
 
         /// <summary>
-        /// Um pedido por vez: o RPC é assíncrono e o filtro é global, então dois
-        /// baús em voo ao mesmo tempo misturariam as respostas.
+        /// One request at a time: the RPC is asynchronous and the filter is global, so
+        /// two chests in flight at once would mix up the responses.
         /// </summary>
         private static void ProcessarFila()
         {
             if (_emVoo != null)
             {
                 if (Time.realtimeSinceStartup < _emVooAte) return;
-                Plugin.Log.LogInfo($"[BAUS] sem resposta de '{Baus.NomeVisivel(_emVoo.Bau)}'");
+                Plugin.Log.LogInfo($"[CHESTS] no response from '{Baus.NomeVisivel(_emVoo.Bau)}'");
                 _emVoo = null;
                 Concluir();
             }
@@ -637,10 +639,10 @@ namespace ValheimTweaks.Patches
             var p = _fila[0];
             if (p.Bau == null) { _fila.RemoveAt(0); return; }
 
-            // O jogo recusa dois TakeAll no mesmo baú dentro de 2s
-            // (Container.RPC_RequestTakeAll, m_lastTakeAllTime). Esperar é melhor do
-            // que perder o pedido calado. O RPC de guardar (RPC_RequestStack) não tem
-            // esse limite, então ele não espera.
+            // The game refuses two TakeAlls on the same chest within 2s
+            // (Container.RPC_RequestTakeAll, m_lastTakeAllTime). Waiting is better than
+            // losing the request silently. The store RPC (RPC_RequestStack) has no
+            // such limit, so it doesn't wait.
             if (!p.Guardando
                 && _ultimoPedido.TryGetValue(p.Bau, out float t)
                 && Time.realtimeSinceStartup - t < 2.05f) return;
@@ -653,13 +655,13 @@ namespace ValheimTweaks.Patches
 
             if (p.Guardando)
             {
-                // Mesmo aperto de mão do "pegar", ao contrário: o dono concede posse
-                // (ForceSendZDO + SetOwner) antes de o inventário ser tocado.
+                // Same handshake as "take", in reverse: the owner grants ownership
+                // (ForceSendZDO + SetOwner) before the inventory is touched.
                 p.Bau.StackAll();
             }
             else if (!p.Bau.TakeAll(Player.m_localPlayer))
             {
-                _emVoo = null;   // recusado na hora; o jogo já avisou
+                _emVoo = null;   // refused on the spot; the game already warned
                 Concluir();
             }
         }
@@ -673,13 +675,13 @@ namespace ValheimTweaks.Patches
                 $"{_levados} {_nomeRodada}");
 
             _levados = 0;
-            _assinatura = null;     // força remontar
+            _assinatura = null;     // force a rebuild
             _proximaVarredura = 0f;
         }
 
         /// <summary>
-        /// Só entra em ação quando o pedido saiu pelo caminho do RPC (baú de outro
-        /// jogador). Fora da janela, o "pegar tudo" do jogo segue intacto.
+        /// Only kicks in when the request went out through the RPC path (another
+        /// player's chest). Outside the window, the game's "take all" stays intact.
         /// </summary>
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveAll))]
         internal static class MoveAllHook
@@ -690,8 +692,8 @@ namespace ValheimTweaks.Patches
 
                 var p = _emVoo;
 
-                // Confere que é a resposta do NOSSO baú: se o jogador apertou o
-                // "pegar tudo" do próprio jogo dentro da janela, não sequestramos.
+                // Check that it's the response for OUR chest: if the player pressed
+                // the game's own "take all" within the window, we don't hijack it.
                 if (p.Bau == null || fromInventory != p.Bau.GetInventory()) return true;
 
                 _emVoo = null;
@@ -702,13 +704,14 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Guardar num baú de outro jogador passa pelo RPC_RequestStack, cuja resposta
-        /// chama Inventory.StackAll(mochila). Trocamos esse laço pelo movimento exato
-        /// que foi planejado -- senão ele despejaria tudo que o baú já contém.
+        /// Storing into another player's chest goes through RPC_RequestStack, whose
+        /// response calls Inventory.StackAll(backpack). We swap that loop for the exact
+        /// move that was planned -- otherwise it would dump everything the chest already
+        /// holds.
         ///
-        /// O QuickStorePatch também prefixa este método, com a janela dele. Os dois
-        /// convivem porque cada um só age dentro da própria janela, e as duas nunca
-        /// estão abertas ao mesmo tempo (partem de ações diferentes do jogador).
+        /// QuickStorePatch also prefixes this method, with its own window. The two
+        /// coexist because each only acts within its own window, and the two are never
+        /// open at the same time (they start from different player actions).
         /// </summary>
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll))]
         internal static class StackAllHook
@@ -731,7 +734,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Guardar: planejamento
+        // Store: planning
         // ==================================================================
         private class Destino
         {
@@ -742,17 +745,17 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Decide para onde vai cada unidade, em três passadas:
+        /// Decides where each unit goes, in three passes:
         ///
-        ///   1. sobra das pilhas que JÁ existem  -> não gasta slot nenhum
-        ///   2. baú que já tem o item, em slot novo -> mantém sua organização
-        ///   3. qualquer baú com espaço
+        ///   1. top off the stacks that ALREADY exist  -> uses no slot at all
+        ///   2. chest that already has the item, in a new slot -> keeps your organization
+        ///   3. any chest with space
         ///
-        /// A ordem importa: começar pelo passo 2 encheria de slots novos baús que
-        /// tinham pilha pela metade, e o armazém ficaria cheio antes da hora.
+        /// The order matters: starting with step 2 would fill chests that had a
+        /// half-full stack with new slots, and the store would fill up before its time.
         ///
-        /// Só planeja. Quem executa é Guardar(), e o painel mostra o plano antes de
-        /// você confirmar -- guardar sem saber onde foi parar é pior que não guardar.
+        /// It only plans. Guardar() executes, and the panel shows the plan before you
+        /// confirm -- storing without knowing where it ended up is worse than not storing.
         /// </summary>
         private static List<Destino> PlanejarDeposito(ItemDrop.ItemData item, int quantidade, out int sobra)
         {
@@ -760,16 +763,16 @@ namespace ValheimTweaks.Patches
             sobra = quantidade;
             if (item == null || quantidade <= 0) return plano;
 
-            // C# nao deixa uma funcao local tocar em parametro out, entao o saldo
-            // corre numa variavel normal e volta para 'sobra' no fim.
+            // C# doesn't let a local function touch an out parameter, so the balance
+            // runs in a normal variable and returns to 'sobra' at the end.
             int resta = quantidade;
 
             string nome = item.m_shared.m_name;
             int pilha = Mathf.Max(1, item.m_shared.m_maxStackSize);
             float nivel = item.m_worldLevel;
 
-            // Slots livres vão sendo consumidos ao longo do plano, senão dois passos
-            // reservariam o mesmo slot e a conta do "não coube" sairia otimista.
+            // Free slots get consumed over the course of the plan, otherwise two passes
+            // would reserve the same slot and the "didn't fit" count would come out optimistic.
             var livres = new Dictionary<Container, int>();
             foreach (var b in _baus) livres[b.Bau] = b.Livres;
 
@@ -788,7 +791,7 @@ namespace ValheimTweaks.Patches
                 return inv != null && inv.ContainsItemByName(nome);
             }
 
-            // 1) completar pilhas existentes
+            // 1) top off existing stacks
             foreach (var b in _baus)
             {
                 if (resta <= 0) break;
@@ -798,7 +801,7 @@ namespace ValheimTweaks.Patches
                 Poe(b.Bau, b.Nome, Mathf.Min(cabe, resta), Lang.T("tops off stack", "completa pilha"));
             }
 
-            // 2) baús que já têm o item
+            // 2) chests that already have the item
             foreach (var b in _baus)
             {
                 if (resta <= 0) break;
@@ -808,7 +811,7 @@ namespace ValheimTweaks.Patches
                 Poe(b.Bau, b.Nome, cabe, Lang.T("with the rest", "junto do resto"));
             }
 
-            // 3) qualquer um com espaço
+            // 3) anyone with space
             foreach (var b in _baus)
             {
                 if (resta <= 0) break;
@@ -823,32 +826,32 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Diálogo de dividir pilha (o do próprio jogo)
+        // Stack-split dialog (the game's own)
         // ==================================================================
         private static bool _meuSplit;
         private static Agregado _splitAg;
         private static Container _splitBau;
 
         /// <summary>
-        /// Reaproveita o SplitDialog do jogo, que é a telinha que todo mundo já
-        /// conhece. Ele é COMPARTILHADO, e isso exige três cuidados:
+        /// Reuses the game's SplitDialog, which is the little screen everyone already
+        /// knows. It is SHARED, and that calls for three precautions:
         ///
-        ///   - o botão OK dispara o evento SplitAccepted, que só tem ouvinte quando
-        ///     foi o jogo que abriu. Por isso assinamos o nosso.
-        ///   - InventoryGui.UpdateSplitDialog roda todo frame e no Enter chama
-        ///     OnSplitOk() direto, sem passar pelo evento. Por isso o prefixo abaixo.
-        ///   - Escape faz o jogo chamar HideSplitDialog, que não conhece os nossos
-        ///     ouvintes. Por isso soltamos no postfix dele.
+        ///   - the OK button fires the SplitAccepted event, which only has a listener
+        ///     when it was the game that opened it. So we subscribe ours.
+        ///   - InventoryGui.UpdateSplitDialog runs every frame and on Enter calls
+        ///     OnSplitOk() directly, without going through the event. Hence the prefix below.
+        ///   - Escape makes the game call HideSplitDialog, which doesn't know our
+        ///     listeners. Hence we release them in its postfix.
         ///
-        /// Sem os três, ou o OK não faz nada, ou o Enter inicia um arrasto com
-        /// m_splitItem nulo.
+        /// Without all three, either OK does nothing, or Enter starts a drag with a
+        /// null m_splitItem.
         /// </summary>
         private static void AbrirSplit(Agregado ag, Container soDeste)
         {
             var gui = InventoryGui.instance;
             if (gui == null || gui.m_splitDialog == null || ag.Total <= 1)
             {
-                // Sem diálogo (ou item único) o rodapé já resolve.
+                // Without a dialog (or a single item) the footer already handles it.
                 DesenharRodape();
                 return;
             }
@@ -898,7 +901,7 @@ namespace ValheimTweaks.Patches
             LimparSplit();
         }
 
-        /// <summary>Enter no diálogo chama isto direto; desviamos quando é o nosso.</summary>
+        /// <summary>Enter in the dialog calls this directly; we divert it when it's ours.</summary>
         [HarmonyPatch(typeof(InventoryGui), "OnSplitOk")]
         internal static class SplitOkHook
         {
@@ -921,7 +924,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        /// <summary>Escape passa por aqui; soltamos os nossos ouvintes junto.</summary>
+        /// <summary>Escape goes through here; we release our listeners along with it.</summary>
         [HarmonyPatch(typeof(InventoryGui), "HideSplitDialog")]
         internal static class SplitHideHook
         {
@@ -932,16 +935,16 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Guardar: a área de soltar
+        // Store: the drop area
         // ==================================================================
         private static GameObject _deposito;
         private static TMP_Text _depTitulo, _depPlano;
         private static string _depAssinatura;
 
         /// <summary>
-        /// Cobre o painel inteiro enquanto você está com um item na mão. Cobrir tudo
-        /// é de propósito: se só uma faixa aceitasse o item, você erraria a mira e o
-        /// clique cairia no slot de baixo, pegando outra coisa.
+        /// Covers the whole panel while you're holding an item. Covering everything
+        /// is on purpose: if only one strip accepted the item, you'd miss your aim and
+        /// the click would land on the slot below, taking something else.
         /// </summary>
         private static void MontarDeposito(float larg, float alt)
         {
@@ -973,7 +976,7 @@ namespace ValheimTweaks.Patches
             _deposito.SetActive(false);
         }
 
-        /// <summary>Mostra/esconde a área e mantém o plano em dia. Chamado todo frame.</summary>
+        /// <summary>Shows/hides the area and keeps the plan up to date. Called every frame.</summary>
         private static void AtualizarDeposito()
         {
             if (_deposito == null) return;
@@ -984,8 +987,8 @@ namespace ValheimTweaks.Patches
             if (_deposito.activeSelf != mostrar) _deposito.SetActive(mostrar);
             if (!mostrar) { _depAssinatura = null; return; }
 
-            // Recalcular o plano todo frame seria desperdício: ele só muda se o item,
-            // a quantidade ou o conteúdo dos baús mudarem.
+            // Recomputing the plan every frame would be wasteful: it only changes if the
+            // item, the quantity or the chest contents change.
             string assin = item.m_shared.m_name + "#" + qtd + "#" + _assinatura;
             if (assin == _depAssinatura) return;
             _depAssinatura = assin;
@@ -1030,34 +1033,34 @@ namespace ValheimTweaks.Patches
             var item = ItemNaMao(out var de, out int qtd);
             if (item == null) return;
 
-            // O item pode ter saído do inventário entre pegar e soltar (outro mod,
-            // outro jogador). Conferir evita duplicar item a partir de referência velha.
+            // The item may have left the inventory between grabbing and dropping (another
+            // mod, another player). Checking avoids duplicating an item from a stale reference.
             if (de == null || !de.ContainsItem(item)) { SoltarArrasto(); return; }
 
             Guardar(item, qtd);
             SoltarArrasto();
-            _assinatura = null;       // força remontar a grade com o novo conteúdo
+            _assinatura = null;       // force rebuilding the grid with the new contents
             _proximaVarredura = 0f;
         }
 
         // ==================================================================
-        // Guardar: execução
+        // Store: execution
         // ==================================================================
         private static void Guardar(ItemDrop.ItemData item, int quantidade)
         {
             var player = Player.m_localPlayer;
             if (item == null || player == null) return;
 
-            // Item de missão não sai do inventário: é a mesma recusa que o jogo faz
-            // em OnSelectedItem, e sem ela dava para perder um item de quest num baú.
+            // A quest item doesn't leave the inventory: it's the same refusal the game
+            // makes in OnSelectedItem, and without it you could lose a quest item in a chest.
             if (item.m_shared.m_questItem)
             {
                 player.Message(MessageHud.MessageType.Center, "$msg_cantmove");
                 return;
             }
 
-            // Guardar peça equipada tem que desequipar antes, senão o personagem fica
-            // com o bônus de uma armadura que já está dentro do baú.
+            // Storing an equipped piece requires unequipping first, otherwise the character
+            // keeps the bonus of an armor that's already inside the chest.
             if (player.IsItemEquiped(item))
             {
                 player.RemoveEquipAction(item);
@@ -1091,12 +1094,12 @@ namespace ValheimTweaks.Patches
             }
 
             if (sobra > 0)
-                Plugin.Log.LogInfo($"[BAUS] {_nomeRodada}: {sobra} nao coube nos baus por perto");
+                Plugin.Log.LogInfo($"[CHESTS] {_nomeRodada}: {sobra} didn't fit in nearby chests");
 
             Concluir();
         }
 
-        // ---- leitura do arrasto do jogo -----------------------------------
+        // ---- reading the game's drag --------------------------------------
         private static readonly FieldInfo CampoDragItem =
             AccessTools.Field(typeof(InventoryGui), "m_dragItem");
         private static readonly FieldInfo CampoDragInv =
@@ -1120,7 +1123,7 @@ namespace ValheimTweaks.Patches
             return item;
         }
 
-        /// <summary>Encerra o arrasto do jeito que o próprio jogo encerra.</summary>
+        /// <summary>Ends the drag the same way the game itself ends it.</summary>
         private static void SoltarArrasto()
         {
             var gui = InventoryGui.instance;
@@ -1128,7 +1131,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Botão
+        // Button
         // ==================================================================
         private static void GarantirBotao()
         {
@@ -1137,7 +1140,7 @@ namespace ValheimTweaks.Patches
             var gui = InventoryGui.instance;
             if (gui == null || gui.m_player == null)
             {
-                Reclamar("InventoryGui ou o painel do inventario ainda nao existem");
+                Reclamar("InventoryGui or the inventory panel doesn't exist yet");
                 return;
             }
 
@@ -1145,17 +1148,17 @@ namespace ValheimTweaks.Patches
 
             if (gui.m_takeAllButton != null)
             {
-                // Clonar um botão do próprio jogo traz arte, fonte e som de clique.
+                // Cloning one of the game's own buttons brings art, font and click sound.
                 go = Object.Instantiate(gui.m_takeAllButton.gameObject, gui.m_player);
                 _botao = go.GetComponent<Button>();
                 _botaoTxt = go.GetComponentInChildren<TMP_Text>(true);
             }
             else
             {
-                // Sem o molde, um botão simples -- feio é melhor que ausente. Antes
-                // isto era um `return` calado, e "o botão não aparece" virava um
-                // mistério sem nenhuma pista no log.
-                Reclamar("m_takeAllButton nao encontrado; usando um botao simples");
+                // Without the template, a plain button -- ugly is better than missing.
+                // Before, this was a silent `return`, and "the button doesn't appear"
+                // became a mystery with no clue in the log.
+                Reclamar("m_takeAllButton not found; using a plain button");
 
                 go = new GameObject("VT_BotaoBaus", typeof(RectTransform));
                 go.transform.SetParent(gui.m_player, false);
@@ -1183,19 +1186,19 @@ namespace ValheimTweaks.Patches
             rt.anchoredPosition = new Vector2(ModConfig.ChestSearchButtonX.Value,
                                               ModConfig.ChestSearchButtonY.Value);
 
-            Plugin.Log.LogInfo($"[BAUS] botao criado em {rt.anchoredPosition} "
-                             + $"(painel do inventario {gui.m_player.rect.width:0}x{gui.m_player.rect.height:0})");
+            Plugin.Log.LogInfo($"[CHESTS] button created at {rt.anchoredPosition} "
+                             + $"(inventory panel {gui.m_player.rect.width:0}x{gui.m_player.rect.height:0})");
             AtualizarBotao();
         }
 
         private static float _proximaReclamacao;
 
-        /// <summary>Avisa no log, no máximo uma vez a cada 5s, por que o botão não veio.</summary>
+        /// <summary>Warns in the log, at most once every 5s, why the button didn't come up.</summary>
         private static void Reclamar(string motivo)
         {
             if (Time.realtimeSinceStartup < _proximaReclamacao) return;
             _proximaReclamacao = Time.realtimeSinceStartup + 5f;
-            Plugin.Log.LogWarning($"[BAUS] botao nao criado: {motivo}");
+            Plugin.Log.LogWarning($"[CHESTS] button not created: {motivo}");
         }
 
         private static void AtualizarBotao()
@@ -1207,9 +1210,9 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Painel -- posicionamento manual
+        // Panel -- manual positioning
         // ==================================================================
-        /// <summary>Ancora no canto superior esquerdo do painel e posiciona por (x, y de cima).</summary>
+        /// <summary>Anchors to the panel's top-left corner and positions by (x, y from the top).</summary>
         private static RectTransform Por(GameObject go, float x, float yDeCima, float larg, float alt)
         {
             var rt = go.GetComponent<RectTransform>() ?? go.AddComponent<RectTransform>();
@@ -1221,9 +1224,9 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Encaixa o painel no retângulo do painel de produção. Largura e altura em
-        /// 0 quer dizer copiar o da produção, que é o que alinha certo em qualquer
-        /// resolução; valor diferente de 0 manda.
+        /// Fits the panel into the crafting panel's rectangle. Width and height at
+        /// 0 means copy the crafting one's, which is what aligns correctly at any
+        /// resolution; a non-zero value wins.
         /// </summary>
         private static void PosicionarPainel()
         {
@@ -1252,7 +1255,7 @@ namespace ValheimTweaks.Patches
             var pai = gui.m_crafting.parent as RectTransform;
             if (pai == null) return;
 
-            // ---- casca, copiando exatamente o retângulo do painel de produção
+            // ---- shell, copying the crafting panel's rectangle exactly
             _painel = new GameObject("VT_PainelBaus", typeof(RectTransform));
             _painel.transform.SetParent(pai, false);
             _painel.transform.SetSiblingIndex(gui.m_crafting.GetSiblingIndex());
@@ -1264,8 +1267,8 @@ namespace ValheimTweaks.Patches
             prt.pivot = c.pivot;
             PosicionarPainel();
 
-            // A madeira do painel de produção, com a mesma borda em 9-slice. Nada de
-            // desenhar borda na mão: o sprite do jogo já traz a dele.
+            // The crafting panel's wood, with the same 9-slice border. No drawing a
+            // border by hand: the game's sprite already brings its own.
             EstiloJogo.Descobrir();
 
             var img = _painel.AddComponent<Image>();
@@ -1273,18 +1276,18 @@ namespace ValheimTweaks.Patches
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(prt);
 
-            // Se o retangulo ainda nao resolveu (ancora esticada num pai que nao
-            // passou pelo layout), medir daria zero e o painel sairia sem nada.
+            // If the rectangle still hasn't resolved (stretch anchor in a parent that
+            // didn't go through layout), measuring would give zero and the panel would come out empty.
             float larg = prt.rect.width  > 60f ? prt.rect.width  : 340f;
             float alt  = prt.rect.height > 80f ? prt.rect.height : 520f;
             if (prt.rect.width <= 60f || prt.rect.height <= 80f)
             {
                 prt.sizeDelta = new Vector2(larg, alt);
-                Plugin.Log.LogInfo($"[BAUS] retangulo da producao nao resolveu; usando {larg}x{alt}");
+                Plugin.Log.LogInfo($"[CHESTS] crafting rectangle didn't resolve; using {larg}x{alt}");
             }
             float dentroLarg = larg - Pad * 2f;
 
-            // ---- cabeçalho
+            // ---- header
             float y = Pad;
 
             var titulo = NovoTexto(_painel.transform, 18f, Ouro);
@@ -1299,7 +1302,7 @@ namespace ValheimTweaks.Patches
             Por(_resumo.gameObject, Pad, y, dentroLarg, AltResumo);
             y += AltResumo + 5f;
 
-            // ---- barra de ocupação: quanto dos baús ao redor ainda está livre
+            // ---- occupancy bar: how much of the surrounding chests is still free
             float largTxt = 112f;
             var trilho = new GameObject("trilho", typeof(RectTransform));
             trilho.transform.SetParent(_painel.transform, false);
@@ -1314,7 +1317,7 @@ namespace ValheimTweaks.Patches
             _ocupFill.raycastTarget = false;
             var frt = _ocupFill.rectTransform;
             frt.anchorMin = new Vector2(0f, 0f);
-            frt.anchorMax = new Vector2(0f, 1f);   // largura vem do sizeDelta.x
+            frt.anchorMax = new Vector2(0f, 1f);   // width comes from sizeDelta.x
             frt.pivot = new Vector2(0f, 0.5f);
             frt.offsetMin = new Vector2(1f, 1f);
             frt.offsetMax = new Vector2(1f, -1f);
@@ -1327,11 +1330,11 @@ namespace ValheimTweaks.Patches
             Divisor(Pad, y, dentroLarg);
             y += 7f;
 
-            // ---- busca
+            // ---- search
             CriarBusca(Pad, y, dentroLarg);
             y += AltBusca + 7f;
 
-            // ---- ordenação
+            // ---- sorting
             float x = Pad;
             x += Chip(0, Lang.T("Amount", "Quantidade"), x, y, () => { _ordemPorNome = false; Montar(); });
             x += Chip(1, Lang.T("Name", "Nome"), x, y, () => { _ordemPorNome = true; Montar(); });
@@ -1341,7 +1344,7 @@ namespace ValheimTweaks.Patches
             Divisor(Pad, y, dentroLarg);
             y += 8f;
 
-            // ---- área rolável
+            // ---- scrollable area
             float alturaRolo = alt - y - AltRodape - Pad - 8f;
 
             var roloGo = new GameObject("rolo", typeof(RectTransform));
@@ -1365,7 +1368,7 @@ namespace ValheimTweaks.Patches
             sr.content = _conteudo;
             sr.viewport = _rolo;
 
-            // ---- rodapé
+            // ---- footer
             float yr = alt - AltRodape - Pad + 4f;
             Divisor(Pad, yr - 7f, dentroLarg);
 
@@ -1393,21 +1396,21 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Campo próprio em vez de clonar o do menu de construção.
+        /// A field of our own instead of cloning the build menu's.
         ///
-        /// O clone parecia a escolha óbvia -- arte do jogo de graça -- mas a arte
-        /// dele é uma pílula clara, desenhada para o fundo claro do menu de
-        /// construção, e num painel escuro ela grita. Junto vinham um selo de tecla,
-        /// placeholder em maiúsculas e o comportamento de foco do GuiInputField, que
-        /// é subclasse e faz coisas próprias. Um TMP_InputField simples e escuro
-        /// combina com o painel e não tem nada escondido.
+        /// The clone looked like the obvious choice -- the game's art for free -- but its
+        /// art is a light pill, drawn for the build menu's light background, and on a
+        /// dark panel it screams. Along with it came a key badge, an uppercase
+        /// placeholder and the focus behavior of GuiInputField, which is a subclass and
+        /// does things of its own. A simple, dark TMP_InputField matches the panel and
+        /// hides nothing.
         /// </summary>
         private static void CriarBusca(float x, float y, float larg)
         {
             var caixa = new GameObject("VT_BuscaSimples", typeof(RectTransform));
             caixa.transform.SetParent(_painel.transform, false);
             Por(caixa, x, y, larg, AltBusca);
-            // Caixa escura sobre a madeira, para o texto digitado ter contraste.
+            // Dark box over the wood, so the typed text has contrast.
             var borda = caixa.AddComponent<Image>();
             borda.color = Borda;
 
@@ -1449,7 +1452,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Grade
+        // Grid
         // ==================================================================
         private static void Montar()
         {
@@ -1473,7 +1476,7 @@ namespace ValheimTweaks.Patches
             float cel = lado + AltRotulo;
             float larg = _rolo.rect.width;
 
-            // Colunas pela largura real: o painel muda de tamanho com a resolução.
+            // Columns from the real width: the panel changes size with the resolution.
             int cols = ModConfig.ChestSearchColumns.Value > 0
                 ? ModConfig.ChestSearchColumns.Value
                 : Mathf.Max(1, Mathf.FloorToInt((larg + GapCel) / (lado + GapCel)));
@@ -1565,8 +1568,8 @@ namespace ValheimTweaks.Patches
 
         private static void Limpar()
         {
-            // Destroy só acontece no fim do frame; sem soltar do pai agora, os
-            // filhos velhos ainda apareceriam sobre os novos por um frame.
+            // Destroy only happens at the end of the frame; without detaching from the
+            // parent now, the old children would still show over the new ones for a frame.
             foreach (var g in _descartar)
                 if (g != null) { g.transform.SetParent(null, false); Object.Destroy(g); }
             _descartar.Clear();
@@ -1589,7 +1592,7 @@ namespace ValheimTweaks.Patches
             Por(raiz, x, y, lado, lado + AltRotulo);
             _descartar.Add(raiz);
 
-            // O slot do jogo: arte, borda e tooltip nativos.
+            // The game's slot: native art, border and tooltip.
             var slotGo = Object.Instantiate(gui.m_playerGrid.m_elementPrefab, raiz.transform);
             slotGo.SetActive(true);
             Por(slotGo, 0f, 0f, lado, lado);
@@ -1608,8 +1611,8 @@ namespace ValheimTweaks.Patches
             el.m_icon.sprite = item.GetIcon();
             el.m_icon.color = Color.white;
 
-            // O UpdateGui do jogo escreveria "347/50" aqui -- por isso usamos só o
-            // slot, e não o InventoryGrid inteiro.
+            // The game's UpdateGui would write "347/50" here -- that's why we use only the
+            // slot, and not the whole InventoryGrid.
             el.m_amount.enabled = true;
             el.m_amount.text = qtd.ToString();
 
@@ -1642,11 +1645,11 @@ namespace ValheimTweaks.Patches
             var handler = slotGo.GetComponentInChildren<UIInputHandler>();
             if (handler != null)
             {
-                // Passar o mouse não mexe mais no rodapé: com a linha de quantidade
-                // ali, mover o cursor até o botão "10" trocaria o item embaixo dele.
-                // O tooltip nativo do slot já cobre a curiosidade rápida.
-                // Mesmos modificadores que o jogo usa nas grades dele
-                // (InventoryGrid.OnLeftDown): Shift = dividir, Ctrl = mover.
+                // Hovering the mouse no longer touches the footer: with the quantity line
+                // there, moving the cursor to the "10" button would swap the item under it.
+                // The slot's native tooltip already covers quick curiosity.
+                // Same modifiers the game uses in its grids
+                // (InventoryGrid.OnLeftDown): Shift = split, Ctrl = move.
                 handler.m_onLeftClick = _ =>
                 {
                     bool shift = ZInput.GetKey(KeyCode.LeftShift) || ZInput.GetKey(KeyCode.RightShift);
@@ -1658,14 +1661,14 @@ namespace ValheimTweaks.Patches
                     if (shift) { AbrirSplit(ag, soDeste); return; }
                     if (ctrl) { Pegar(ag, soDeste, ag.Total); return; }
 
-                    // Clique simples leva uma pilha, igual a pegar de um baú aberto.
+                    // A plain click takes one stack, like taking from an open chest.
                     Pegar(ag, soDeste, Mathf.Max(1, ag.Amostra.m_shared.m_maxStackSize));
                 };
             }
         }
 
         // ==================================================================
-        // Linha de quantidade
+        // Quantity line
         // ==================================================================
         private static GameObject _linhaQtd;
         private static TMP_InputField _campoQtd;
@@ -1673,11 +1676,11 @@ namespace ValheimTweaks.Patches
         private static int _qtdEscolhida;
 
         /// <summary>
-        /// Constrói a linha "PEGAR [1] [10] [pilha] [Tudo]  [-] [n] [+]  [Pegar]".
+        /// Builds the line "TAKE [1] [10] [stack] [All]  [-] [n] [+]  [Take]".
         ///
-        /// Ela é montada UMA vez e depois só tem rótulo e visibilidade atualizados.
-        /// Recriar botão a cada seleção destruiria o objeto sob o mouse no meio do
-        /// clique, o que no uGUI engole o evento.
+        /// It is built ONCE and afterwards only its label and visibility are updated.
+        /// Recreating the button on each selection would destroy the object under the
+        /// mouse mid-click, which in uGUI swallows the event.
         /// </summary>
         private static void MontarLinhaQuantidade(float x, float y, float larg)
         {
@@ -1693,8 +1696,8 @@ namespace ValheimTweaks.Patches
 
             float cx = 46f;
 
-            // Quatro atalhos: 1, 10, uma pilha, tudo. O texto de cada um muda com o
-            // item selecionado (a pilha do minério é 30, a da madeira 50).
+            // Four shortcuts: 1, 10, one stack, all. The text of each changes with the
+            // selected item (ore's stack is 30, wood's is 50).
             for (int i = 0; i < 4; i++)
             {
                 int idx = i;
@@ -1714,7 +1717,7 @@ namespace ValheimTweaks.Patches
             MiniBotao(_linhaQtd.transform, "+", cx, 0f, 24f, 22f, () => AjustarQtd(+1));
             cx += 30f;
 
-            var pegar = MiniBotao(_linhaQtd.transform, "Pegar", cx, 0f, larg - cx, 22f,
+            var pegar = MiniBotao(_linhaQtd.transform, Lang.T("Take", "Pegar"), cx, 0f, larg - cx, 22f,
                                   () => PegarEscolhido());
             pegar.color = Ouro;
 
@@ -1763,8 +1766,8 @@ namespace ValheimTweaks.Patches
                 var t = _rotulosAtalho[i];
                 if (t == null) continue;
                 t.text = textos[i];
-                // Atalho que não faz sentido para este item fica apagado em vez de
-                // sumir: botão que dança de lugar é pior do que botão inerte.
+                // A shortcut that makes no sense for this item is dimmed instead of
+                // disappearing: a button that dances around is worse than an inert button.
                 bool util = valores[i] <= _focado.Total;
                 t.color = util ? Texto : new Color(Apagado.r, Apagado.g, Apagado.b, 0.4f);
             }
@@ -1774,8 +1777,8 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Barra de ocupação dos baús ao redor. O número que importa é "quantos slots
-        /// ainda dá para encher", então ele é que vai em destaque, não a porcentagem.
+        /// Occupancy bar for the surrounding chests. The number that matters is "how many
+        /// slots can still be filled", so that's the one highlighted, not the percentage.
         /// </summary>
         private static void AtualizarOcupacao()
         {
@@ -1789,8 +1792,8 @@ namespace ValheimTweaks.Patches
             _ocupFill.rectTransform.sizeDelta =
                 new Vector2(Mathf.Max(0f, largura * Mathf.Clamp01(frac)), 0f);
 
-            // Verde enquanto sobra espaço; avermelha quando está apertado, para a
-            // barra dizer algo de relance em vez de ser só decoração.
+            // Green while there's room left; turns red when it's tight, so the
+            // bar says something at a glance instead of being mere decoration.
             _ocupFill.color = frac >= 0.85f ? Cor("#B0603F")
                             : frac >= 0.65f ? Cor("#B09A45")
                                             : Cor("#7E9C50");
@@ -1839,7 +1842,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Peças
+        // Pieces
         // ==================================================================
         private static float Chip(int i, string texto, float x, float y,
                                   UnityEngine.Events.UnityAction ao, float larg = 0f)
@@ -1851,8 +1854,8 @@ namespace ValheimTweaks.Patches
             Image img;
             TMP_Text txt;
 
-            // Mesmo botão do jogo dos outros, só menor: arte, fonte e som de clique
-            // vêm juntos, e fica coerente com o botão que abre o painel.
+            // The same game button as the others, just smaller: art, font and click sound
+            // come together, and it stays consistent with the button that opens the panel.
             if (gui != null && gui.m_takeAllButton != null)
             {
                 go = Object.Instantiate(gui.m_takeAllButton.gameObject, _painel.transform);
@@ -1904,16 +1907,16 @@ namespace ValheimTweaks.Patches
         {
             if (_chip[i] == null) return;
 
-            // Tingir em cima da cor original: assim funciona tanto com a arte do
-            // botão do jogo quanto com o retângulo do plano B.
+            // Tint on top of the original color: that way it works both with the game's
+            // button art and with the plan B rectangle.
             var b = _chipCorBase[i];
             _chip[i].color = ligado ? b : new Color(b.r, b.g, b.b, b.a * 0.5f);
             if (_chipTxt[i] != null) _chipTxt[i].color = ligado ? Ouro : Apagado;
         }
 
         /// <summary>
-        /// Botão pequeno com a arte do jogo. Devolve o TMP do rótulo, que é o que
-        /// os chamadores precisam atualizar depois.
+        /// Small button with the game's art. Returns the label's TMP, which is what the
+        /// callers need to update afterwards.
         /// </summary>
         private static TMP_Text MiniBotao(Transform pai, string texto, float x, float y,
                                           float larg, float alt, UnityEngine.Events.UnityAction ao)
@@ -1953,7 +1956,7 @@ namespace ValheimTweaks.Patches
             return txt;
         }
 
-        /// <summary>Campo só de número, para digitar a quantidade exata.</summary>
+        /// <summary>Number-only field, for typing the exact quantity.</summary>
         private static TMP_InputField CampoNumero(Transform pai, float x, float y, float larg, float alt)
         {
             var caixa = new GameObject("VT_Qtd", typeof(RectTransform));
@@ -2000,7 +2003,7 @@ namespace ValheimTweaks.Patches
                 if (int.TryParse(s, out int v))
                     _qtdEscolhida = Mathf.Clamp(v, 1, _focado.Total);
             });
-            // Enter pega direto, como no diálogo de dividir pilha do jogo.
+            // Enter takes directly, like in the game's stack-split dialog.
             campo.onSubmit.AddListener(_ => PegarEscolhido());
 
             return campo;
@@ -2039,20 +2042,20 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Ctrl+clique no inventário guarda nos baús
+        // Ctrl+click in the inventory stores into chests
         // ==================================================================
         /// <summary>
-        /// Ctrl+clique num item chega aqui como Modifier.Move. Com um baú aberto, o
-        /// jogo move para ele; sem baú aberto, ele faz isto:
+        /// Ctrl+click on an item arrives here as Modifier.Move. With a chest open, the
+        /// game moves it into the chest; with no chest open, it does this:
         ///
         ///     else if (Player.m_localPlayer.DropItem(grid.GetInventory(), item, item.m_stack))
         ///
-        /// ou seja, LARGA NO CHÃO. Com o painel aberto isso é quase sempre um
-        /// acidente -- você queria guardar. Então assumimos o comando: distribui nos
-        /// baús próximos, exatamente como soltar o item em cima do painel.
+        /// that is, DROPS IT ON THE GROUND. With the panel open that's almost always an
+        /// accident -- you wanted to store it. So we take over the command: distribute
+        /// into nearby chests, exactly like dropping the item onto the panel.
         ///
-        /// Só interfere quando o painel está aberto e não há baú aberto. Fora disso,
-        /// o comportamento do jogo fica intacto.
+        /// It only interferes when the panel is open and no chest is open. Outside that,
+        /// the game's behavior stays intact.
         /// </summary>
         [HarmonyPatch(typeof(InventoryGui), "OnSelectedItem")]
         internal static class CtrlGuardaHook
@@ -2064,10 +2067,10 @@ namespace ValheimTweaks.Patches
                 if (mod != InventoryGrid.Modifier.Move) return true;
                 if (__instance.IsContainerOpen()) return true;
 
-                // Só a grade do jogador: a do baú aberto é assunto do jogo.
+                // Only the player's grid: the open chest's grid is the game's business.
                 if (grid == null || grid != __instance.m_playerGrid) return true;
 
-                // Se já existe algo na mão, o clique é um "soltar" -- não é nosso.
+                // If something is already in hand, the click is a "drop" -- not ours.
                 if (ItemNaMao(out _, out _) != null) return true;
 
                 Guardar(item, item.m_stack);
@@ -2078,22 +2081,22 @@ namespace ValheimTweaks.Patches
         }
 
         // ==================================================================
-        // Digitar não pode virar comando
+        // Typing must not become a command
         // ==================================================================
         /// <summary>
-        /// InventoryGui.Update fecha a tela com isto:
+        /// InventoryGui.Update closes the screen with this:
         ///
         ///     bool flag = ZInput.GetButtonDown("Inventory") || ... || ZInput.GetButtonDown("Use");
         ///     if (m_shownFrames > 1 &amp;&amp; flag) { ...; Hide(); }
         ///
-        /// Sem nenhuma checagem de campo de texto -- o jogo nunca teve um campo de
-        /// busca dentro do inventário. Então digitar "resina" no nosso campo manda um
-        /// "Use" (E) e a tela fecha; aí o personagem volta a andar com as próximas
-        /// letras, que é exatamente o sintoma relatado.
+        /// With no text-field check whatsoever -- the game never had a search field
+        /// inside the inventory. So typing "resina" in our field sends a
+        /// "Use" (E) and the screen closes; then the character starts walking with the
+        /// next letters, which is exactly the reported symptom.
         ///
-        /// Silenciamos só os botões que fecham a tela, e só enquanto o campo tem foco.
-        /// Escape fica de fora de propósito: é por GetKeyDown, outro método, então
-        /// continua funcionando e você nunca fica preso.
+        /// We silence only the buttons that close the screen, and only while the field
+        /// has focus. Escape is left out on purpose: it goes through GetKeyDown, another
+        /// method, so it keeps working and you never get stuck.
         /// </summary>
         [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetButtonDown))]
         internal static class BotaoHook
@@ -2102,15 +2105,15 @@ namespace ValheimTweaks.Patches
             {
                 if (!_aberto) return true;
 
-                // "Use" (E) morre enquanto o painel está aberto, com ou sem foco no
-                // campo: com o painel na tela o E não tem outro significado, e assim
-                // a correção não fica dependendo de acertar a detecção de foco.
+                // "Use" (E) dies while the panel is open, with or without focus in the
+                // field: with the panel on screen the E has no other meaning, and that way
+                // the fix doesn't depend on getting focus detection right.
                 if (name == "Use") { __result = false; return false; }
 
                 if (EhMovimento(name)) { __result = false; return false; }
 
-                // Os outros só com o campo em foco, senão o TAB deixaria de fechar
-                // o inventário normalmente.
+                // The others only with the field focused, otherwise TAB would stop
+                // closing the inventory normally.
                 if (!_buscaFocada) return true;
 
                 switch (name)
@@ -2127,20 +2130,20 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Quem move o personagem é PlayerController.TakeInput -- um método
-        /// diferente do Player.TakeInput, com uma lista própria. E nela o inventário
-        /// só conta quando há controle conectado:
+        /// Whoever moves the character is PlayerController.TakeInput -- a method
+        /// different from Player.TakeInput, with its own list. And in it the inventory
+        /// only counts when a controller is connected:
         ///
         ///     (!ZInput.IsGamepadActive() || !InventoryGui.IsVisible())
         ///
-        /// No teclado e mouse isso é sempre verdadeiro, ou seja: andar com o
-        /// inventário aberto é comportamento normal do Valheim. Por isso o bloqueio
-        /// que eu tinha posto em Player.TakeInput não surtiu efeito nenhum -- o
-        /// movimento nunca passou por lá.
+        /// On keyboard and mouse this is always true, that is: walking with the
+        /// inventory open is normal Valheim behavior. That's why the block
+        /// I had put in Player.TakeInput had no effect whatsoever -- the
+        /// movement never went through there.
         ///
-        /// Na mesma condição está a solução do próprio jogo para o campo de busca do
-        /// menu de construção (!Hud.instance.m_buildUi.SearchFieldFocused). Fazemos
-        /// o equivalente para o nosso.
+        /// In the same condition is the game's own solution for the build menu's
+        /// search field (!Hud.instance.m_buildUi.SearchFieldFocused). We do the
+        /// equivalent for ours.
         /// </summary>
         [HarmonyPatch(typeof(PlayerController), "TakeInput")]
         internal static class ControleHook
@@ -2151,7 +2154,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        /// <summary>Cinto e suspensório: cobre ações que passam pelo Player.</summary>
+        /// <summary>Belt and suspenders: covers actions that go through Player.</summary>
         [HarmonyPatch(typeof(Player), "TakeInput")]
         internal static class TakeInputHook
         {
@@ -2180,19 +2183,19 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Bloqueio na origem, e não num portão.
+        /// Blocking at the source, not at a gate.
         ///
-        /// PlayerController.FixedUpdate lê o andar assim:
+        /// PlayerController.FixedUpdate reads walking like this:
         ///
         ///     if (ZInput.GetButton("Forward"))  zero.z += 1f;
         ///
-        /// Note GetButton, não GetButtonDown: andar é tecla SEGURADA, e são métodos
-        /// diferentes. Remendar só o GetButtonDown não pararia o movimento.
+        /// Note GetButton, not GetButtonDown: walking is a HELD key, and they're
+        /// different methods. Patching only GetButtonDown wouldn't stop the movement.
         ///
-        /// Isto é reforço, não a defesa principal: ZInput.GetButton é um wrapper de
-        /// uma linha (`m_instance?.TryGetButtonState(...) ?? false`), do tamanho que
-        /// o JIT do Mono gosta de inlinar -- e método inlinado não passa pelo detour
-        /// do Harmony. Por isso a trava de verdade está no FixedUpdate abaixo.
+        /// This is reinforcement, not the main defense: ZInput.GetButton is a
+        /// one-line wrapper (`m_instance?.TryGetButtonState(...) ?? false`), the size
+        /// Mono's JIT likes to inline -- and an inlined method doesn't go through Harmony's
+        /// detour. That's why the real lock is in FixedUpdate below.
         /// </summary>
         [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetButton))]
         internal static class BotaoSeguradoHook
@@ -2211,34 +2214,34 @@ namespace ValheimTweaks.Patches
         private static int _logMov;
 
         /// <summary>
-        /// A trava que não tem como falhar.
+        /// The lock that can't fail.
         ///
-        /// Já tentei Player.TakeInput, PlayerController.TakeInput e ZInput.GetButton;
-        /// os três aparecem na lista de patches aplicados e o personagem continuou
-        /// andando. O que os três têm em comum é serem métodos pequenos, candidatos a
-        /// inlining -- quando o Mono cola o corpo deles dentro de FixedUpdate, o
-        /// detour do Harmony fica órfão e o patch vira decoração.
+        /// I've already tried Player.TakeInput, PlayerController.TakeInput and ZInput.GetButton;
+        /// all three show up in the list of applied patches and the character kept
+        /// walking. What the three have in common is being small methods, inlining
+        /// candidates -- when Mono pastes their body into FixedUpdate, Harmony's
+        /// detour is left orphaned and the patch becomes decoration.
         ///
-        /// FixedUpdate não corre esse risco: é mensagem de MonoBehaviour, chamada pela
-        /// engine por ponteiro, nunca inlinada. Pulamos ele inteiro e zeramos os
-        /// controles do mesmo jeito que o próprio jogo faz quando recusa input --
-        /// sem isso, um movimento já em andamento continuaria para sempre.
+        /// FixedUpdate doesn't run that risk: it's a MonoBehaviour message, called by
+        /// the engine through a pointer, never inlined. We skip it entirely and zero the
+        /// controls the same way the game itself does when it refuses input --
+        /// without that, a movement already in progress would continue forever.
         /// </summary>
         [HarmonyPatch(typeof(PlayerController), "FixedUpdate")]
         internal static class MovimentoHook
         {
             private static bool Prefix(PlayerController __instance)
             {
-                // Critério é o PAINEL ABERTO, não o foco no campo.
+                // The criterion is the PANEL BEING OPEN, not focus in the field.
                 //
-                // Quatro versões seguidas travaram o movimento "enquanto o campo tem
-                // foco", e o log mostrou o bloqueio rodando -- só que por pouquíssimos
-                // frames. Detectar foco de um InputField criado em runtime é
-                // escorregadio: clicar num slot, mover o mouse ou remontar a grade
-                // tiram o foco sem aviso, e nesses buracos o WASD volta a andar.
+                // Four versions in a row locked movement "while the field has
+                // focus", and the log showed the block running -- but for only a few
+                // frames. Detecting focus of an InputField created at runtime is
+                // slippery: clicking a slot, moving the mouse or rebuilding the grid
+                // remove focus without warning, and in those gaps WASD walks again.
                 //
-                // Com o painel aberto você está mexendo em baú, não caminhando. Some
-                // a dependência inteira de um sinal que não se provou confiável.
+                // With the panel open you're handling a chest, not walking. That removes
+                // the whole dependency on a signal that didn't prove reliable.
                 if (!_aberto || !ModConfig.ChestSearchBlockMove.Value) return true;
 
                 var p = CampoPersonagem?.GetValue(__instance) as Player;
@@ -2247,36 +2250,36 @@ namespace ValheimTweaks.Patches
                                   false, false, false, false, false, false);
 
                 if (ModConfig.ChestSearchDebug.Value && ++_logMov % 200 == 1)
-                    Plugin.Log.LogInfo("[BAUS] movimento travado (painel aberto)");
+                    Plugin.Log.LogInfo("[CHESTS] movement locked (panel open)");
 
                 return false;
             }
         }
 
         // ==================================================================
-        // A causa real: o "E" digitado fechava o inventário
+        // The real cause: the typed "E" was closing the inventory
         // ==================================================================
         /// <summary>
-        /// Era isto o tempo todo, e estava no primeiro relato: "o boneco anda E EU SAIO
-        /// DO INVENTÁRIO". A ordem dos fatos:
+        /// This was it all along, and it was in the first report: "the character walks AND I
+        /// LEAVE THE INVENTORY". The order of events:
         ///
-        ///   1. você digita "resina"
-        ///   2. o "e" dispara ZInput.GetButtonDown("Use") dentro de InventoryGui.Update
-        ///   3. o inventário fecha  ->  o painel fecha  ->  _aberto vira false
-        ///   4. sem painel aberto, o bloqueio de movimento sai de cena
-        ///   5. as letras seguintes (a, s, d, w) andam com o personagem
+        ///   1. you type "resina"
+        ///   2. the "e" fires ZInput.GetButtonDown("Use") inside InventoryGui.Update
+        ///   3. the inventory closes  ->  the panel closes  ->  _aberto becomes false
+        ///   4. with no panel open, the movement block leaves the scene
+        ///   5. the next letters (a, s, d, w) walk the character
         ///
-        /// Eu vinha tratando o passo 5 e o problema estava no 2. Pior: o silenciador
-        /// que pus no GetButtonDown nunca teve chance, porque ele é um wrapper de uma
-        /// linha e o Mono inlina -- o mesmo motivo do GetButton.
+        /// I had been treating step 5 and the problem was in 2. Worse: the silencer
+        /// I put in GetButtonDown never had a chance, because it's a one-line
+        /// wrapper and Mono inlines it -- the same reason as GetButton.
         ///
-        /// Hide() não corre esse risco: tem quase trinta linhas e é chamado de vários
-        /// lugares, então o detour do Harmony vale. Enquanto você digita, ele
-        /// simplesmente não fecha.
+        /// Hide() doesn't run that risk: it's almost thirty lines and is called from
+        /// several places, so Harmony's detour is worth it. While you type, it
+        /// simply doesn't close.
         ///
-        /// Escape continua fechando de propósito: ele não passa por "Use" nem é
-        /// zerado pelo ResetButtonStatus antes do Hide, então dá para distinguir a
-        /// saída deliberada da letra digitada. Ninguém fica preso.
+        /// Escape still closes on purpose: it doesn't go through "Use" nor is it
+        /// zeroed by ResetButtonStatus before the Hide, so you can tell the deliberate
+        /// exit from the typed letter. Nobody gets stuck.
         /// </summary>
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Hide))]
         internal static class HideHook
@@ -2287,7 +2290,7 @@ namespace ValheimTweaks.Patches
                 if (ZInput.GetKeyDown(KeyCode.Escape)) return true;
 
                 if (ModConfig.ChestSearchDebug.Value && ++_logFechar % 50 == 1)
-                    Plugin.Log.LogInfo("[BAUS] ignorei um fechar de inventario (voce estava digitando)");
+                    Plugin.Log.LogInfo("[CHESTS] ignored an inventory close (you were typing)");
                 return false;
             }
 

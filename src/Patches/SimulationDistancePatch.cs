@@ -3,29 +3,29 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Simulation distance -- o maior custo de CPU do host.
+    /// Simulation distance -- the host's biggest CPU cost.
     ///
-    /// ZoneSystem carrega um quadrado de raio "near": (2n+1)^2 zonas.
-    ///     near = 2 (vanilla) ->  25 zonas
-    ///     near = 3           ->  49 zonas
-    ///     near = 5           -> 121 zonas   <- quase 5x o vanilla
-    /// E o host paga isso por peer conectado (ZDOMan.FindSectorObjects).
+    /// ZoneSystem loads a square of radius "near": (2n+1)^2 zones.
+    ///     near = 2 (vanilla) ->  25 zones
+    ///     near = 3           ->  49 zones
+    ///     near = 5           -> 121 zones   <- almost 5x vanilla
+    /// And the host pays that per connected peer (ZDOMan.FindSectorObjects).
     ///
-    /// Nao e de graca cortar: "near" tambem define o alcance VISUAL do terreno e
-    /// da agua -- Heightmap.GetLodHideDistance() = near * sqrt(zoneSize^2 * 2),
-    /// com ZoneSystem.m_zoneSize = 64 -> ~90,5 m por unidade.
+    /// Cutting it is not free: "near" also defines the VISUAL range of the terrain and
+    /// water -- Heightmap.GetLodHideDistance() = near * sqrt(zoneSize^2 * 2),
+    /// with ZoneSystem.m_zoneSize = 64 -> ~90.5 m per unit.
     ///     near = 5 -> ~452 m      near = 3 -> ~272 m      near = 2 -> ~181 m
     ///
-    /// ---- Como o "host manda" funciona (tudo isso e do proprio jogo) ----
-    /// ZNet.GetSyncedSimulationDistance() devolve min(desejado_local, m_simulationDistance),
-    /// onde m_simulationDistance no cliente vem do servidor. O fluxo:
-    ///     cliente -> RPC_RequestValidSimulationDistance -> servidor clampa -> devolve
-    /// Ou seja: o servidor e um TETO, e o cliente so pode ficar ABAIXO dele.
+    /// ---- How the "host is in charge" works (all of this is from the game itself) ----
+    /// ZNet.GetSyncedSimulationDistance() returns min(local_desired, m_simulationDistance),
+    /// where m_simulationDistance on the client comes from the server. The flow:
+    ///     client -> RPC_RequestValidSimulationDistance -> server clamps -> returns
+    /// In other words: the server is a CEILING, and the client can only stay BELOW it.
     ///
-    /// Entao basta interceptar GetSimulationDistance() -- no host isso vira o teto de
-    /// todo mundo, no cliente vira apenas o desejo dele. Nao precisa de ServerSync:
-    /// a sincronizacao ja e do jogo. So precisamos re-disparar o handshake quando
-    /// o valor muda em runtime.
+    /// So it is enough to intercept GetSimulationDistance() -- on the host that becomes the
+    /// ceiling for everyone, on the client it becomes only its own wish. No ServerSync needed:
+    /// the synchronization is already the game's. We only need to re-trigger the handshake when
+    /// the value changes at runtime.
     /// </summary>
     internal static class SimulationDistancePatch
     {
@@ -38,10 +38,10 @@ namespace ValheimTweaks.Patches
 
                 int near = ModConfig.SimDistanceNear.Value;
 
-                // Durante o teleporte, usa um valor reduzido: o destino so fica
-                // pronto quando a zona central termina de carregar os assets, e com
-                // 121 zonas pedindo asset ao mesmo tempo ela fica na fila.
-                // Medido: 14,7s e 16,8s com near=5 contra 3,7s e 1,5s com near=2.
+                // During teleport, use a reduced value: the destination only becomes
+                // ready when the central zone finishes loading assets, and with
+                // 121 zones requesting assets at the same time it gets stuck in the queue.
+                // Measured: 14.7s and 16.8s with near=5 versus 3.7s and 1.5s with near=2.
                 if (TeleportSpeedPatch.EmTeleporte)
                 {
                     int reduzido = ModConfig.TeleportSimDistance.Value;
@@ -55,14 +55,14 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Re-negocia com os peers depois de mudar o valor em runtime.
-        /// No servidor isso aplica localmente e empurra o novo teto para todos;
-        /// no cliente, pede validacao ao servidor.
+        /// Re-negotiates with the peers after changing the value at runtime.
+        /// On the server this applies locally and pushes the new ceiling to everyone;
+        /// on the client, it requests validation from the server.
         /// </summary>
         internal static void Apply()
         {
             var znet = ZNet.instance;
-            if (znet == null) return; // fora de mundo: aplica sozinho no proximo load
+            if (znet == null) return; // outside the world: applies on its own on the next load
 
             znet.SimulationDistanceServerHandshake();
 
@@ -70,7 +70,7 @@ namespace ValheimTweaks.Patches
             int zonas = (2 * sim.NearSimulationDistance + 1) * (2 * sim.NearSimulationDistance + 1);
             Plugin.Log.LogInfo(
                 $"SimulationDistance: near={sim.NearSimulationDistance} far={sim.FarSimulationDistance} " +
-                $"-> {zonas} zonas ({(znet.IsServer() ? "host: teto para todos" : "cliente: limitado pelo host")})");
+                $"-> {zonas} zones ({(znet.IsServer() ? "host: ceiling for everyone" : "client: limited by host")})");
         }
     }
 }

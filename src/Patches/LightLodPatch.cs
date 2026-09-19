@@ -4,22 +4,22 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Luzes pontuais (tocha, fogueira, forja) e grama.
+    /// Point lights (torch, campfire, forge) and grass.
     ///
-    /// O jogo JA tem um limitador dinamico pronto -- LightLod ordena as luzes por
-    /// distancia e liga so as N primeiras -- mas o menu so expoe 4 degraus fixos
+    /// The game ALREADY has a ready-made dynamic limiter -- LightLod sorts the lights by
+    /// distance and enables only the first N -- but the menu only exposes 4 fixed steps
     /// (GraphicsSettingsManager):
-    ///     GetPointLightLimit:       0 -> 4   1 -> 15   2 -> 40   3 -> -1 (ilimitado)
+    ///     GetPointLightLimit:       0 -> 4   1 -> 15   2 -> 40   3 -> -1 (unlimited)
     ///     GetPointLightShadowLimit: 0 -> 0   1 -> 1    2 -> 3    3 -> -1
     ///
-    /// Sombra de luz pontual e das coisas mais caras do jogo numa base construida,
-    /// mas 3 e pouco e "ilimitado" derruba tudo. O meio-termo (6, 8, 10) nao existe
-    /// no menu -- so aqui.
+    /// Point light shadows are among the most expensive things in the game in a built
+    /// base, but 3 is too little and "unlimited" brings everything down. The middle ground
+    /// (6, 8, 10) does not exist in the menu -- only here.
     ///
-    /// ClutterSystem.m_distance controla ate onde a grama e desenhada. Medido em
-    /// runtime: 45 (o default do codigo e 40; o prefab sobrescreve).
+    /// ClutterSystem.m_distance controls how far the grass is drawn. Measured at
+    /// runtime: 45 (the code default is 40; the prefab overrides it).
     ///
-    /// Convencao das configs: -2 = nao sobrescrever, -1 = ilimitado, 0+ = limite.
+    /// Config convention: -2 = do not override, -1 = unlimited, 0+ = limit.
     /// </summary>
     internal static class LightLodPatch
     {
@@ -31,7 +31,7 @@ namespace ValheimTweaks.Patches
         {
             if (!_subscribed)
             {
-                // O jogo aplica os limites dentro de ApplyLightLod, disparado por este evento.
+                // The game applies the limits inside ApplyLightLod, triggered by this event.
                 GraphicsSettingsManager.GraphicsSettingsChanged += ApplyNow;
                 _subscribed = true;
             }
@@ -65,16 +65,16 @@ namespace ValheimTweaks.Patches
                 Plugin.Log.LogInfo($"ClutterSystem.m_distance -> {grass}");
             }
 
-            // Densidade da grama. O menu mapeia Low->amount/4, Med->amount/2,
-            // High->amount; m_amountScale multiplica por cima disso e e publico.
-            // Trocar o valor exige limpar os patches ja gerados, senao a densidade
-            // nova so aparece em terreno novo -- por isso o ClearAll.
+            // Grass density. The menu maps Low->amount/4, Med->amount/2,
+            // High->amount; m_amountScale multiplies on top of that and is public.
+            // Changing the value requires clearing the already generated patches, otherwise
+            // the new density only shows up on new terrain -- hence the ClearAll.
             float escala = ModConfig.ClutterAmountScale.Value;
             if (escala > 0f && !Mathf.Approximately(clutter.m_amountScale, escala))
             {
                 clutter.m_amountScale = escala;
                 AccessTools.Method(typeof(ClutterSystem), "ClearAll")?.Invoke(clutter, null);
-                Plugin.Log.LogInfo($"ClutterSystem.m_amountScale -> {escala} (patches regenerados)");
+                Plugin.Log.LogInfo($"ClutterSystem.m_amountScale -> {escala} (patches regenerated)");
             }
         }
     }

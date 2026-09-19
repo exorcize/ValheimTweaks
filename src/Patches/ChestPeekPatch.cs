@@ -8,21 +8,22 @@ using UnityEngine.UI;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Espiar o conteudo do bau mirado, sem abrir.
+    /// Peek at the contents of the targeted chest, without opening it.
     ///
-    /// Da para ler sem abrir porque Container.Update chama Load(), que desserializa
-    /// ZDOVars.s_items do ZDO -- e so relê quando a DataRevision muda. Ou seja: o
-    /// m_inventory de qualquer bau carregado ja esta em dia de graca.
+    /// You can read without opening because Container.Update calls Load(), which
+    /// deserializes ZDOVars.s_items from the ZDO -- and it only rereads when
+    /// DataRevision changes. In other words: the m_inventory of any loaded chest
+    /// is already up to date for free.
     ///
-    /// Vale para carroca e navio tambem: os tres sao Container no codigo.
+    /// Applies to carts and ships too: all three are Container in the code.
     ///
-    /// A mira sozinha nao basta -- exigimos proximidade. Na pratica o raycast de
-    /// hover do jogo ja limita a m_maxInteractDistance, mas a checagem fica
-    /// explicita para o caso de outro mod esticar esse alcance.
+    /// Aiming alone isn't enough -- we require proximity. In practice the game's
+    /// hover raycast already limits to m_maxInteractDistance, but the check stays
+    /// explicit in case another mod stretches that reach.
     ///
-    /// Itens sao agrupados por tipo antes de ordenar: GetAllItems devolve por SLOT,
-    /// entao tres pilhas de madeira viriam como tres entradas e a ordenacao sairia
-    /// errada com madeira repetida.
+    /// Items are grouped by type before sorting: GetAllItems returns per SLOT,
+    /// so three stacks of wood would come as three entries and the sorting would
+    /// come out wrong with wood repeated.
     /// </summary>
     internal static class ChestPeekPatch
     {
@@ -39,7 +40,7 @@ namespace ValheimTweaks.Patches
         private static float _perdeuMiraEm = -1f;
 
         // ------------------------------------------------------------------
-        // Deteccao
+        // Detection
         // ------------------------------------------------------------------
         private static Container BauMirado()
         {
@@ -67,7 +68,7 @@ namespace ValheimTweaks.Patches
 
             if (bau == null)
             {
-                // Atraso antes de sumir: mira que passa raspando faria o painel piscar.
+                // Delay before hiding: a crosshair that grazes past would make the panel blink.
                 if (_painel != null && _painel.activeSelf)
                 {
                     if (_perdeuMiraEm < 0f) _perdeuMiraEm = Time.realtimeSinceStartup;
@@ -82,7 +83,7 @@ namespace ValheimTweaks.Patches
             var nview = bau.GetComponent<ZNetView>();
             long revisao = nview?.GetZDO() != null ? nview.GetZDO().DataRevision : 0;
 
-            // So remonta quando muda de bau ou quando o conteudo muda de verdade.
+            // Only rebuilds when the chest changes or the contents actually change.
             if (bau != _atual || revisao != _revisaoVista)
             {
                 _atual = bau;
@@ -100,7 +101,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ------------------------------------------------------------------
-        // Conteudo agrupado e ordenado
+        // Grouped and sorted contents
         // ------------------------------------------------------------------
         private class Entrada
         {
@@ -148,15 +149,15 @@ namespace ValheimTweaks.Patches
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
             rt.anchoredPosition = new Vector2(-ModConfig.ChestPeekX.Value, 0f);
 
-            // Mesma madeira dos painéis do jogo, em vez de um retângulo liso meu.
+            // Same wood as the game's panels, instead of a plain rectangle of mine.
             EstiloJogo.Descobrir();
             var fundo = _painel.AddComponent<Image>();
             EstiloJogo.AplicarFundo(fundo);
             fundo.raycastTarget = false;
 
             var col = _painel.AddComponent<VerticalLayoutGroup>();
-            // Folga maior que antes: a moldura de madeira tem borda própria, e o
-            // conteúdo encostado nela fica espremido.
+            // More padding than before: the wood frame has its own border, and
+            // content pressed against it looks cramped.
             col.padding = new RectOffset(18, 18, 14, 16);
             col.spacing = 6f;
             col.childAlignment = TextAnchor.UpperLeft;
@@ -209,8 +210,9 @@ namespace ValheimTweaks.Patches
 
             var itens = Agrupar(inv);
 
-            // Mostra TUDO, mas encolhe o slot conforme a quantidade de tipos para
-            // nao tomar a tela. Colunas sobem junto, senao viraria uma coluna alta.
+            // Shows EVERYTHING, but shrinks the slot as the number of types grows
+            // so it doesn't take over the screen. Columns increase along with it,
+            // otherwise it would become one tall column.
             float lado;
             int colunas;
             if (itens.Count <= 10) { lado = 68f; colunas = 5; }
@@ -241,9 +243,10 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
-        /// Usa o slot do próprio inventário (InventoryGrid.m_elementPrefab) em vez de
-        /// desenhar um quadrado. Assim a borda, o fundo e a posição do número são
-        /// exatamente os do jogo, e o painel deixa de parecer coisa de fora.
+        /// Uses the inventory's own slot (InventoryGrid.m_elementPrefab) instead of
+        /// drawing a square. That way the border, the background and the number's
+        /// position are exactly the game's, and the panel stops looking like
+        /// something foreign.
         /// </summary>
         private static void NovoSlot(float lado, Entrada e)
         {
@@ -251,7 +254,7 @@ namespace ValheimTweaks.Patches
 
             if (prefab == null)
             {
-                SlotSimples(lado, e);   // antes do inventário existir
+                SlotSimples(lado, e);   // before the inventory exists
                 return;
             }
 
@@ -274,7 +277,7 @@ namespace ValheimTweaks.Patches
             el.m_quality.enabled = false;
             if (el.m_selected != null) el.m_selected.SetActive(false);
 
-            // Sem tooltip nem clique: aqui é só espiar, e o mouse está no baú.
+            // No tooltip or click: this is just peeking, and the mouse is on the chest.
             if (el.m_tooltip != null) el.m_tooltip.enabled = false;
             foreach (var h in slotGo.GetComponentsInChildren<UIInputHandler>(true)) h.enabled = false;
             foreach (var d in slotGo.GetComponentsInChildren<UIDragHandler>(true)) d.enabled = false;

@@ -6,28 +6,29 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Minerar sozinho enquanto a mira estiver no minério.
+    /// Mine by yourself while the crosshair is on the ore.
     ///
-    /// ---- Só minério, não pedra ----
-    /// MineRock5 e MineRock servem tanto para depósito de cobre quanto para pedra
-    /// comum, então o tipo não distingue. O que distingue é o que o alvo SOLTA:
-    /// ambos expõem m_dropItems (DropTable) com m_drops[].m_item, e basta olhar se
-    /// algum drop bate com a lista de minérios. Pedra solta Stone, que não está na
-    /// lista -- e assim a regra vale para minério modado também, bastando
-    /// acrescentar o nome na config.
+    /// ---- Only ore, not stone ----
+    /// MineRock5 and MineRock are used both for copper deposits and for common
+    /// stone, so the type doesn't distinguish them. What distinguishes them is
+    /// what the target DROPS: both expose m_dropItems (DropTable) with
+    /// m_drops[].m_item, and it's enough to check whether any drop matches the
+    /// ore list. Stone drops Stone, which isn't in the list -- and so the rule
+    /// works for modded ore too, as long as the name is added to the config.
     ///
-    /// ---- Alcance de verdade ----
-    /// Mirar não basta: a distância é medida até o PONTO MAIS PRÓXIMO do collider
-    /// (Collider.ClosestPoint), não até o transform. Depósito é grande e o centro
-    /// dele pode estar metros além da superfície -- medir pelo centro deixava o
-    /// personagem batendo no que estivesse na frente. E o limite é o alcance real
-    /// da arma equipada (m_attack.m_attackRange), não um número fixo.
+    /// ---- Real reach ----
+    /// Aiming isn't enough: the distance is measured to the CLOSEST POINT of the
+    /// collider (Collider.ClosestPoint), not to the transform. A deposit is large
+    /// and its center can be meters beyond the surface -- measuring from the
+    /// center left the character hitting whatever was in front. And the limit is
+    /// the real reach of the equipped weapon (m_attack.m_attackRange), not a
+    /// fixed number.
     ///
-    /// ---- Como para ----
-    /// As condições são checadas todo frame e a fila de ataque só é alimentada
-    /// enquanto todas passam. Quebrou o minério, desviou a mira, guardou a
-    /// picareta ou afastou: o golpe em curso termina e o personagem para. Não
-    /// existe detecção separada de "quebrou".
+    /// ---- How it stops ----
+    /// The conditions are checked every frame and the attack queue is only fed
+    /// while all of them pass. Broke the ore, moved the aim away, sheathed the
+    /// pickaxe or walked off: the current swing finishes and the character stops.
+    /// There is no separate "broke it" detection.
     /// </summary>
     internal static class AutoMinePatch
     {
@@ -45,7 +46,7 @@ namespace ValheimTweaks.Patches
         internal static bool Ligado => _ligado;
 
         // ------------------------------------------------------------------
-        // O alvo solta minerio?
+        // Does the target drop ore?
         // ------------------------------------------------------------------
         private static bool SoltaMinerio(DropTable tabela)
         {
@@ -68,7 +69,7 @@ namespace ValheimTweaks.Patches
             return false;
         }
 
-        /// <summary>Collider do minerio sob a mira, ou null.</summary>
+        /// <summary>Collider of the ore under the crosshair, or null.</summary>
         private static Collider MinerioMirado(Player player)
         {
             if (HoveringField == null) return null;
@@ -76,9 +77,10 @@ namespace ValheimTweaks.Patches
             var go = HoveringField.GetValue(player) as GameObject;
             if (go == null) return null;
 
-            // Tres formas diferentes de um alvo minerável carregar sua tabela de
-            // drop. O estanho nao usa MineRock: e um Destructible com o componente
-            // separado DropOnDestroyed, e por isso a versao anterior o ignorava.
+            // Three different ways a minable target can carry its drop table.
+            // Tin doesn't use MineRock: it's a Destructible with the separate
+            // DropOnDestroyed component, which is why the previous version
+            // ignored it.
             bool ehMinerio = false;
 
             var rock5 = go.GetComponentInParent<MineRock5>();
@@ -102,28 +104,29 @@ namespace ValheimTweaks.Patches
                 return null;
             }
 
-            // O collider mirado e o pedaco exato: MineRock5 e dividido em varias
-            // areas, e usar o do objeto raiz mediria distancia errada.
+            // The targeted collider is the exact piece: MineRock5 is split into
+            // several areas, and using the root object's would measure the wrong
+            // distance.
             return go.GetComponent<Collider>() ?? go.GetComponentInParent<Collider>();
         }
 
         private static string _ultimoDiagnostico;
 
         /// <summary>
-        /// Loga o que foi recusado e por que. Sem isso, "nao funciona no estanho"
-        /// vira tentativa e erro; com isso o proprio log diz qual componente o
-        /// alvo usa e o que ele solta.
+        /// Logs what was rejected and why. Without this, "it doesn't work on tin"
+        /// becomes trial and error; with it, the log itself says which component
+        /// the target uses and what it drops.
         /// </summary>
         private static void Diagnosticar(GameObject go)
         {
             if (!ModConfig.AutoMineDebug.Value) return;
 
             string nome = go.name;
-            if (nome == _ultimoDiagnostico) return; // nao repete todo frame
+            if (nome == _ultimoDiagnostico) return; // doesn't repeat every frame
             _ultimoDiagnostico = nome;
 
             var partes = new System.Text.StringBuilder();
-            partes.Append($"[AUTO-MINERAR] alvo recusado: {nome}");
+            partes.Append($"[AUTO-MINE] target rejected: {nome}");
 
             var r5 = go.GetComponentInParent<MineRock5>();
             var r = go.GetComponentInParent<MineRock>();
@@ -136,27 +139,27 @@ namespace ValheimTweaks.Patches
             var tabela = r5?.m_dropItems ?? r?.m_dropItems ?? dd?.m_dropWhenDestroyed;
             if (tabela?.m_drops != null)
             {
-                partes.Append(" | solta:");
+                partes.Append(" | drops:");
                 foreach (var d in tabela.m_drops)
                     if (d.m_item != null) partes.Append(' ').Append(d.m_item.name);
             }
-            else partes.Append(" | sem tabela de drop");
+            else partes.Append(" | no drop table");
 
             Plugin.Log.LogInfo(partes.ToString());
         }
 
         /// <summary>
-        /// Distancia ate a SUPERFICIE do alvo.
+        /// Distance to the SURFACE of the target.
         ///
-        /// Collider.ClosestPoint so aceita box, esfera, capsula e mesh CONVEXA --
-        /// e deposito de minerio e mesh nao convexa. Nesses casos o Unity nao so
-        /// cospe um aviso por frame no log (milhares em poucos minutos de jogo)
-        /// como devolve o proprio ponto consultado: a distancia saia zero e o
-        /// limite de alcance nunca reprovava nada.
+        /// Collider.ClosestPoint only accepts box, sphere, capsule and CONVEX
+        /// mesh -- and ore deposits are non-convex meshes. In those cases Unity
+        /// not only spits out a warning per frame into the log (thousands in a
+        /// few minutes of play) but also returns the queried point itself: the
+        /// distance came out zero and the reach limit never rejected anything.
         ///
-        /// Para collider nao suportado usamos a caixa envolvente. Menos preciso
-        /// que a malha, mas funciona em qualquer tipo, nao polui o log e -- o que
-        /// importa -- nao mente sobre a distancia.
+        /// For unsupported colliders we use the bounding box. Less precise than
+        /// the mesh, but it works on any type, doesn't pollute the log and --
+        /// what matters -- doesn't lie about the distance.
         /// </summary>
         private static float DistanciaAteSuperficie(Collider col, Vector3 origem)
         {
@@ -195,14 +198,14 @@ namespace ValheimTweaks.Patches
             if (!digitando && ModConfig.AutoMineKey.Value.IsDown())
             {
                 _ligado = !_ligado;
-                // De proposito NAO usa MessageHud: a duracao dele e do jogo e vale
-                // para todas as mensagens. O proprio indicador da o retorno, com
-                // tempo que a gente controla.
+                // On purpose does NOT use MessageHud: its duration belongs to the
+                // game and applies to all messages. The indicator itself gives the
+                // feedback, with timing we control.
                 _avisoAte = Time.realtimeSinceStartup + ModConfig.AutoMineToggleSeconds.Value;
             }
 
-            // Fica visivel enquanto ligado; ao desligar, ainda aparece pelo tempo
-            // do aviso para voce ver que desligou.
+            // Stays visible while on; when turned off, it still shows for the
+            // warning's duration so you can see it turned off.
             MostrarAviso(_ligado || Time.realtimeSinceStartup < _avisoAte);
 
             if (!_ligado || QueuedAttackField == null) return;
@@ -212,17 +215,17 @@ namespace ValheimTweaks.Patches
             var col = MinerioMirado(player);
             if (col == null) return;
 
-            // Distancia ate a superficie do alvo, nao ate o centro.
+            // Distance to the target's surface, not to its center.
             Vector3 origem = player.transform.position + Vector3.up * 1f;
             float d = DistanciaAteSuperficie(col, origem);
             if (d > AlcanceDaArma(player)) return;
 
-            // Mesmo valor que o jogo escreve ao apertar o botao de ataque.
+            // Same value the game writes when the attack button is pressed.
             QueuedAttackField.SetValue(player, 0.5f);
         }
 
         // ------------------------------------------------------------------
-        // Indicador permanente enquanto ligado
+        // Permanent indicator while on
         // ------------------------------------------------------------------
         private static void MostrarAviso(bool visivel)
         {
@@ -250,19 +253,20 @@ namespace ValheimTweaks.Patches
                 _avisoTxt.raycastTarget = false;
             }
 
-            // Reaplica a cada exibicao: se a HUD ainda nao estava pronta quando o
-            // objeto foi criado, a fonte teria ficado no fallback para sempre. E
-            // sem fonte o TMP procura LiberationSans, que o Valheim nao inclui --
-            // o rotulo sai sem fonte nenhuma. Melhor esconder e tentar no proximo
-            // frame do que mostrar quebrado.
+            // Reapply on every display: if the HUD wasn't ready yet when the
+            // object was created, the font would have stayed on the fallback
+            // forever. And without a font TMP looks for LiberationSans, which
+            // Valheim doesn't include -- the label comes out with no font at all.
+            // Better to hide it and try again next frame than to show it broken.
             if (!StoreHudPatch.AplicarFonte(_avisoTxt))
             {
                 if (_aviso.activeSelf) _aviso.SetActive(false);
                 return;
             }
 
-            // Logo apos alternar, destaca o estado; depois volta ao rotulo discreto.
-            // Sem emoji: a fonte do Valheim nao tem esses glifos e sai quadradinho.
+            // Right after toggling, it highlights the state; then it returns to the
+            // discreet label. No emoji: Valheim's font lacks those glyphs and they
+            // come out as little squares.
             bool recemAlternado = Time.realtimeSinceStartup < _avisoAte;
             if (recemAlternado)
                 _avisoTxt.text = _ligado

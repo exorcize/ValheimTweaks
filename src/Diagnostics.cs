@@ -4,11 +4,11 @@ using UnityEngine;
 namespace ValheimTweaks
 {
     /// <summary>
-    /// Despeja no log o estado REAL do pipeline de render.
+    /// Dumps the REAL state of the render pipeline to the log.
     ///
-    /// Existe para parar de especular. Em particular responde a pergunta que
-    /// decide se MSAA e viavel: qual o actualRenderingPath da camera do jogo?
-    /// MSAA so funciona em Forward -- em Deferred o Unity ignora.
+    /// It exists to stop speculating. In particular it answers the question that
+    /// decides whether MSAA is viable: what is the game camera's actualRenderingPath?
+    /// MSAA only works in Forward -- in Deferred Unity ignores it.
     /// </summary>
     internal static class Diagnostics
     {
@@ -16,14 +16,14 @@ namespace ValheimTweaks
         {
             var sb = new StringBuilder();
             sb.AppendLine();
-            sb.AppendLine("=============== ValheimTweaks :: diagnostico (" + reason + ") ===============");
+            sb.AppendLine("=============== ValheimTweaks :: diagnostics (" + reason + ") ===============");
 
-            // ---- Cameras: a resposta sobre MSAA esta aqui ----
+            // ---- Cameras: the answer about MSAA is here ----
             sb.AppendLine("[CAMERAS]");
             var cams = Camera.allCameras;
             if (cams == null || cams.Length == 0)
             {
-                sb.AppendLine("  (nenhuma camera ativa)");
+                sb.AppendLine("  (no active camera)");
             }
             else
             {
@@ -31,16 +31,16 @@ namespace ValheimTweaks
                 {
                     if (c == null) continue;
                     sb.AppendLine($"  {c.name,-22} path={c.actualRenderingPath,-16} " +
-                                  $"(pedido={c.renderingPath}) MSAA_ok={c.allowMSAA} HDR={c.allowHDR} " +
+                                  $"(requested={c.renderingPath}) MSAA_ok={c.allowMSAA} HDR={c.allowHDR} " +
                                   $"fov={c.fieldOfView:0.#} far={c.farClipPlane:0} depth={c.depth}");
                 }
-                sb.AppendLine("  -> MSAA so vale a pena se actualRenderingPath == Forward");
+                sb.AppendLine("  -> MSAA is only worth it if actualRenderingPath == Forward");
             }
 
             // ---- QualitySettings ----
             sb.AppendLine("[QUALITY]");
-            sb.AppendLine($"  antiAliasing(MSAA) = {QualitySettings.antiAliasing}   (o jogo NUNCA seta isso)");
-            sb.AppendLine($"  anisotropicFiltering = {QualitySettings.anisotropicFiltering}   (o jogo NUNCA seta isso)");
+            sb.AppendLine($"  antiAliasing(MSAA) = {QualitySettings.antiAliasing}   (the game NEVER sets this)");
+            sb.AppendLine($"  anisotropicFiltering = {QualitySettings.anisotropicFiltering}   (the game NEVER sets this)");
             sb.AppendLine($"  lodBias = {QualitySettings.lodBias}");
             sb.AppendLine($"  shadowDistance = {QualitySettings.shadowDistance}  cascades = {QualitySettings.shadowCascades}  res = {QualitySettings.shadowResolution}");
             sb.AppendLine($"  pixelLightCount = {QualitySettings.pixelLightCount}");
@@ -49,26 +49,26 @@ namespace ValheimTweaks
             sb.AppendLine($"  globalTextureMipmapLimit = {QualitySettings.globalTextureMipmapLimit}");
             sb.AppendLine($"  vSyncCount = {QualitySettings.vSyncCount}");
 
-            // ---- Luzes pontuais (tochas, fogueiras) ----
+            // ---- Point lights (torches, campfires) ----
             sb.AppendLine("[LIGHT LOD]");
-            sb.AppendLine($"  m_lightLimit = {LightLod.m_lightLimit}   (-1 = ilimitado)");
-            sb.AppendLine($"  m_shadowLimit = {LightLod.m_shadowLimit}  (-1 = ilimitado)");
+            sb.AppendLine($"  m_lightLimit = {LightLod.m_lightLimit}   (-1 = unlimited)");
+            sb.AppendLine($"  m_shadowLimit = {LightLod.m_shadowLimit}  (-1 = unlimited)");
 
-            // ---- Grama ----
+            // ---- Grass ----
             var clutter = ClutterSystem.instance;
             sb.AppendLine("[CLUTTER]");
             if (clutter != null)
                 sb.AppendLine($"  m_distance = {clutter.m_distance}  m_grassPatchSize = {clutter.m_grassPatchSize}");
             else
-                sb.AppendLine("  (ClutterSystem ainda nao existe)");
+                sb.AppendLine("  (ClutterSystem doesn't exist yet)");
 
             // ---- Render/fog ----
             sb.AppendLine("[RENDER SETTINGS]");
             sb.AppendLine($"  fog = {RenderSettings.fog}  density = {RenderSettings.fogDensity:0.#####}  mode = {RenderSettings.fogMode}");
             sb.AppendLine($"  ambientMode = {RenderSettings.ambientMode}  ambientLight = {RenderSettings.ambientLight}");
 
-            // ---- Rede / mundo ----
-            sb.AppendLine("[REDE]");
+            // ---- Network / world ----
+            sb.AppendLine("[NETWORK]");
             var znet = ZNet.instance;
             if (znet != null)
             {
@@ -79,36 +79,36 @@ namespace ValheimTweaks
                 float distCenario = sim.TotalSimulationDistance * zoneSize + zoneSize * 0.5f;
                 sb.AppendLine($"  IsServer = {znet.IsServer()}");
                 sb.AppendLine($"  SimulationDistance: near = {sim.NearSimulationDistance}  far = {sim.FarSimulationDistance}  classic = {sim.IsClassic}");
-                sb.AppendLine($"    -> {zonas} zonas simuladas (vanilla near=2 -> 25 zonas)");
-                sb.AppendLine($"    -> CRIATURAS (inimigos/animais) visiveis ate ~{distCriaturas:0} m   [= near]");
-                sb.AppendLine($"    -> cenario distante ate ~{distCenario:0} m   [= near+far, o numero que o menu mostra]");
+                sb.AppendLine($"    -> {zonas} simulated zones (vanilla near=2 -> 25 zones)");
+                sb.AppendLine($"    -> CREATURES (enemies/animals) visible up to ~{distCriaturas:0} m   [= near]");
+                sb.AppendLine($"    -> distant scenery up to ~{distCenario:0} m   [= near+far, the number the menu shows]");
                 sb.AppendLine($"  ZRpc timeout atual = {Patches.TimeoutPatch.Current}s");
             }
             else
             {
-                sb.AppendLine("  (fora de mundo)");
+                sb.AppendLine("  (outside a world)");
             }
 
-            // ---- Fontes de engasgo ----
-            sb.AppendLine("[ENGASGO]");
+            // ---- Sources of stutter ----
+            sb.AppendLine("[STUTTER]");
             sb.AppendLine($"  GC: {Patches.GcPatch.Describe()}");
             var zs = ZoneSystem.instance;
             if (zs != null)
             {
                 sb.AppendLine($"  LocationsGenerated = {zs.LocationsGenerated}" +
-                              (zs.LocationsGenerated ? "" : "   <- mundo NOVO: o jogo usa orcamento de 100ms/frame"));
-                sb.AppendLine($"  orcamento de geracao de zona = {Patches.ZoneGenBudgetPatch.CurrentBudgetMs:0.##} ms/frame");
+                              (zs.LocationsGenerated ? "" : "   <- NEW world: the game uses a 100ms/frame budget"));
+                sb.AppendLine($"  zone generation budget = {Patches.ZoneGenBudgetPatch.CurrentBudgetMs:0.##} ms/frame");
             }
-            sb.AppendLine($"  intervalo de posse de ZDO = {ModConfig.ZdoReleaseIntervalSec.Value:0.#}s");
+            sb.AppendLine($"  ZDO ownership interval = {ModConfig.ZdoReleaseIntervalSec.Value:0.#}s");
 
             DumpWorldRates(sb);
 
-            // ---- Tela ----
-            sb.AppendLine("[TELA]");
+            // ---- Screen ----
+            sb.AppendLine("[SCREEN]");
             sb.AppendLine($"  {Screen.width}x{Screen.height} @ {Screen.currentResolution.refreshRateRatio.value:0.##}Hz  " +
                           $"fullScreenMode = {Screen.fullScreenMode}");
-            sb.AppendLine($"  -> MaximizedWindow/Windowed passa pelo DWM e custa latencia. " +
-                          $"Para MEDIR fps use borderless (captura de tela funciona); para JOGAR use exclusivo.");
+            sb.AppendLine($"  -> MaximizedWindow/Windowed goes through DWM and costs latency. " +
+                          $"To MEASURE fps use borderless (screen capture works); to PLAY use exclusive.");
 
             DumpItemDrops(sb);
 
@@ -118,22 +118,22 @@ namespace ValheimTweaks
         }
 
         /// <summary>
-        /// Lista os multiplicadores e flags que o mundo realmente tem.
+        /// Lists the multipliers and flags the world actually has.
         ///
-        /// O menu de World Modifiers expoe so 5 categorias (Combat, DeathPenalty,
-        /// Resources, Raids, Portals), mas o enum GlobalKeys tem 41 chaves
-        /// funcionais, todas lidas por Game.UpdateWorldRates via trySetScalarKey.
-        /// O mapeamento menu -> chave vem de dados de prefab, nao de codigo, entao
-        /// nao da para saber por leitura o que o menu cobre. Isto mostra o estado
-        /// REAL, que e o que importa.
+        /// The World Modifiers menu exposes only 5 categories (Combat, DeathPenalty,
+        /// Resources, Raids, Portals), but the GlobalKeys enum has 41 functional
+        /// keys, all read by Game.UpdateWorldRates via trySetScalarKey.
+        /// The menu -> key mapping comes from prefab data, not code, so
+        /// you can't tell from reading what the menu covers. This shows the
+        /// REAL state, which is what matters.
         /// </summary>
         private static void DumpWorldRates(StringBuilder sb)
         {
-            sb.AppendLine("[MUNDO: MULTIPLICADORES]");
+            sb.AppendLine("[WORLD: MULTIPLIERS]");
 
             void Rate(string nome, float v)
             {
-                if (!Mathf.Approximately(v, 1f)) sb.AppendLine($"  {nome,-22} {v:0.##}  <- alterado");
+                if (!Mathf.Approximately(v, 1f)) sb.AppendLine($"  {nome,-22} {v:0.##}  <- changed");
             }
 
             Rate("PlayerDamage", Game.m_playerDamageRate);
@@ -153,13 +153,13 @@ namespace ValheimTweaks
             Rate("SkillReduction", Game.m_skillReductionRate);
             Rate("CarryWeight", Game.m_carryWeightRate);
             sb.AppendLine($"  WorldLevel             {Game.m_worldLevel}");
-            sb.AppendLine("  (so aparece o que difere de 1.0)");
+            sb.AppendLine("  (only what differs from 1.0 shows)");
 
             var zs = ZoneSystem.instance;
-            if (zs == null) { sb.AppendLine("  (ZoneSystem ausente)"); return; }
+            if (zs == null) { sb.AppendLine("  (ZoneSystem absent)"); return; }
 
-            sb.AppendLine("[MUNDO: FLAGS ATIVAS]");
-            // So as que mudam regra de jogo -- as de progresso (defeated_*) ficam de fora.
+            sb.AppendLine("[WORLD: ACTIVE FLAGS]");
+            // Only those that change game rules -- the progress ones (defeated_*) are left out.
             GlobalKeys[] interessantes =
             {
                 GlobalKeys.TeleportAll, GlobalKeys.NoPortals, GlobalKeys.NoBossPortals,
@@ -177,25 +177,25 @@ namespace ValheimTweaks
             {
                 if (zs.GetGlobalKey(k)) { sb.AppendLine($"  {k}"); alguma = true; }
             }
-            if (!alguma) sb.AppendLine("  nenhuma (mundo no padrao)");
+            if (!alguma) sb.AppendLine("  none (world at default)");
         }
 
         /// <summary>
-        /// Mede por que item no chao some de perto, em vez de teorizar.
+        /// Measures why a ground item disappears from up close, instead of theorizing.
         ///
-        /// ItemDrop nao tem codigo de culling: quem esconde e o LODGroup do Unity.
-        /// A distancia em que um LOD troca (ou o objeto some) sai de:
+        /// ItemDrop has no culling code: what hides it is Unity's LODGroup.
+        /// The distance at which a LOD switches (or the object disappears) comes from:
         ///     dist = (size * lodBias) / (2 * screenRelativeHeight * tan(fovV/2))
-        /// O ultimo LOD com threshold mais baixo e o ponto de sumico.
+        /// The last LOD with the lowest threshold is the disappearance point.
         /// </summary>
         private static void DumpItemDrops(StringBuilder sb)
         {
-            sb.AppendLine("[ITENS NO CHAO]");
+            sb.AppendLine("[GROUND ITEMS]");
 
             var drops = Object.FindObjectsByType<ItemDrop>(FindObjectsSortMode.None);
             if (drops == null || drops.Length == 0)
             {
-                sb.AppendLine("  (nenhum ItemDrop na cena -- jogue algo no chao e rode DumpNow)");
+                sb.AppendLine("  (no ItemDrop in the scene -- drop something on the ground and run DumpNow)");
                 return;
             }
 
@@ -207,7 +207,7 @@ namespace ValheimTweaks
                 ? Player.m_localPlayer.transform.position
                 : (cam != null ? cam.transform.position : Vector3.zero);
 
-            sb.AppendLine($"  {drops.Length} item(s) na cena. lodBias atual = {bias}");
+            sb.AppendLine($"  {drops.Length} item(s) in the scene. current lodBias = {bias}");
 
             int shown = 0;
             foreach (var d in drops)
@@ -221,7 +221,7 @@ namespace ValheimTweaks
 
                 if (lod == null)
                 {
-                    sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  sem LODGroup (nao e culling de LOD)");
+                    sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  no LODGroup (not LOD culling)");
                     continue;
                 }
 
@@ -236,10 +236,10 @@ namespace ValheimTweaks
                     : -1f;
 
                 sb.AppendLine($"  {nome,-24} {dist,6:0.0}m  LODs={lods.Length} size={lod.size:0.00} " +
-                              $"cullAt={menorThreshold:0.0000} -> some a ~{cull:0}m");
+                              $"cullAt={menorThreshold:0.0000} -> disappears at ~{cull:0}m");
             }
 
-            sb.AppendLine("  -> dobrar lodBias dobra essas distancias (linear).");
+            sb.AppendLine("  -> doubling lodBias doubles these distances (linear).");
         }
     }
 }

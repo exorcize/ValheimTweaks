@@ -5,20 +5,22 @@ using UnityEngine.UI;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Peças de aparência emprestadas dos painéis do próprio jogo.
+    /// Appearance pieces borrowed from the game's own panels.
     ///
-    /// Imitar o Valheim com hex escolhido a olho nunca fica igual -- a madeira tem
-    /// textura e a borda é 9-slice. Em vez disso copiamos o sprite, o material e a
-    /// fonte que o painel de produção já usa.
+    /// Imitating Valheim with an eyeballed hex never comes out the same -- the
+    /// wood has texture and the border is 9-slice. Instead we copy the sprite,
+    /// the material and the font the crafting panel already uses.
     ///
-    /// ---- Por que procurar por forma e não por nome ----
-    /// Nome de GameObject muda entre versões do jogo e quebraria calado. As regras
-    /// aqui são estruturais: fundo de painel é 9-slice (Sliced) e cobre a maior
-    /// área; título é o maior TMP_Text. Isso continua valendo depois de um patch.
+    /// ---- Why search by shape and not by name ----
+    /// GameObject names change between game versions and would break silently.
+    /// The rules here are structural: a panel's background is 9-slice (Sliced)
+    /// and covers the largest area; the title is the largest TMP_Text. That
+    /// still holds after a patch.
     ///
-    /// A primeira versão pegava simplesmente a maior Image e escolheu 'darken_blob',
-    /// um véu escuro que cobre o painel inteiro -- maior que a moldura, e sem
-    /// nenhuma aparência. Daí a preferência explícita por Sliced.
+    /// The first version simply grabbed the largest Image and picked
+    /// 'darken_blob', a dark veil covering the whole panel -- larger than the
+    /// frame, and with no look at all. Hence the explicit preference for
+    /// Sliced.
     /// </summary>
     internal static class EstiloJogo
     {
@@ -56,15 +58,16 @@ namespace ValheimTweaks.Patches
                 float area = r.width * r.height;
                 if (area <= 0f) continue;
 
-                // Um sprite de máscara é uma silhueta chapada: desenhado como fundo
-                // vira um borrão de cor sólida. Foi o que aconteceu com
-                // 'woodpanel_crafting_240_mask', que venceu por área e pintou tudo
-                // de amarelo. Máscara tem componente Mask junto -- dá para saber.
+                // A mask sprite is a flat silhouette: drawn as a background it
+                // becomes a blob of solid color. That's what happened with
+                // 'woodpanel_crafting_240_mask', which won by area and painted
+                // everything yellow. A mask has a Mask component alongside --
+                // that's how we can tell.
                 bool ehMascara = img.GetComponent<Mask>() != null
                               || img.sprite.name.IndexOf("mask", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
                 candidatos.Append($"\n    {img.sprite.name} ({img.type}) {r.width:0}x{r.height:0}"
-                                + (ehMascara ? "  [mascara, ignorado]" : ""));
+                                + (ehMascara ? "  [mask, ignored]" : ""));
                 if (ehMascara) continue;
 
                 if (img.type == Image.Type.Sliced && area > areaSliced)
@@ -79,7 +82,7 @@ namespace ValheimTweaks.Patches
                 }
             }
             if (ModConfig.ChestSearchDebug.Value)
-                Plugin.Log.LogInfo($"[ESTILO] candidatos a fundo:{candidatos}");
+                Plugin.Log.LogInfo($"[STYLE] background candidates:{candidatos}");
 
             var escolhido = melhorSliced ?? melhorQualquer;
             if (escolhido != null)
@@ -104,12 +107,12 @@ namespace ValheimTweaks.Patches
             Pronto = FundoSprite != null || FonteTitulo != null;
 
             Plugin.Log.LogInfo(
-                $"[ESTILO] fundo='{FundoSprite?.name ?? "-"}' ({FundoTipo}) "
-              + $"| fonte='{FonteTitulo?.name ?? "-"}' {maiorFonte:0.#}px"
-              + (melhorSliced == null ? "  (nenhum 9-slice; usando o maior)" : ""));
+                $"[STYLE] background='{FundoSprite?.name ?? "-"}' ({FundoTipo}) "
+              + $"| font='{FonteTitulo?.name ?? "-"}' {maiorFonte:0.#}px"
+              + (melhorSliced == null ? "  (no 9-slice; using the largest)" : ""));
         }
 
-        /// <summary>Pinta a madeira do jogo num Image. Sem sprite, cai num fundo liso.</summary>
+        /// <summary>Paints the game's wood onto an Image. Without a sprite, it falls back to a flat background.</summary>
         internal static void AplicarFundo(Image alvo, float opacidade = 1f)
         {
             if (alvo == null) return;

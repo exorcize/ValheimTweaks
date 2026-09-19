@@ -3,17 +3,17 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Cronometros nos sistemas quentes do jogo.
+    /// Timers on the game's hot systems.
     ///
-    /// Padrao Harmony: o Prefix devolve o timestamp em __state, o Postfix fecha.
-    /// __state e por-chamada, entao aguenta reentrancia e recursao sem embaralhar.
+    /// Harmony pattern: the Prefix returns the timestamp in __state, the Postfix closes it.
+    /// __state is per-call, so it handles reentrancy and recursion without getting mixed up.
     ///
-    /// Os alvos foram escolhidos por serem os suspeitos de custo por frame do lado
-    /// do HOST e do streaming de mundo -- que e o cenario do usuario (ele hospeda
-    /// para 4 peers com near=5, 121 zonas).
+    /// The targets were chosen because they are the suspects for per-frame cost on the
+    /// HOST side and for world streaming -- which is the user's scenario (he hosts
+    /// for 4 peers with near=5, 121 zones).
     ///
-    /// Tudo so acumula quando SystemProfiler.Enabled, entao fora da medicao o
-    /// custo e uma leitura de bool.
+    /// Everything only accumulates when SystemProfiler.Enabled, so outside of
+    /// measuring the cost is a single bool read.
     /// </summary>
     internal static class InstrumentationPatches
     {
@@ -52,10 +52,10 @@ namespace ValheimTweaks.Patches
             private static void Postfix(long __state) => SystemProfiler.End(SystemProfiler.Sys.Clutter, __state);
         }
 
-        // Geracao de zona: instancia toda a vegetacao e destroi em seguida, so para
-        // registrar os ZDOs. Custo UMA VEZ por zona (SetZoneGenerated), mas enorme.
-        // Hipotese a testar: em mundo novo isto domina o engasgo de caminhada, e
-        // some sozinho conforme o mundo e explorado.
+        // Zone generation: instantiates all the vegetation and destroys it right after,
+        // just to register the ZDOs. Cost ONCE per zone (SetZoneGenerated), but huge.
+        // Hypothesis to test: in a new world this dominates the walking hitch, and it
+        // goes away on its own as the world is explored.
         [HarmonyPatch(typeof(ZoneSystem), "SpawnZone")]
         internal static class SpawnZoneHook
         {
@@ -68,7 +68,7 @@ namespace ValheimTweaks.Patches
             }
         }
 
-        // Rebuild de mesh de terreno: raro mas caro, tipico de pico isolado.
+        // Terrain mesh rebuild: rare but expensive, typical of an isolated spike.
         [HarmonyPatch(typeof(Heightmap), nameof(Heightmap.Regenerate))]
         internal static class HeightmapRegenerate
         {

@@ -5,29 +5,30 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Velocidade do portal.
+    /// Portal speed.
     ///
-    /// Player.UpdateTeleport tem um cronômetro com três limiares fixos:
+    /// Player.UpdateTeleport has a timer with three fixed thresholds:
     ///
     ///     m_teleportTimer += dt;
-    ///     if (!(m_teleportTimer > 2f)) return;              // espera inicial
-    ///     ... move o jogador ...
-    ///     if ((!(m_teleportTimer > 8f) &amp;&amp; m_distantTeleport)   // piso de 8 s
+    ///     if (!(m_teleportTimer > 2f)) return;              // initial wait
+    ///     ... moves the player ...
+    ///     if ((!(m_teleportTimer > 8f) &amp;&amp; m_distantTeleport)   // 8 s floor
     ///         || !ZNetScene.instance.IsAreaReady(alvo)) return;
     ///     ...
-    ///     else if (m_teleportTimer > 15f || !m_distantTeleport)  // desistência
+    ///     else if (m_teleportTimer > 15f || !m_distantTeleport)  // giving up
     ///
-    /// Multiplicar o dt que alimenta o cronômetro faz os três limiares chegarem
-    /// proporcionalmente antes, sem tocar na lógica. O IsAreaReady continua
-    /// segurando: some a espera artificial, não a real.
+    /// Multiplying the dt that feeds the timer makes the three thresholds arrive
+    /// proportionally earlier, without touching the logic. IsAreaReady keeps
+    /// holding: the artificial wait goes away, not the real one.
     ///
-    /// ---- Instrumentação ----
-    /// São duas esperas somadas e elas se parecem de dentro do jogo. O log separa:
-    /// quanto tempo foi piso do cronômetro e quanto foi destino carregando.
-    /// Sem isso não dá para saber se aumentar o multiplicador ainda ajuda ou se
-    /// o limite passou a ser o carregamento.
+    /// ---- Instrumentation ----
+    /// There are two waits added together and they look alike from inside the
+    /// game. The log separates them: how much time was timer floor and how much
+    /// was the destination loading. Without this you can't tell whether increasing
+    /// the multiplier still helps or whether the bottleneck became loading.
     ///
-    /// É local. O estado de teleporte é do próprio jogador e não trafega na rede.
+    /// It is local. The teleport state belongs to the player and does not travel
+    /// over the network.
     /// </summary>
     internal static class TeleportSpeedPatch
     {
@@ -40,27 +41,28 @@ namespace ValheimTweaks.Patches
         private static int _framesTotal;
 
         /// <summary>
-        /// Lido pelo SimulationDistancePatch para reduzir a distancia so enquanto
-        /// dura o teleporte.
+        /// Read by SimulationDistancePatch to reduce the distance only while the
+        /// teleport lasts.
         /// </summary>
         internal static bool EmTeleporte => _teleportando;
 
         /// <summary>
-        /// Faz o ZoneSystem reler a distancia. ApplySettings() apenas copia o valor
-        /// de ZNet.GetSyncedSimulationDistance(), que por sua vez le o "desejado"
-        /// que o nosso patch acabou de alterar.
+        /// Makes ZoneSystem re-read the distance. ApplySettings() just copies the
+        /// value from ZNet.GetSyncedSimulationDistance(), which in turn reads the
+        /// "desired" value our patch just changed.
         ///
-        /// De proposito NAO chama ZNet.ApplySimulationDistance nem o handshake:
-        /// aqueles mexem no TETO que o host envia aos peers, e baixar isso a cada
-        /// portal derrubaria a distancia de simulacao dos amigos junto. Aqui muda
-        /// so o lado local.
+        /// On purpose does NOT call ZNet.ApplySimulationDistance nor the handshake:
+        /// those touch the CAP the host sends to peers, and lowering that on every
+        /// portal would drop our friends' simulation distance too. Here only the
+        /// local side changes.
         /// </summary>
         private static void ReaplicarDistancia(bool restaurando)
         {
             if (ZoneSystem.instance != null) ZoneSystem.instance.ApplySettings();
 
-            // Alcance visual de agua e terreno tambem deriva da distancia. Durante
-            // o teleporte a tela esta preta, entao so vale corrigir na volta.
+            // The visual range of water and terrain also derives from the distance.
+            // During the teleport the screen is black, so it's only worth fixing on
+            // the way back.
             if (restaurando)
             {
                 Water.ApplySettingsOnAll();
@@ -95,9 +97,9 @@ namespace ValheimTweaks.Patches
                 {
                     _framesTotal++;
 
-                    // Conta os frames em que o destino ainda nao estava pronto.
-                    // Se isso for quase todo o teleporte, o multiplicador nao ajuda
-                    // mais -- o que falta e carregamento.
+                    // Counts the frames in which the destination wasn't ready yet.
+                    // If that's almost the whole teleport, the multiplier no longer
+                    // helps -- what's missing is loading.
                     if (TargetPosField != null && ZNetScene.instance != null)
                     {
                         var alvo = (Vector3)TargetPosField.GetValue(__instance);
@@ -115,14 +117,14 @@ namespace ValheimTweaks.Patches
                         : 0f;
 
                     Plugin.Log.LogInfo(
-                        $"[TELEPORTE] {total:0.00}s no total | " +
-                        $"{pctArea:0}% do tempo esperando o destino carregar | " +
-                        $"multiplicador {ModConfig.TeleportSpeed.Value:0.#}x");
+                        $"[TELEPORT] {total:0.00}s total | " +
+                        $"{pctArea:0}% of the time waiting for the destination to load | " +
+                        $"multiplier {ModConfig.TeleportSpeed.Value:0.#}x");
 
                     if (pctArea > 60f)
                         Plugin.Log.LogInfo(
-                            "[TELEPORTE] o gargalo e CARREGAMENTO do destino, nao o cronometro. " +
-                            "Aumentar TeleportSpeed nao vai ajudar mais.");
+                            "[TELEPORT] the bottleneck is LOADING the destination, not the timer. " +
+                            "Increasing TeleportSpeed won't help anymore.");
                 }
             }
         }

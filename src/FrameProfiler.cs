@@ -6,18 +6,19 @@ using UnityEngine;
 namespace ValheimTweaks
 {
     /// <summary>
-    /// Medidor de frametime interno.
+    /// Internal frametime meter.
     ///
-    /// O PresentMon precisa de elevacao e, neste setup, morre depois de ~2s --
-    /// tempo demais gasto brigando com ferramenta externa. O mod ja roda DENTRO
-    /// do processo do jogo, entao mede o loop de frame direto.
+    /// PresentMon needs elevation and, in this setup, dies after ~2s -- too much
+    /// time spent fighting an external tool. The mod already runs INSIDE the game
+    /// process, so it measures the frame loop directly.
     ///
-    /// Nao substitui o PresentMon para tudo (nao separa CPU de GPU, nao ve o modo
-    /// de apresentacao), mas para "essa mudanca ajudou ou nao?" e o instrumento
-    /// certo: sem elevacao, sem injetor, e do mesmo lado do problema.
+    /// It doesn't replace PresentMon for everything (it doesn't separate CPU from
+    /// GPU, doesn't see the presentation mode), but for "did this change help or
+    /// not?" it's the right instrument: no elevation, no injector, and on the same
+    /// side of the problem.
     ///
-    /// Lembrete do caso do CS2: media alta nao quer dizer sensacao boa. Por isso
-    /// o relatorio da mais peso a P99 e a CONTAGEM DE ENGASGOS do que a media.
+    /// Reminder from the CS2 case: a high average doesn't mean a good feel. That's
+    /// why the report gives more weight to P99 and the STUTTER COUNT than to the average.
     /// </summary>
     internal static class FrameProfiler
     {
@@ -35,15 +36,15 @@ namespace ValheimTweaks
             _running = true;
             _endsAt = Time.realtimeSinceStartup + seconds;
             SystemProfiler.SetEnabled(ModConfig.ProfileSystems.Value);
-            Plugin.Log.LogInfo($"[PROFILER] capturando {seconds:0}s como '{tag}'...");
+            Plugin.Log.LogInfo($"[PROFILER] capturing {seconds:0}s as '{tag}'...");
         }
 
-        /// <summary>Chamado todo frame pelo Plugin.Update.</summary>
+        /// <summary>Called every frame by Plugin.Update.</summary>
         internal static void Tick()
         {
             if (!_running) return;
 
-            // unscaledDeltaTime: nao sofre com timeScale, e o tempo de parede do frame.
+            // unscaledDeltaTime: unaffected by timeScale, and is the frame's wall-clock time.
             Samples.Add(Time.unscaledDeltaTime * 1000f);
 
             if (Time.realtimeSinceStartup >= _endsAt) Report();
@@ -55,7 +56,7 @@ namespace ValheimTweaks
 
             if (Samples.Count < 30)
             {
-                Plugin.Log.LogWarning($"[PROFILER] '{_tag}': poucos frames ({Samples.Count}).");
+                Plugin.Log.LogWarning($"[PROFILER] '{_tag}': too few frames ({Samples.Count}).");
                 return;
             }
 
@@ -67,8 +68,8 @@ namespace ValheimTweaks
             float media = soma / Samples.Count;
             float p50 = Pct(sorted, 0.50f);
 
-            // Engasgo = frame que levou mais que o dobro da mediana. E o que a
-            // pessoa sente como travada, e some completamente na media.
+            // Stutter = a frame that took more than twice the median. It's what a
+            // person feels as a hitch, and it vanishes completely in the average.
             float limiar = p50 * 2f;
             int engasgos = 0;
             float piorSeq = 0f;
@@ -83,16 +84,16 @@ namespace ValheimTweaks
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine($"=============== PROFILER :: {_tag} ===============");
-            sb.AppendLine($"  {Samples.Count} frames em {duracao:0.0}s");
-            sb.AppendLine($"  media    {media,6:0.00} ms  ({1000f / media:0} fps)");
+            sb.AppendLine($"  {Samples.Count} frames in {duracao:0.0}s");
+            sb.AppendLine($"  average  {media,6:0.00} ms  ({1000f / media:0} fps)");
             sb.AppendLine($"  P50      {p50,6:0.00} ms  ({1000f / p50:0} fps)");
             sb.AppendLine($"  P95      {Pct(sorted, 0.95f),6:0.00} ms");
-            sb.AppendLine($"  P99      {Pct(sorted, 0.99f),6:0.00} ms  <- o que se sente");
+            sb.AppendLine($"  P99      {Pct(sorted, 0.99f),6:0.00} ms  <- what you feel");
             sb.AppendLine($"  P99.9    {Pct(sorted, 0.999f),6:0.00} ms");
             sb.AppendLine($"  MAX      {piorSeq,6:0.00} ms");
             sb.AppendLine($"  1% low   {1000f / Pct(sorted, 0.99f),6:0} fps");
-            sb.AppendLine($"  engasgos {engasgos} frames acima de {limiar:0.0}ms " +
-                          $"({(100f * engasgos / Samples.Count):0.00}% dos frames, " +
+            sb.AppendLine($"  stutters {engasgos} frames above {limiar:0.0}ms " +
+                          $"({(100f * engasgos / Samples.Count):0.00}% of frames, " +
                           $"{engasgos / Mathf.Max(duracao, 0.001f):0.0}/s)");
             sb.AppendLine("==================================================");
 

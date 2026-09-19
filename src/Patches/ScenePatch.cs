@@ -1,23 +1,24 @@
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Trava hora do dia e clima -- cena controlada para comparacao visual.
+    /// Freezes time of day and weather -- controlled scene for visual comparison.
     ///
-    /// Motivacao direta: duas medicoes minhas foram invalidadas hoje porque a cena
-    /// mudou no meio (a nevoa se dissipou e o SSAO apareceu "acelerando" o frame,
-    /// o que e impossivel). Sem travar hora e clima, qualquer A/B visual ou de
-    /// custo esta comparando cenas diferentes.
+    /// Direct motivation: two of my measurements were invalidated today because
+    /// the scene changed midway (the fog dissipated and SSAO appeared to "speed
+    /// up" the frame, which is impossible). Without freezing time and weather, any
+    /// visual or cost A/B is comparing different scenes.
     ///
-    /// E puramente LOCAL. EnvMan so usa isto para o render:
+    /// It is purely LOCAL. EnvMan only uses this for rendering:
     ///
     ///     // EnvMan.cs:353
     ///     if (m_debugTimeOfDay) m_smoothDayFraction = m_debugTime;
     ///
-    /// Nao toca em m_totalSeconds (o tempo real do mundo), nao vai para os peers,
-    /// nao marca o mundo. Os campos sao publicos, entao nao precisa de reflection.
+    /// Doesn't touch m_totalSeconds (the world's real time), doesn't go to the
+    /// peers, doesn't mark the world. The fields are public, so no reflection is
+    /// needed.
     ///
-    /// m_debugTime: 0 = meia-noite, 0.25 = amanhecer, 0.5 = meio-dia,
-    ///              0.75 = entardecer.
+    /// m_debugTime: 0 = midnight, 0.25 = dawn, 0.5 = noon,
+    ///              0.75 = dusk.
     /// </summary>
     internal static class ScenePatch
     {
@@ -26,13 +27,13 @@ namespace ValheimTweaks.Patches
         internal static void Apply()
         {
             var env = EnvMan.instance;
-            if (env == null) return; // fora de mundo; reaplica no proximo load
+            if (env == null) return; // out of world; reapplies on the next load
 
             bool travar = ModConfig.FreezeTimeOfDay.Value;
             if (env.m_debugTimeOfDay != travar)
             {
                 env.m_debugTimeOfDay = travar;
-                Plugin.Log.LogInfo($"Hora do dia {(travar ? "TRAVADA" : "liberada")}");
+                Plugin.Log.LogInfo($"Time of day {(travar ? "FROZEN" : "released")}");
             }
             if (travar) env.m_debugTime = ModConfig.TimeOfDay.Value;
 
@@ -42,8 +43,8 @@ namespace ValheimTweaks.Patches
                 _climaAplicado = clima;
                 env.SetForceEnvironment(clima);
                 Plugin.Log.LogInfo(clima.Length > 0
-                    ? $"Clima forcado: {clima}"
-                    : "Clima liberado (volta ao normal do bioma)");
+                    ? $"Weather forced: {clima}"
+                    : "Weather released (back to the biome's normal)");
             }
         }
     }

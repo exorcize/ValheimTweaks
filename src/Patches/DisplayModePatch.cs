@@ -3,9 +3,9 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Modo de tela -- a explicacao mais provavel para "numeros bons, sensacao ruim".
+    /// Display mode -- the most likely explanation for "good numbers, bad feel".
     ///
-    /// O menu do jogo NAO consegue por em tela cheia exclusiva:
+    /// The game menu CANNOT set exclusive fullscreen:
     ///
     ///     // Valheim.SettingsGui/GraphicsSettings.cs:1039
     ///     Screen.SetResolution(w, h,
@@ -13,34 +13,34 @@ namespace ValheimTweaks.Patches
     ///                                 : FullScreenMode.Windowed,
     ///         resolution.refreshRateRatio);
     ///
-    /// O botao alterna entre Windowed e FullScreenWindow (borderless). Os dois
-    /// passam pela composicao do DWM. Existe um comando de console escondido
-    /// ("exclusivefullscreen", e nao e cheat), mas depende do console habilitado.
+    /// The button toggles between Windowed and FullScreenWindow (borderless). Both
+    /// go through DWM composition. There is a hidden console command
+    /// ("exclusivefullscreen", and it is not a cheat), but it depends on the console being enabled.
     ///
-    /// ---- Por que isso vira travada percebida ----
-    /// Medido: PresentMode = "Composed: Flip" em 100% dos frames, ou seja, o DWM
-    /// compoe. Com ~209 fps num painel de 360 Hz:
+    /// ---- Why this becomes perceived stutter ----
+    /// Measured: PresentMode = "Composed: Flip" in 100% of frames, that is, the DWM
+    /// composes. At ~209 fps on a 360 Hz panel:
     ///
-    ///     360 / 209 = 1,72 atualizacoes de tela por frame renderizado
+    ///     360 / 209 = 1.72 screen updates per rendered frame
     ///
-    /// Como nao da para mostrar 1,72 vez, cada frame aparece por 1 OU 2 refreshes,
-    /// alternando de forma irregular. Isso e JUDDER: o movimento anda e para, e
-    /// o frametime pode estar perfeitamente liso enquanto acontece. E exatamente
-    /// o desfecho do caso do CS2 -- frametime otimo, sensacao ruim.
+    /// Since you cannot show 1.72 of a time, each frame appears for 1 OR 2 refreshes,
+    /// alternating irregularly. This is JUDDER: the motion moves and stops, and
+    /// the frametime can be perfectly smooth while it happens. It is exactly
+    /// the outcome of the CS2 case -- great frametime, bad feel.
     ///
-    /// Tela cheia exclusiva tira o DWM do caminho (independent flip): a GPU manda
-    /// direto para a tela. Permite tearing, mas o movimento fica continuo.
+    /// Exclusive fullscreen takes the DWM out of the path (independent flip): the GPU sends
+    /// directly to the screen. It allows tearing, but motion becomes continuous.
     ///
-    /// Alternativa sem exclusiva: limitar fps a um divisor do refresh (180 = 360/2,
-    /// ou 120 = 360/3). Cada frame passa a durar um numero inteiro de refreshes e
-    /// o judder some. Fica como opcao porque o usuario prefere fps alto.
+    /// Alternative without exclusive: cap fps to a divisor of the refresh (180 = 360/2,
+    /// or 120 = 360/3). Each frame then lasts a whole number of refreshes and
+    /// the judder disappears. It stays as an option because the user prefers high fps.
     /// </summary>
     internal static class DisplayModePatch
     {
         internal static void Apply()
         {
             int modo = ModConfig.DisplayMode.Value;
-            if (modo <= 0) return; // 0 = nao mexer
+            if (modo <= 0) return; // 0 = do not touch
 
             FullScreenMode alvo = modo switch
             {
@@ -51,14 +51,14 @@ namespace ValheimTweaks.Patches
 
             if (Screen.fullScreenMode == alvo) return;
 
-            // Em exclusiva a resolucao precisa ser um modo real do monitor. A janela
-            // atual (ex.: 1267x1048) nao e -- por isso usamos a do desktop.
+            // In exclusive, the resolution must be a real monitor mode. The current
+            // window (e.g. 1267x1048) is not -- so we use the desktop one.
             var res = Screen.currentResolution;
             int w = ModConfig.DisplayWidth.Value > 0 ? ModConfig.DisplayWidth.Value : res.width;
             int h = ModConfig.DisplayHeight.Value > 0 ? ModConfig.DisplayHeight.Value : res.height;
 
             Plugin.Log.LogInfo(
-                $"Modo de tela: {Screen.fullScreenMode} ({Screen.width}x{Screen.height}) " +
+                $"Display mode: {Screen.fullScreenMode} ({Screen.width}x{Screen.height}) " +
                 $"-> {alvo} ({w}x{h} @ {res.refreshRateRatio.value:0.##}Hz)");
 
             Screen.SetResolution(w, h, alvo, res.refreshRateRatio);

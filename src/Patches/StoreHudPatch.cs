@@ -6,20 +6,21 @@ using UnityEngine.UI;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Lista dos itens guardados, no canto inferior esquerdo.
+    /// List of stored items, in the lower left corner.
     ///
-    /// Fica ACIMA da HUD de vida e comida, que ja ocupa o pe da tela. A altura e
-    /// configuravel porque a posicao exata daquela HUD vem de prefab, nao de
-    /// codigo -- nao da para calcular por leitura, entao o valor e ajustavel.
+    /// It sits ABOVE the health and food HUD, which already occupies the bottom
+    /// of the screen. The height is configurable because the exact position of
+    /// that HUD comes from a prefab, not from code -- it can't be calculated by
+    /// reading, so the value is adjustable.
     ///
-    /// Uma linha por item (nao por bau): se madeira for para dois baus, saem duas
-    /// linhas. As mais antigas sobem, esmaecem e somem.
+    /// One line per item (not per chest): if wood goes to two chests, two lines
+    /// appear. The older ones rise, fade and disappear.
     ///
-    /// O nome do bau vem de Container.GetHoverName(), que devolve m_name. Como
-    /// bau sem nome devolve o nome padrao da peca em vez de vazio, comparamos com
-    /// o m_name do PREFAB original: se for igual, nao ha nome proprio e a linha
-    /// sai sem seta. Isso funciona com qualquer mod que renomeie bau, nao so com
-    /// um especifico.
+    /// The chest name comes from Container.GetHoverName(), which returns m_name.
+    /// Since an unnamed chest returns the piece's default name instead of empty,
+    /// we compare it with the m_name of the original PREFAB: if equal, there is
+    /// no custom name and the line comes out without an arrow. This works with
+    /// any mod that renames a chest, not just a specific one.
     /// </summary>
     internal static class StoreHudPatch
     {
@@ -36,10 +37,10 @@ namespace ValheimTweaks.Patches
         private static Material _material;
 
         /// <summary>
-        /// Fonte e material de um texto CONHECIDO da HUD. Pegar o primeiro TMP_Text
-        /// que aparecesse trazia uma fonte qualquer, e sem o fontSharedMaterial o
-        /// TextMeshPro cai no fallback -- foi o que deixou o texto com cara de
-        /// console na primeira tentativa.
+        /// Font and material from a KNOWN HUD text. Grabbing the first TMP_Text
+        /// that appeared brought some random font, and without the
+        /// fontSharedMaterial TextMeshPro falls back -- that's what made the text
+        /// look like a console on the first attempt.
         /// </summary>
         internal static bool AplicarFonte(TMP_Text alvo)
         {
@@ -61,7 +62,7 @@ namespace ValheimTweaks.Patches
                 }
             }
 
-            if (_fonte == null) return false;   // HUD ainda nao pronta: tenta de novo depois
+            if (_fonte == null) return false;   // HUD not ready yet: try again later
 
             alvo.font = _fonte;
             if (_material != null) alvo.fontSharedMaterial = _material;
@@ -69,7 +70,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ------------------------------------------------------------------
-        // Nome proprio do bau, ou null
+        // Chest's custom name, or null
         // ------------------------------------------------------------------
         internal static string NomeDoBau(Container bau)
         {
@@ -86,12 +87,12 @@ namespace ValheimTweaks.Patches
             var original = prefab != null ? prefab.GetComponent<Container>() : null;
             if (original == null) return null;
 
-            // Igual ao padrao da peca = ninguem renomeou.
+            // Same as the piece's default = no one renamed it.
             return atual == original.m_name ? null : atual;
         }
 
         // ------------------------------------------------------------------
-        // Construcao da UI
+        // UI construction
         // ------------------------------------------------------------------
         private static void Garantir()
         {
@@ -137,7 +138,7 @@ namespace ValheimTweaks.Patches
             h.childControlWidth = true;
             h.childControlHeight = true;
 
-            // Icone
+            // Icon
             var icones = item.m_shared.m_icons;
             if (icones != null && icones.Length > 0)
             {
@@ -150,7 +151,7 @@ namespace ValheimTweaks.Patches
                 le.preferredWidth = le.preferredHeight = 20f;
             }
 
-            // Texto
+            // Text
             var txtGo = new GameObject("txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, worldPositionStays: false);
             var txt = txtGo.AddComponent<TextMeshProUGUI>();
@@ -160,8 +161,8 @@ namespace ValheimTweaks.Patches
             txt.enableWordWrapping = false;
             txt.raycastTarget = false;
 
-            // m_name e um token de localizacao ("$item_feathers"); sem Localize
-            // o token cru aparece na tela.
+            // m_name is a localization token ("$item_feathers"); without Localize
+            // the raw token appears on screen.
             string nome = Localization.instance.Localize(item.m_shared.m_name);
             txt.text = string.IsNullOrEmpty(nomeBau)
                 ? $"<color=#E8DDC4>{nome} x{quantidade}</color>"
@@ -169,7 +170,7 @@ namespace ValheimTweaks.Patches
 
             Linhas.Add(new Linha { Go = go, Fade = fade, Nasceu = Time.realtimeSinceStartup });
 
-            // Teto de linhas: despejo grande viraria parede de texto.
+            // Line cap: a big dump would become a wall of text.
             while (Linhas.Count > ModConfig.StoreHudMaxLines.Value) Remover(0);
         }
 
@@ -181,7 +182,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ------------------------------------------------------------------
-        // Expiracao
+        // Expiration
         // ------------------------------------------------------------------
         internal static void Update()
         {

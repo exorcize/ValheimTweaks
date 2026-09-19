@@ -3,27 +3,27 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Fumaca -- custo de FISICA, nao de render.
+    /// Smoke -- PHYSICS cost, not render.
     ///
-    /// Cada particula de fumaca e um GameObject com Rigidbody de verdade
-    /// (Smoke.Awake: m_body = GetComponent&lt;Rigidbody&gt;()). Numa base com varias
-    /// fogueiras, forja e fornos, isso vira dezenas de corpos rigidos simulados
-    /// o tempo todo. E um dos custos mais bobos do jogo.
+    /// Each smoke particle is a GameObject with a real Rigidbody
+    /// (Smoke.Awake: m_body = GetComponent&lt;Rigidbody&gt;()). In a base with several
+    /// campfires, a forge and ovens, that becomes dozens of rigid bodies simulated
+    /// all the time. It is one of the silliest costs in the game.
     ///
-    /// O teto e aplicado em SmokeSpawner:
+    /// The cap is applied in SmokeSpawner:
     ///     if (Smoke.GetTotalSmoke() > 100) Smoke.FadeOldest();
-    /// com "100" vindo de "private const int m_maxGlobalSmoke = 100" -- const, ou
-    /// seja INLINADO no IL. Nao da para mudar escrevendo o campo.
+    /// with "100" coming from "private const int m_maxGlobalSmoke = 100" -- a const, that is,
+    /// INLINED in the IL. You cannot change it by writing the field.
     ///
-    /// Truque para evitar Transpiler: damos Postfix em GetTotalSmoke() e devolvemos
-    /// a contagem DESLOCADA. Com offset = 100 - maxDesejado, a comparacao
-    ///     (count + 100 - max) > 100      vira      count > max
-    /// que e exatamente o teto novo, sem tocar no IL do call site.
+    /// Trick to avoid a Transpiler: we Postfix GetTotalSmoke() and return
+    /// the SHIFTED count. With offset = 100 - desiredMax, the comparison
+    ///     (count + 100 - max) > 100      becomes      count > max
+    /// which is exactly the new cap, without touching the call site's IL.
     ///
-    /// Segundo ajuste: o jogo apaga a fumaca MAIS ANTIGA, que costuma ser a que
-    /// esta bem na tua frente. Smoke.FadeMostDistant() ja existe no jogo e nunca e
-    /// chamado -- redirecionamos para ele. A fumaca que some passa a ser a mais
-    /// longe, que e a que ninguem ve.
+    /// Second adjustment: the game removes the OLDEST smoke, which tends to be the
+    /// one right in front of you. Smoke.FadeMostDistant() already exists in the game and is
+    /// never called -- we redirect to it. The smoke that disappears then becomes the
+    /// farthest one, which is the one nobody sees.
     /// </summary>
     internal static class SmokePatch
     {
@@ -44,7 +44,7 @@ namespace ValheimTweaks.Patches
         [HarmonyPatch(typeof(Smoke), nameof(Smoke.FadeOldest))]
         internal static class FadeOldestHook
         {
-            // Retornar false pula o metodo original.
+            // Returning false skips the original method.
             private static bool Prefix()
             {
                 if (!ModConfig.FadeDistantSmokeFirst.Value) return true;

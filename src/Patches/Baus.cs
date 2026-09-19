@@ -4,13 +4,13 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Baús ao redor do jogador.
+    /// Chests around the player.
     ///
-    /// Vale para carroça e navio também: os três são Container no código.
+    /// Applies to carts and ships too: all three are Container in the code.
     ///
-    /// Um baú só existe como objeto na cena enquanto a zona dele está carregada.
-    /// Fora disso não está na memória e não há o que contar -- por isso "baús ao
-    /// redor" e não "todos os baús da base".
+    /// A chest only exists as an object in the scene while its zone is loaded.
+    /// Outside that it isn't in memory and there's nothing to count -- hence
+    /// "chests around" and not "all the chests in the base".
     /// </summary>
     internal static class Baus
     {
@@ -31,7 +31,7 @@ namespace ValheimTweaks.Patches
                 var cont = c.GetComponentInParent<Container>();
                 if (cont == null || Buffer.Contains(cont)) continue;
 
-                // Sem ZDO valido ainda esta carregando: pular evita RPC perdido.
+                // Without a valid ZDO it's still loading: skipping avoids a lost RPC.
                 var nview = cont.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
 
@@ -40,7 +40,7 @@ namespace ValheimTweaks.Patches
             return Buffer;
         }
 
-        /// <summary>Nome proprio do bau, ou o nome do tipo. Nunca vazio.</summary>
+        /// <summary>The chest's proper name, or the type's name. Never empty.</summary>
         internal static string NomeVisivel(Container bau)
         {
             if (bau == null) return "";

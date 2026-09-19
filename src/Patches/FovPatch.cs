@@ -3,24 +3,24 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Campo de visao.
+    /// Field of view.
     ///
-    /// GameCamera.m_fov e 65 fixo no prefab, e o menu nao expoe. UpdateCamera faz
-    /// m_camera.fieldOfView = m_fov todo frame, entao basta escrever no campo da
-    /// instancia que o jogo propaga sozinho (inclusive para a m_skyCamera).
+    /// GameCamera.m_fov is fixed at 65 in the prefab, and the menu does not expose it.
+    /// UpdateCamera sets m_camera.fieldOfView = m_fov every frame, so it is enough to
+    /// write to the instance field and the game propagates it on its own (including to m_skyCamera).
     ///
-    /// Cuidado: FOV alto puxa mais geometria para dentro do frustum, entao custa
-    /// draw calls. E acima de ~100 a distorcao nas bordas fica agressiva.
+    /// Careful: a high FOV pulls more geometry into the frustum, so it costs
+    /// draw calls. And above ~100 the distortion at the edges becomes aggressive.
     /// </summary>
     internal static class FovPatch
     {
         internal static void Apply()
         {
             float fov = ModConfig.FieldOfView.Value;
-            if (fov <= 0f) return; // 0 = nao sobrescrever
+            if (fov <= 0f) return; // 0 = do not override
 
             var cam = GameCamera.instance;
-            if (cam == null) return; // fora de mundo; reaplica no proximo load
+            if (cam == null) return; // outside the world; reapplies on the next load
 
             if (!Mathf.Approximately(cam.m_fov, fov))
             {

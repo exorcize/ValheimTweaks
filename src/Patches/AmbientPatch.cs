@@ -5,21 +5,21 @@ using UnityEngine.Rendering;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Nevoa e luz ambiente -- a "cara" do jogo.
+    /// Fog and ambient light -- the "face" of the game.
     ///
-    /// EnvMan.SetEnv() e o unico ponto que escreve fog/ambiente, por bioma e por
-    /// hora do dia. Um Postfix aqui governa a atmosfera inteira do jogo.
+    /// EnvMan.SetEnv() is the only point that writes fog/ambient, per biome and per
+    /// time of day. A Postfix here governs the entire atmosphere of the game.
     ///
-    /// Medido no mundo LAB: fogDensity = 0,03 Exponential, ambientMode = Flat,
-    /// ambientLight = cinza 0,382 uniforme. E dai que vem o aspecto lavado.
+    /// Measured in the LAB world: fogDensity = 0.03 Exponential, ambientMode = Flat,
+    /// ambientLight = uniform gray 0.382. That is where the washed-out look comes from.
     ///
-    /// ---- CUIDADO COM A ORDEM ----
-    /// Dentro do proprio SetEnv, DEPOIS de escrever RenderSettings.ambientLight,
-    /// o jogo faz:
+    /// ---- MIND THE ORDER ----
+    /// Inside SetEnv itself, AFTER writing RenderSettings.ambientLight,
+    /// the game does:
     ///     Shader.SetGlobalColor(s_ambientColor, RenderSettings.ambientLight);
-    /// Os shaders do Valheim leem esse global, nao o RenderSettings. Entao mexer
-    /// so no RenderSettings num Postfix deixaria os dois dessincronizados
-    /// (Unity com um valor, shader com outro). Por isso reescrevemos o global.
+    /// Valheim's shaders read that global, not RenderSettings. So touching
+    /// only RenderSettings in a Postfix would leave the two out of sync
+    /// (Unity with one value, the shader with another). That is why we rewrite the global.
     /// </summary>
     internal static class AmbientPatch
     {
@@ -30,7 +30,7 @@ namespace ValheimTweaks.Patches
         {
             private static void Postfix()
             {
-                // --- Nevoa ---
+                // --- Fog ---
                 if (ModConfig.FogEnabled.Value)
                 {
                     float scale = ModConfig.FogDensityScale.Value;
@@ -42,7 +42,7 @@ namespace ValheimTweaks.Patches
                     RenderSettings.fog = false;
                 }
 
-                // --- Ambiente ---
+                // --- Ambient ---
                 float brightness = ModConfig.AmbientBrightness.Value;
                 bool trilight = ModConfig.TrilightAmbient.Value;
                 if (Mathf.Approximately(brightness, 1f) && !trilight) return;
@@ -53,15 +53,15 @@ namespace ValheimTweaks.Patches
 
                 if (trilight)
                 {
-                    // Flat = uma cor vinda de todo lado (o mais barato e mais chapado).
-                    // Trilight separa ceu / horizonte / chao e da volume aos objetos.
+                    // Flat = one color coming from all sides (the cheapest and flattest).
+                    // Trilight separates sky / horizon / ground and gives objects volume.
                     RenderSettings.ambientMode = AmbientMode.Trilight;
                     RenderSettings.ambientSkyColor = amb * 1.15f;
                     RenderSettings.ambientEquatorColor = amb;
                     RenderSettings.ambientGroundColor = amb * 0.6f;
                 }
 
-                // Obrigatorio: o jogo ja setou este global com o valor ANTIGO.
+                // Mandatory: the game has already set this global with the OLD value.
                 Shader.SetGlobalColor(AmbientColorId, amb);
             }
         }

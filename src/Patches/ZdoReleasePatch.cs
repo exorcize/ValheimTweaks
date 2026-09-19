@@ -5,39 +5,39 @@ using HarmonyLib;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Transferencia de posse de ZDO -- custo periodico exclusivo do HOST.
+    /// ZDO ownership transfer -- periodic cost exclusive to the HOST.
     ///
     ///     private void ReleaseZDOS(float dt) {
     ///         m_releaseZDOTimer += dt;
-    ///         if (!(m_releaseZDOTimer > 2f)) return;          // a cada 2 s
+    ///         if (!(m_releaseZDOTimer > 2f)) return;          // every 2 s
     ///         m_releaseZDOTimer = 0f;
     ///         ReleaseNearbyZDOS(ZNet.instance.GetReferencePosition(), m_sessionID);
     ///         foreach (ZDOPeer peer in m_peers)
     ///             ReleaseNearbyZDOS(peer.m_peer.m_refPos, peer.m_peer.m_uid);
     ///     }
     ///
-    /// E ReleaseNearbyZDOS faz, para CADA chamada:
-    ///     FindSectorObjects(zone, simDistance, m_tempNearObjects)   // varre as
-    ///                                                              // 121 zonas
-    /// e depois itera todo ZDO coletado chamando GetPosition(),
-    /// ZNetScene.InActiveArea() e IsInPeerActiveArea().
+    /// And ReleaseNearbyZDOS does, for EACH call:
+    ///     FindSectorObjects(zone, simDistance, m_tempNearObjects)   // scans the
+    ///                                                              // 121 zones
+    /// and then iterates every collected ZDO calling GetPosition(),
+    /// ZNetScene.InActiveArea() and IsInPeerActiveArea().
     ///
-    /// Com o usuario hospedando para 4 amigos: 5 varreduras completas do anel
-    /// near a cada 2 segundos, tudo num unico frame. Custo O(zonas * (peers+1)),
-    /// e "zonas" e (2*near+1)^2 -- 121 em near=5 contra 25 no vanilla.
+    /// With the user hosting for 4 friends: 5 complete scans of the near
+    /// ring every 2 seconds, all in a single frame. Cost O(zones * (peers+1)),
+    /// and "zones" is (2*near+1)^2 -- 121 at near=5 versus 25 in vanilla.
     ///
-    /// Periodico e concentrado num frame = exatamente a assinatura de engasgo.
+    /// Periodic and concentrated in one frame = exactly the signature of a hitch.
     ///
-    /// ---- IMPORTANTE: isto ainda NAO foi medido ----
-    /// Hoje eu ja errei uma vez otimizando antes de medir (limitei instanciacao
-    /// por frame com uma explicacao mecanica convincente, e o efeito era ruido).
-    /// Entao aqui NAO se mexe na logica de posse -- so no INTERVALO, que e
-    /// reversivel e nao muda comportamento, e por padrao fica no valor do jogo.
-    /// A instrumentacao (SystemProfiler.Sys.ZdoRelease) mede primeiro.
+    /// ---- IMPORTANT: this has NOT been measured yet ----
+    /// Today I already made a mistake once by optimizing before measuring (I limited
+    /// instantiation per frame with a convincing mechanical explanation, and the effect was noise).
+    /// So here we do NOT touch the ownership logic -- only the INTERVAL, which is
+    /// reversible and does not change behavior, and by default stays at the game's value.
+    /// The instrumentation (SystemProfiler.Sys.ZdoRelease) measures first.
     ///
-    /// Transpiler troca so a constante 2f -- ela aparece uma unica vez no metodo.
-    /// Dobrar o intervalo corta o custo pela metade; o preco e posse de objeto
-    /// demorar mais para migrar entre jogadores.
+    /// The transpiler replaces only the constant 2f -- it appears once in the method.
+    /// Doubling the interval cuts the cost in half; the price is that object ownership
+    /// takes longer to migrate between players.
     /// </summary>
     internal static class ZdoReleasePatch
     {
@@ -70,8 +70,8 @@ namespace ValheimTweaks.Patches
                 if (!trocado)
                 {
                     Plugin.Log.LogError(
-                        "ZdoReleasePatch: constante 2f nao encontrada em ReleaseZDOS. " +
-                        "O intervalo NAO esta configuravel (o jogo mudou).");
+                        "ZdoReleasePatch: constant 2f not found in ReleaseZDOS. " +
+                        "The interval is NOT configurable (the game changed).");
                 }
             }
         }

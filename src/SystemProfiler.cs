@@ -6,32 +6,32 @@ using UnityEngine;
 namespace ValheimTweaks
 {
     /// <summary>
-    /// Mede ONDE o tempo do frame e gasto, por sistema do jogo.
+    /// Measures WHERE the frame time is spent, per game system.
     ///
-    /// Motivacao: gastei varias rodadas testando levers (limite de instanciacao,
-    /// orcamento de geracao de zona, simulation distance, fatia de GC) e todos
-    /// cairam dentro do ruido. Testar palpite um por um nao estava convergindo.
-    /// Isto para de adivinhar: cronometra os sistemas quentes e, quando um frame
-    /// estoura, imprime a repartição DAQUELE frame.
+    /// Motivation: I spent several rounds testing levers (instantiation limit,
+    /// zone generation budget, simulation distance, GC slice) and they all
+    /// fell within the noise. Testing guesses one by one wasn't converging.
+    /// This stops guessing: it times the hot systems and, when a frame
+    /// blows up, prints THAT frame's breakdown.
     ///
-    /// E o mesmo caminho que fechou o caso do CS2: trace e pilha, nao palpite.
+    /// It's the same path that closed the CS2 case: trace and stack, not guesswork.
     ///
-    /// Custo: dois Stopwatch.GetTimestamp por sistema por frame. Da ordem de
-    /// dezenas de nanossegundos -- irrelevante perto dos ms que estamos cacando,
-    /// mas por isso mesmo so fica ligado durante a medicao.
+    /// Cost: two Stopwatch.GetTimestamp per system per frame. On the order of
+    /// tens of nanoseconds -- irrelevant next to the ms we're hunting, but for
+    /// that very reason it only stays on during measurement.
     /// </summary>
     internal static class SystemProfiler
     {
         internal enum Sys
         {
-            ZDOMan,              // rede/ZDO -- custo de host, por peer
-            CreateDestroyObjects,// streaming de objetos do ZNetScene
+            ZDOMan,              // network/ZDO -- host cost, per peer
+            CreateDestroyObjects,// object streaming from ZNetScene
             ZNetSceneUpdate,
-            ZoneSystem,          // geracao/carregamento de zona
-            ZdoRelease,          // transferencia de posse de ZDO (host, a cada 2s, por peer)
-            SpawnZone,           // geracao de zona nova: instancia tudo e destroi
-            Clutter,             // grama
-            HeightmapRegen,      // rebuild de mesh de terreno (spiky)
+            ZoneSystem,          // zone generation/loading
+            ZdoRelease,          // ZDO ownership transfer (host, every 2s, per peer)
+            SpawnZone,           // new zone generation: instantiates everything and destroys
+            Clutter,             // grass
+            HeightmapRegen,      // terrain mesh rebuild (spiky)
             COUNT
         }
 
@@ -48,7 +48,7 @@ namespace ValheimTweaks
         private static int _frames;
         private static bool _enabled;
 
-        // Guarda a repartição do pior frame visto, para imprimir no fim.
+        // Stores the breakdown of the worst frame seen, to print at the end.
         private static readonly double[] WorstFrameBreakdown = new double[(int)Sys.COUNT];
         private static double _worstFrameMs;
 
@@ -59,7 +59,7 @@ namespace ValheimTweaks
             if (_enabled == on) return;
             _enabled = on;
             if (on) Reset();
-            Plugin.Log.LogInfo($"[SYS] instrumentacao {(on ? "LIGADA" : "desligada")}");
+            Plugin.Log.LogInfo($"[SYS] instrumentation {(on ? "ON" : "off")}");
         }
 
         private static void Reset()
@@ -74,8 +74,8 @@ namespace ValheimTweaks
         }
 
         /// <summary>
-        /// Conta zonas geradas na janela. Serve para separar "mundo novo estreando"
-        /// (custo que some sozinho) de "problema permanente".
+        /// Counts zones generated in the window. It separates "new world still warming up"
+        /// (a cost that goes away on its own) from "permanent problem".
         /// </summary>
         internal static void CountZoneSpawn() { if (_enabled) _zonesGeradas++; }
 
@@ -95,7 +95,7 @@ namespace ValheimTweaks
             if (ms > WorstMs[i]) WorstMs[i] = ms;
         }
 
-        /// <summary>Fecha o frame anterior quando o frameCount muda.</summary>
+        /// <summary>Closes the previous frame when frameCount changes.</summary>
         private static void RollFrameIfNeeded()
         {
             int f = Time.frameCount;
@@ -119,13 +119,13 @@ namespace ValheimTweaks
 
         internal static string Report()
         {
-            if (_frames < 10) return "[SYS] poucos frames instrumentados.";
+            if (_frames < 10) return "[SYS] too few instrumented frames.";
 
             var sb = new StringBuilder();
             sb.AppendLine();
-            sb.AppendLine("--------------- ONDE O TEMPO VAI ---------------");
-            sb.AppendLine($"  {_frames} frames instrumentados");
-            sb.AppendLine($"  {"sistema",-22} {"ms/frame",9} {"pior ms",9} {"chamadas",9}");
+            sb.AppendLine("--------------- WHERE THE TIME GOES ---------------");
+            sb.AppendLine($"  {_frames} instrumented frames");
+            sb.AppendLine($"  {"system",-22} {"ms/frame",9} {"worst ms",9} {"calls",9}");
 
             double somaMedia = 0;
             for (int i = 0; i < (int)Sys.COUNT; i++)
@@ -134,21 +134,21 @@ namespace ValheimTweaks
                 somaMedia += porFrame;
                 sb.AppendLine($"  {(Sys)i,-22} {porFrame,9:0.000} {WorstMs[i],9:0.00} {Calls[i],9}");
             }
-            sb.AppendLine($"  {"SOMA INSTRUMENTADA",-22} {somaMedia,9:0.000}");
+            sb.AppendLine($"  {"INSTRUMENTED SUM",-22} {somaMedia,9:0.000}");
             sb.AppendLine();
-            sb.AppendLine($"  PIOR FRAME: {_worstFrameMs:0.00} ms dentro do instrumentado");
+            sb.AppendLine($"  WORST FRAME: {_worstFrameMs:0.00} ms within the instrumented portion");
             for (int i = 0; i < (int)Sys.COUNT; i++)
             {
                 if (WorstFrameBreakdown[i] > 0.01)
                     sb.AppendLine($"     {(Sys)i,-22} {WorstFrameBreakdown[i],9:0.00} ms");
             }
             sb.AppendLine();
-            sb.AppendLine($"  zonas GERADAS nesta janela: {_zonesGeradas}");
+            sb.AppendLine($"  zones GENERATED in this window: {_zonesGeradas}");
             sb.AppendLine(_zonesGeradas > 0
-                ? "     -> mundo ainda estreando aqui. Este custo e pago UMA VEZ por zona"
-                : "     -> nenhuma zona nova: area ja explorada, custo de geracao = 0");
-            sb.AppendLine($"  ZDOs no mundo: {(ZDOMan.instance != null ? ZDOMan.instance.NrOfObjects() : -1)}");
-            sb.AppendLine("  (o que nao aparece aqui e render, fisica, animacao e IA)");
+                ? "     -> world still warming up here. This cost is paid ONCE per zone"
+                : "     -> no new zones: area already explored, generation cost = 0");
+            sb.AppendLine($"  ZDOs in the world: {(ZDOMan.instance != null ? ZDOMan.instance.NrOfObjects() : -1)}");
+            sb.AppendLine("  (what doesn't appear here is render, physics, animation and AI)");
             sb.AppendLine("-----------------------------------------------");
             return sb.ToString();
         }

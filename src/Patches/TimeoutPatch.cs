@@ -5,23 +5,23 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Timeout de rede.
+    /// Network timeout.
     ///
-    /// Como o jogo faz (assembly_valheim, ZRpc):
+    /// How the game does it (assembly_valheim, ZRpc):
     ///     private static float m_timeout;
-    ///     static ZRpc() { m_timeout = 600f; }                    // default generoso
+    ///     static ZRpc() { m_timeout = 600f; }                    // generous default
     ///     public static void SetLongTimeout(bool enable) {
     ///         if (enable) m_timeout = 90f; else m_timeout = 30f;
     ///     }
-    /// E ZNet.Start() chama SetLongTimeout(enable: false) -> trava em 30s no Steam.
-    /// Consumido em ZRpc.UpdatePing: se m_timeSinceLastPing > m_timeout, m_socket.Close().
+    /// And ZNet.Start() calls SetLongTimeout(enable: false) -> locks at 30s on Steam.
+    /// Consumed in ZRpc.UpdatePing: if m_timeSinceLastPing > m_timeout, m_socket.Close().
     ///
-    /// Em vez de editar a DLL, damos Postfix em SetLongTimeout: pega todo call site
-    /// (ZNet.Start e os dois do ZPlayFabSocket) e sobrevive a patch do jogo.
+    /// Instead of editing the DLL, we Postfix SetLongTimeout: it catches every call site
+    /// (ZNet.Start and the two in ZPlayFabSocket) and survives a game patch.
     /// </summary>
     internal static class TimeoutPatch
     {
-        // m_timeout e private static -> acesso por reflection cacheada.
+        // m_timeout is private static -> accessed via cached reflection.
         private static readonly FieldInfo TimeoutField =
             AccessTools.Field(typeof(ZRpc), "m_timeout");
 
@@ -40,7 +40,7 @@ namespace ValheimTweaks.Patches
 
             if (TimeoutField == null)
             {
-                Plugin.Log.LogError("ZRpc.m_timeout nao encontrado - o jogo mudou? Timeout nao aplicado.");
+                Plugin.Log.LogError("ZRpc.m_timeout not found - did the game change? Timeout not applied.");
                 return;
             }
 
@@ -49,7 +49,7 @@ namespace ValheimTweaks.Patches
             if (Mathf.Approximately(current, desired)) return;
 
             TimeoutField.SetValue(null, desired);
-            Plugin.Log.LogInfo($"Timeout de RPC: {current}s -> {desired}s");
+            Plugin.Log.LogInfo($"RPC timeout: {current}s -> {desired}s");
         }
     }
 }

@@ -6,36 +6,38 @@ using UnityEngine;
 namespace ValheimTweaks.Patches
 {
     /// <summary>
-    /// Guardar itens nos baús próximos.
+    /// Store items in nearby chests.
     ///
-    /// Dois modos, ambos ativos:
-    ///   - marcar um item (tecla sobre ele) e depois despejar todos os marcados
-    ///   - guardar na hora o item sob o cursor
+    /// Two modes, both active:
+    ///   - mark an item (key over it) and then dump all marked ones
+    ///   - store the item under the cursor right away
     ///
-    /// ---- Por que reutiliza Container.StackAll em vez de mexer no inventário ----
-    /// Escrever direto no inventário de um baú corrompe save em multijogador: outro
-    /// jogador pode estar com ele aberto, o baú pode estar dentro de área protegida,
-    /// e quem manda nos dados é o dono do ZDO, que pode ser outra máquina.
+    /// ---- Why reuse Container.StackAll instead of touching the inventory ----
+    /// Writing directly to a chest's inventory corrupts the save in multiplayer:
+    /// another player may have it open, the chest may be inside a protected area,
+    /// and the one who owns the data is the owner of the ZDO, which may be another
+    /// machine.
     ///
-    /// O jogo já tem o aperto de mão para isso:
+    /// The game already has the handshake for this:
     ///
     ///     Container.StackAll()
-    ///       -> RPC_RequestStack  (dono checa IsOwner / IsInUse / CheckAccess)
-    ///            -> concede: ForceSendZDO + SetOwner(uid)
-    ///                 -> RPC_StackResponse: m_inventory.StackAll(inv do player)
+    ///       -> RPC_RequestStack  (owner checks IsOwner / IsInUse / CheckAccess)
+    ///            -> grants: ForceSendZDO + SetOwner(uid)
+    ///                 -> RPC_StackResponse: m_inventory.StackAll(player's inv)
     ///
-    /// Chamamos isso e deixamos o jogo cuidar de posse, baú em uso e guard stone.
-    /// Como o RPC transfere a posse para nós antes do StackAll, mexer no inventário
-    /// dentro dessa janela é legítimo -- é o que o próprio jogo faz.
+    /// We call that and let the game handle ownership, chest in use and guard stone.
+    /// Since the RPC transfers ownership to us before the StackAll, touching the
+    /// inventory inside that window is legitimate -- it's what the game itself does.
     ///
-    /// ---- O filtro ----
-    /// Inventory.StackAll move tudo que o destino já contém. Para respeitar a
-    /// marcação, um Prefix substitui o laço -- mas SÓ enquanto a nossa operação
-    /// está em andamento (s_filtroAte). Fora dela, o quick-stack do jogo e de
-    /// outros mods continua intacto. É assim que se evita conflito.
+    /// ---- The filter ----
+    /// Inventory.StackAll moves everything the destination already contains. To
+    /// respect the marking, a Prefix replaces the loop -- but ONLY while our
+    /// operation is in progress (s_filtroAte). Outside of it, the game's quick-stack
+    /// and that of other mods stays intact. That's how conflicts are avoided.
     ///
-    /// Como o RPC é assíncrono, o filtro vale por uma janela de tempo em vez de
-    /// uma única chamada: as respostas dos vários baús chegam em frames diferentes.
+    /// Since the RPC is asynchronous, the filter lasts for a time window instead of
+    /// a single call: the responses from the various chests arrive on different
+    /// frames.
     /// </summary>
     internal static class QuickStorePatch
     {
@@ -44,7 +46,7 @@ namespace ValheimTweaks.Patches
         private static readonly MethodInfo GetHoveredElementMethod =
             AccessTools.Method(typeof(InventoryGrid), "GetHoveredElement");
 
-        // Inventory.Changed e privado; e ele que avisa a UI e marca o ZDO como sujo.
+        // Inventory.Changed is private; it's what notifies the UI and marks the ZDO as dirty.
         private static readonly MethodInfo ChangedMethod =
             AccessTools.Method(typeof(Inventory), "Changed", new[] { typeof(bool), typeof(bool) });
 
@@ -53,7 +55,7 @@ namespace ValheimTweaks.Patches
             if (inv != null) ChangedMethod?.Invoke(inv, new object[] { false, false });
         }
 
-        // Filtro ativo durante a operação. null = comportamento normal do jogo.
+        // Filter active during the operation. null = normal game behavior.
         private static System.Func<ItemDrop.ItemData, bool> s_filtro;
         private static float s_filtroAte;
         private static int s_movidos;
@@ -61,7 +63,7 @@ namespace ValheimTweaks.Patches
         private static bool FiltroAtivo => s_filtro != null && Time.realtimeSinceStartup < s_filtroAte;
 
         // ------------------------------------------------------------------
-        // Marcação (persistida no item, sobrevive a save e a troca de inventário)
+        // Marking (persisted on the item, survives a save and inventory swaps)
         // ------------------------------------------------------------------
         internal static bool EstaMarcado(ItemDrop.ItemData item)
             => item?.m_customData != null && item.m_customData.ContainsKey(ChaveMarca);
@@ -90,7 +92,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ------------------------------------------------------------------
-        // Item sob o cursor
+        // Item under the cursor
         // ------------------------------------------------------------------
         private static ItemDrop.ItemData ItemSobCursor()
         {
@@ -105,7 +107,7 @@ namespace ValheimTweaks.Patches
         }
 
         // ------------------------------------------------------------------
-        // Despejo
+        // Dump
         // ------------------------------------------------------------------
         private static List<Container> BausProximos()
         {
@@ -122,7 +124,7 @@ namespace ValheimTweaks.Patches
                 var cont = c.GetComponentInParent<Container>();
                 if (cont == null || achados.Contains(cont)) continue;
 
-                // Baú sem ZDO valido ainda esta carregando; pular evita RPC perdido.
+                // A chest without a valid ZDO is still loading; skipping avoids a lost RPC.
                 var nview = cont.GetComponent<ZNetView>();
                 if (nview == null || !nview.IsValid()) continue;
 
@@ -131,8 +133,8 @@ namespace ValheimTweaks.Patches
             return achados;
         }
 
-        // Inventario -> Container. O Prefix do StackAll so recebe o inventario, e
-        // precisamos do Container para descobrir o nome do bau.
+        // Inventory -> Container. The StackAll Prefix only receives the inventory, and
+        // we need the Container to find out the chest's name.
         private static readonly Dictionary<Inventory, Container> Dono =
             new Dictionary<Inventory, Container>();
 
@@ -154,16 +156,16 @@ namespace ValheimTweaks.Patches
 
             s_filtro = filtro;
             s_movidos = 0;
-            // Janela generosa: cada bau responde no seu proprio frame.
+            // Generous window: each chest responds on its own frame.
             s_filtroAte = Time.realtimeSinceStartup + 3f;
 
             foreach (var bau in baus) bau.StackAll();
 
-            Plugin.Log.LogInfo($"[GUARDAR] {oQue} -> {baus.Count} bau(s) em {ModConfig.StoreRadius.Value}m");
+            Plugin.Log.LogInfo($"[STORE] {oQue} -> {baus.Count} chest(s) in {ModConfig.StoreRadius.Value}m");
         }
 
         // ------------------------------------------------------------------
-        // Substitui o laço do StackAll enquanto a nossa operação roda
+        // Replaces the StackAll loop while our operation runs
         // ------------------------------------------------------------------
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll))]
         internal static class StackAllHook
@@ -171,7 +173,7 @@ namespace ValheimTweaks.Patches
             private static bool Prefix(Inventory __instance, Inventory fromInventory,
                                        ref int __result)
             {
-                if (!FiltroAtivo) return true; // jogo normal, nao interferimos
+                if (!FiltroAtivo) return true; // normal game, we don't interfere
 
                 var player = Player.m_localPlayer;
                 if (player == null) return true;
@@ -182,14 +184,14 @@ namespace ValheimTweaks.Patches
                 Dono.TryGetValue(__instance, out var bau);
                 string nomeBau = StoreHudPatch.NomeDoBau(bau);
 
-                // 1a passada: so onde o bau JA tem o item (comportamento do jogo).
+                // 1st pass: only where the chest ALREADY has the item (game behavior).
                 foreach (var item in itens)
                 {
                     if (!s_filtro(item) || player.IsItemEquiped(item)) continue;
                     if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
 
                     int qtd = item.m_stack;
-                    // Tira a marca antes de mover: ela vale so enquanto o item e seu.
+                    // Remove the mark before moving: it's only valid while the item is yours.
                     item.m_customData?.Remove(ChaveMarca);
                     if (__instance.AddItem(item))
                     {
@@ -199,7 +201,7 @@ namespace ValheimTweaks.Patches
                     }
                 }
 
-                // 2a passada (opcional): qualquer bau com espaco.
+                // 2nd pass (optional): any chest with space.
                 if (ModConfig.StoreFallbackAnyChest.Value)
                 {
                     foreach (var item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
@@ -226,12 +228,12 @@ namespace ValheimTweaks.Patches
                 }
 
                 __result = movidos;
-                return false; // pula o original
+                return false; // skips the original
             }
         }
 
         // ------------------------------------------------------------------
-        // Marca visual: tinge o icone do slot marcado
+        // Visual mark: tints the icon of the marked slot
         // ------------------------------------------------------------------
         [HarmonyPatch(typeof(InventoryGrid), "UpdateGui")]
         internal static class UpdateGuiHook
@@ -243,9 +245,9 @@ namespace ValheimTweaks.Patches
                 var inv = __instance.GetInventory();
                 if (inv == null) return;
 
-                // A marca vive no proprio item (m_customData), entao viaja junto
-                // quando ele vai para o bau -- e ficava azul la dentro. A marca so
-                // faz sentido no SEU inventario: fora dele, nem tinge.
+                // The mark lives on the item itself (m_customData), so it travels along
+                // when it goes to the chest -- and it turned blue in there. The mark only
+                // makes sense in YOUR inventory: outside of it, don't even tint.
                 var gui = InventoryGui.instance;
                 bool ehGradeDoJogador = gui != null && __instance == gui.m_playerGrid;
                 if (!ehGradeDoJogador)
@@ -260,15 +262,15 @@ namespace ValheimTweaks.Patches
                     if (el.m_icon == null || !el.m_icon.enabled) continue;
 
                     var item = inv.GetItemAt(el.Position.x, el.Position.y);
-                    // Reescreve sempre, nos dois sentidos: o jogo reaproveita os
-                    // elementos entre aberturas e um icone tingido ficaria preso.
+                    // Always rewrite, both ways: the game reuses the elements between
+                    // openings and a tinted icon would get stuck.
                     el.m_icon.color = (item != null && EstaMarcado(item)) ? Tom : Color.white;
                 }
             }
         }
 
         // ------------------------------------------------------------------
-        // Teclas
+        // Keys
         // ------------------------------------------------------------------
         internal static void Update()
         {
@@ -290,7 +292,7 @@ namespace ValheimTweaks.Patches
 
             if (ModConfig.StoreMarkedKey.Value.IsDown())
             {
-                Despejar(EstaMarcado, "itens marcados");
+                Despejar(EstaMarcado, "marked items");
             }
         }
     }
