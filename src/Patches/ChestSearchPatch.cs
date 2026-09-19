@@ -1362,9 +1362,17 @@ namespace ValheimTweaks.Patches
             _scroll = Place(roloGo, Pad, y, innerWidth, scrollHeight);
             roloGo.AddComponent<RectMask2D>();
 
+            // A raycast target on the viewport itself. Without it the pointer lands on
+            // the panel background (an ancestor of the ScrollRect) whenever it is not
+            // exactly over a slot's icon, and the wheel event travels up to a parent
+            // that has no scroll handler -- so scrolling only worked over the items.
+            // Transparent on purpose: it is here to catch the ray, not to be seen.
+            var viewportHit = roloGo.AddComponent<Image>();
+            viewportHit.color = new Color(0f, 0f, 0f, 0f);
+
             var sr = roloGo.AddComponent<ScrollRect>();
             sr.horizontal = false;
-            sr.scrollSensitivity = 28f;
+            sr.scrollSensitivity = ModConfig.ChestSearchScrollSpeed.Value;
             sr.movementType = ScrollRect.MovementType.Clamped;
 
             var conteudoGo = new GameObject("conteudo", typeof(RectTransform));

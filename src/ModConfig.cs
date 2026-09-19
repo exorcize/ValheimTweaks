@@ -98,6 +98,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> ChestSearchEnabled;
         internal static ConfigEntry<float> ChestSearchRadius;
         internal static ConfigEntry<float> ChestSearchRefresh;
+        internal static ConfigEntry<float> ChestSearchScrollSpeed;
         internal static ConfigEntry<int> ChestSearchColumns;
         internal static ConfigEntry<float> ChestSearchSlotSize;
         internal static ConfigEntry<float> ChestSearchLabelSize;
@@ -493,6 +494,12 @@ namespace ValheimTweaks
                     "How often, in seconds, the panel rechecks the chests while " +
                     "it is open.",
                     new AcceptableValueRange<float>(0.2f, 3f)));
+
+            ChestSearchScrollSpeed = cfg.Bind("05 - Convenience", "ChestSearchScrollSpeed", 60f,
+                new ConfigDescription(
+                    "How far the mouse wheel scrolls the item list, in pixels per notch. " +
+                    "Raise it if scrolling feels slow.",
+                    new AcceptableValueRange<float>(10f, 300f)));
 
             ChestSearchColumns = cfg.Bind("05 - Convenience", "ChestSearchColumns", 0,
                 new ConfigDescription(
