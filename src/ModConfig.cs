@@ -22,6 +22,8 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> ProfileNow;
         internal static ConfigEntry<float> ProfileSeconds;
         internal static ConfigEntry<bool> ProfileSystems;
+        internal static ConfigEntry<bool> ChestAuditLog;
+        internal static ConfigEntry<bool> ChestAuditContents;
 
         // ---------- 02 - Network ----------
         internal static ConfigEntry<bool> TimeoutEnabled;
@@ -146,6 +148,17 @@ namespace ValheimTweaks
 
             ProfileSystems = cfg.Bind("01 - Diagnostics", "ProfileSystems", true,
                 "Includes in the measurement the time each part of the game spends per frame.");
+
+            ChestAuditLog = cfg.Bind("01 - Diagnostics", "ChestAuditLog", true,
+                "Writes to the log every chest interaction on the network: who opened, " +
+                "stacked or took all from which chest, whether the owner allowed it, and " +
+                "the chest's owner and id. This is what shows the other player's actions. " +
+                "Useful to investigate a missing item; can be turned off on a busy base.");
+
+            ChestAuditContents = cfg.Bind("01 - Diagnostics", "ChestAuditContents", true,
+                "Includes the full list of items (and amounts) whenever a chest's contents " +
+                "or owner change. This is the detailed part of ChestAuditLog; turn it off " +
+                "to keep the log smaller if you only care about who touched which chest.");
 
             // ------------------------------------------------------------------
             // 02 - Network

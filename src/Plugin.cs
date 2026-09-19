@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.33.3";
+        public const string VERSION = "0.33.4";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -104,6 +104,7 @@ namespace ValheimTweaks
             Patches.ChestPeekPatch.Update();
             Patches.AutoMinePatch.Update();
             Patches.ChestSearchPatch.Update();
+            Patches.ChestAudit.Tick();
 
             if (_reloadPending && ModConfig.HotReload.Value)
             {

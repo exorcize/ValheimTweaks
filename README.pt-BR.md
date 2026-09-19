@@ -119,6 +119,12 @@ Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afeta
 o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
 cena.
 
+Há também uma **auditoria de baús** (`ChestAuditLog`): escreve no log toda
+interação de rede com baús — quem abriu, empilhou ou pegou tudo de qual baú, se o
+dono autorizou, o id e o dono do baú — e, com `ChestAuditContents`, a lista de
+itens antes e depois de cada mudança. Serve para responder "para onde foi meu
+item" com fatos. Desligue numa base movimentada para o log não crescer.
+
 ## Sobre desempenho
 
 Este mod não tenta otimizar o motor do jogo. Para isso vale instalar o

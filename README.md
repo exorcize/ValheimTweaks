@@ -120,6 +120,12 @@ It comes with an option to freeze the time of day and the weather on your screen
 without affecting the world or other players, so you can compare two tweaks in the
 same scene.
 
+There is also a **chest audit** (`ChestAuditLog`): it writes to the log every chest
+interaction on the network — who opened, stacked or took from which chest, whether
+the owner allowed it, the chest id and its owner — and, with `ChestAuditContents`,
+the item list before and after each change. It exists to answer "where did my item
+go" with facts. Turn it off on a busy base to keep the log small.
+
 ## About performance
 
 This mod does not try to optimize the game engine. For that, install
