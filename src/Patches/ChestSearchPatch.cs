@@ -466,6 +466,12 @@ namespace ValheimTweaks.Patches
             internal string Name;
             /// <summary>true = backpack -> chest (store); false = chest -> backpack (take).</summary>
             internal bool Storing;
+            /// <summary>
+            /// Exact stack to draw from when storing. Without it the move would take
+            /// from whichever stack of that key comes first, so clicking one of two
+            /// identical stacks could empty the other one.
+            /// </summary>
+            internal ItemDrop.ItemData Only;
         }
 
         private static readonly List<Request> _queue = new List<Request>();
@@ -573,7 +579,8 @@ namespace ValheimTweaks.Patches
         /// Now we debit first and give back what didn't fit. Duplicating is worse than
         /// failing, and vanishing is worse than both -- hence the check below.
         /// </summary>
-        private static int Move(Inventory destination, Inventory source, string key, int amount)
+        private static int Move(Inventory destination, Inventory source, string key, int amount,
+                                ItemDrop.ItemData only = null)
         {
             if (destination == null || source == null || amount <= 0) return 0;
 
@@ -586,6 +593,9 @@ namespace ValheimTweaks.Patches
             {
                 if (remaining <= 0) break;
                 if (Key(item) != key) continue;
+
+                // When the player acted on one specific stack, touch only that stack.
+                if (only != null && !ReferenceEquals(item, only)) continue;
 
                 int n = Mathf.Min(item.m_stack, remaining);
 
@@ -725,7 +735,7 @@ namespace ValheimTweaks.Patches
                 if (p.Chest == null || __instance != p.Chest.GetInventory()) return true;
 
                 _inFlight = null;
-                int n = Move(__instance, fromInventory, p.Key, p.Amount);
+                int n = Move(__instance, fromInventory, p.Key, p.Amount, p.Only);
                 _taken += n;
                 __result = n;
                 Complete();
@@ -1084,12 +1094,12 @@ namespace ValheimTweaks.Patches
             foreach (var d in plan)
             {
                 if (IsOwner(d.Chest))
-                    _taken += Move(d.Chest.GetInventory(), backpack, key, d.Amount);
+                    _taken += Move(d.Chest.GetInventory(), backpack, key, d.Amount, item);
                 else
                     _queue.Add(new Request
                     {
                         Chest = d.Chest, Key = key, Amount = d.Amount,
-                        Name = _roundName, Storing = true,
+                        Name = _roundName, Storing = true, Only = item,
                     });
             }
 
