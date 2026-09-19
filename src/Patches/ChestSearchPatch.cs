@@ -654,6 +654,23 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
+        /// The owner refused the stack (chest in use, not yours). Without this the request
+        /// would sit in flight until the 3s timeout, stalling every request behind it --
+        /// which is what made storing several stacks feel slow.
+        /// </summary>
+        [HarmonyPatch(typeof(Container), "RPC_StackResponse")]
+        internal static class StackResponseHook
+        {
+            private static void Postfix(bool granted)
+            {
+                if (granted || _inFlight == null || !_inFlight.Storing) return;
+                Plugin.Log.LogInfo($"[CHESTS] refused by '{Chests.VisibleName(_inFlight.Chest)}'");
+                _inFlight = null;
+                Complete();
+            }
+        }
+
+        /// <summary>
         /// One request at a time: the RPC is asynchronous and the filter is global, so
         /// two chests in flight at once would mix up the responses.
         /// </summary>
@@ -688,6 +705,7 @@ namespace ValheimTweaks.Patches
 
             if (p.Storing)
             {
+                Plugin.Log.LogInfo($"[CHESTS] request {p.Amount} '{p.Key}' -> {Chests.VisibleName(p.Chest)}");
                 // Same handshake as "take", in reverse: the owner grants ownership
                 // (ForceSendZDO + SetOwner) before the inventory is touched.
                 p.Chest.StackAll();
@@ -812,7 +830,10 @@ namespace ValheimTweaks.Patches
             void Put(Container chest, string chestName, int n, string reason)
             {
                 if (n <= 0) return;
-                var j = plan.Find(p => p.Chest == chest && p.Reason == reason);
+                // One entry per chest. Each entry becomes one Move or one RPC round-trip,
+                // and several entries for the same chest meant several handshakes per stack
+                // (the slow part when storing many stacks), and several chances to go wrong.
+                var j = plan.Find(p => p.Chest == chest);
                 if (j != null) j.Amount += n;
                 else plan.Add(new Destination { Chest = chest, Name = chestName, Amount = n, Reason = reason });
                 left -= n;
