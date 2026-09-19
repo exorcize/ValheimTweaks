@@ -673,6 +673,18 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
+        /// Moves one whole stack, safely. The quick-store shares the same footgun with
+        /// AddItem's partial/failed cases, so it goes through here instead of rolling
+        /// its own add-then-remove.
+        /// </summary>
+        internal static int SafeTransfer(Inventory destination, Inventory source,
+                                         ItemDrop.ItemData item)
+        {
+            if (item == null) return 0;
+            return Move(destination, source, Key(item), item.m_stack, item);
+        }
+
+        /// <summary>
         /// One request at a time: the RPC is asynchronous and the filter is global, so
         /// two chests in flight at once would mix up the responses.
         /// </summary>

@@ -146,8 +146,12 @@ namespace ValheimTweaks.Patches
                 if (have <= 0) continue;
 
                 int take = Mathf.Min(have, amount - removed);
+
+                // Measure the removal instead of assuming it: if the game takes less
+                // than asked, only what actually left is credited.
                 inv.RemoveItem(name, take, quality, worldLevelBased);
-                removed += take;
+                int left = inv.CountItems(name, quality, worldLevelBased);
+                removed += Mathf.Max(0, have - left);
             }
 
             if (removed > 0) Invalidate();   // the aggregate is stale now

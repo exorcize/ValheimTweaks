@@ -188,20 +188,22 @@ namespace ValheimTweaks.Patches
                 Owner.TryGetValue(__instance, out var chest);
                 string chestName = StoreHudPatch.ChestName(chest);
 
+                // Both passes go through the shared move: AddItem can put part of the
+                // stack in and still return "false", and the old add-then-remove left
+                // those units duplicated.
                 // 1st pass: only where the chest ALREADY has the item (game behavior).
                 foreach (var item in items)
                 {
                     if (!s_filter(item) || player.IsItemEquiped(item)) continue;
                     if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
 
-                    int amount = item.m_stack;
                     // Remove the mark before moving: it's only valid while the item is yours.
                     item.m_customData?.Remove(MarkKey);
-                    if (__instance.AddItem(item))
+                    int movedNow = ChestSearchPatch.SafeTransfer(__instance, fromInventory, item);
+                    if (movedNow > 0)
                     {
-                        fromInventory.RemoveItem(item);
                         moved++;
-                        StoreHudPatch.Add(item, amount, chestName);
+                        StoreHudPatch.Add(item, movedNow, chestName);
                     }
                 }
 
@@ -212,12 +214,11 @@ namespace ValheimTweaks.Patches
                     {
                         if (!s_filter(item) || player.IsItemEquiped(item)) continue;
 
-                        int amount = item.m_stack;
-                        if (__instance.AddItem(item))
+                        int movedNow = ChestSearchPatch.SafeTransfer(__instance, fromInventory, item);
+                        if (movedNow > 0)
                         {
-                            fromInventory.RemoveItem(item);
                             moved++;
-                            StoreHudPatch.Add(item, amount, chestName);
+                            StoreHudPatch.Add(item, movedNow, chestName);
                         }
                     }
                 }
