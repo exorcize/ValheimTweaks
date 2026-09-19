@@ -190,6 +190,14 @@ namespace ValheimTweaks.Patches
             // the fit through F1 without restarting the game.
             PositionPanel();
 
+            // If the font wasn't ready when the panel was built, the texts came out
+            // fontless and TMP spams the log every frame. Reapply once it resolves.
+            if (_fontVersion != StoreHudPatch.FontVersion)
+            {
+                _fontVersion = StoreHudPatch.FontVersion;
+                StoreHudPatch.ApplyFontToAll(_panel.transform);
+            }
+
             UpdateDropArea();
 
             // Resizing only changes the frame: the innards were positioned by hand for
@@ -211,6 +219,7 @@ namespace ValheimTweaks.Patches
         }
 
         private static Vector2 _builtSize;
+        private static int _fontVersion;
 
         /// <summary>
         /// Rebuilds the whole panel while preserving what you already typed. It only
@@ -605,8 +614,16 @@ namespace ValheimTweaks.Patches
                 source.RemoveItem(item, n);
 
                 // AddItem reduces part.m_stack as it places; whatever is left didn't go in.
-                if (!destination.AddItem(part) && part.m_stack > 0)
-                    source.AddItem(part);   // give back what didn't fit
+                destination.AddItem(part);
+                if (part.m_stack > 0)
+                {
+                    // Give back what didn't fit. If even the source refuses it, the units
+                    // would vanish -- so fail loudly instead of silently.
+                    if (!source.AddItem(part))
+                        Plugin.Log.LogError(
+                            $"[CHESTS] LOST {part.m_stack}x '{key}': neither the chest nor "
+                          + "the backpack accepted it. Tell the mod author.");
+                }
 
                 remaining -= n;
             }
@@ -616,6 +633,12 @@ namespace ValheimTweaks.Patches
 
             int movedOut = beforeSource - Count(source, key);
             int movedIn = Count(destination, key) - beforeDestination;
+
+            // The store path carries a specific stack, so log it: this is the path
+            // where "it disappeared" reports come from.
+            if (only != null)
+                Plugin.Log.LogInfo($"[CHESTS] store-move '{key}': asked {amount}, "
+                                 + $"out {movedOut}, in {movedIn}");
 
             // Safety net: if the two ends don't match, someone gained or
             // lost an item. There's no safe way to undo it here, but yelling in the log
@@ -1090,6 +1113,14 @@ namespace ValheimTweaks.Patches
 
             var backpack = player.GetInventory();
             string key = Key(item);
+
+            // Store logging stays on: this is where "the item disappeared" reports come
+            // from, and it is a handful of lines per action, not per frame.
+            Plugin.Log.LogInfo($"[CHESTS] store '{key}': asked {amount} (stack {item.m_stack}), "
+                             + $"plan {plan.Count} chest(s), leftover {leftover}");
+            foreach (var d in plan)
+                Plugin.Log.LogInfo($"[CHESTS]   plan {d.Amount} -> {Chests.VisibleName(d.Chest)}"
+                                 + $" (owner={IsOwner(d.Chest)})");
 
             foreach (var d in plan)
             {

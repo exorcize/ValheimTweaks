@@ -38,6 +38,7 @@ namespace ValheimTweaks.Patches
         private static Container _current;
         private static long _seenRevision = -1;
         private static float _lostAimAt = -1f;
+        private static int _fontVersion;
 
         // ------------------------------------------------------------------
         // Detection
@@ -79,6 +80,13 @@ namespace ValheimTweaks.Patches
             }
 
             _lostAimAt = -1f;
+
+            // Reapply the font if it resolved after this panel was built (see StoreHudPatch).
+            if (_fontVersion != StoreHudPatch.FontVersion && _panel != null)
+            {
+                _fontVersion = StoreHudPatch.FontVersion;
+                StoreHudPatch.ApplyFontToAll(_panel.transform);
+            }
 
             var nview = chest.GetComponent<ZNetView>();
             long revision = nview?.GetZDO() != null ? nview.GetZDO().DataRevision : 0;

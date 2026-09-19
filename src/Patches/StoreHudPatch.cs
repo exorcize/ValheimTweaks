@@ -36,6 +36,9 @@ namespace ValheimTweaks.Patches
         private static TMP_FontAsset _font;
         private static Material _material;
 
+        /// <summary>Bumps when the font is first resolved; panels reapply it on change.</summary>
+        internal static int FontVersion { get; private set; }
+
         /// <summary>
         /// Font and material from a KNOWN HUD text. Grabbing the first TMP_Text
         /// that appeared brought some random font, and without the
@@ -45,16 +48,38 @@ namespace ValheimTweaks.Patches
         internal static bool ApplyFont(TMP_Text target)
         {
             if (target == null) return false;
+            EnsureFont();
+            if (_font == null) return false;   // HUD not ready yet: try again later
 
-            if (_font == null && Hud.instance != null)
+            target.font = _font;
+            if (_material != null) target.fontSharedMaterial = _material;
+            return true;
+        }
+
+        /// <summary>Applies the font to every TMP text under <paramref name="root"/>.</summary>
+        internal static void ApplyFontToAll(Transform root)
+        {
+            if (root == null) return;
+            EnsureFont();
+            if (_font == null) return;
+
+            foreach (var t in root.GetComponentsInChildren<TMP_Text>(true))
+            {
+                t.font = _font;
+                if (_material != null) t.fontSharedMaterial = _material;
+            }
+        }
+
+        private static void EnsureFont()
+        {
+            if (_font != null) return;
+
+            // 1) A known HUD text.
+            if (Hud.instance != null)
             {
                 TMP_Text template = Hud.instance.m_healthText
                               ?? Hud.instance.m_staminaText
                               ?? Hud.instance.m_actionName;
-
-                if (template == null && MessageHud.instance != null)
-                    template = MessageHud.instance.m_messageCenterText;
-
                 if (template != null)
                 {
                     _font = template.font;
@@ -62,11 +87,32 @@ namespace ValheimTweaks.Patches
                 }
             }
 
-            if (_font == null) return false;   // HUD not ready yet: try again later
+            if (_font == null && MessageHud.instance != null)
+            {
+                var template = MessageHud.instance.m_messageCenterText;
+                if (template != null)
+                {
+                    _font = template.font;
+                    _material = template.fontSharedMaterial;
+                }
+            }
 
-            target.font = _font;
-            if (_material != null) target.fontSharedMaterial = _material;
-            return true;
+            // 2) Fallback: the font the chest panels already discovered from the
+            // crafting panel. The HUD source above can come back null depending on
+            // load order, and a text with no font makes TMP spam the log every frame
+            // ("no Font Asset assigned").
+            if (_font == null && GameStyle.TitleFont != null)
+            {
+                _font = GameStyle.TitleFont;
+                _material = GameStyle.TitleMaterial;
+            }
+
+            if (_font != null)
+            {
+                FontVersion++;
+                Plugin.Log.LogInfo($"[STYLE] body font = '{_font.name}'"
+                    + (Hud.instance != null && Hud.instance.m_healthText != null ? " (HUD)" : " (fallback)"));
+            }
         }
 
         // ------------------------------------------------------------------
