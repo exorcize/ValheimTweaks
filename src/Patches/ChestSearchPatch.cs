@@ -600,20 +600,30 @@ namespace ValheimTweaks.Patches
 
                 int n = Mathf.Min(item.m_stack, remaining);
 
-                // Detach the piece and debit the source right away.
+                // Debit the source first, then measure how much actually left it. We do
+                // not trust the mutated ItemData that AddItem gets: depending on whether
+                // it merges into an existing stack or makes a new one, its effect on the
+                // passed object is not something to depend on (trusting it made the item
+                // come out twice).
                 var part = item.Clone();
-                part.m_stack = n;
+                int sourceBefore = Count(source, key);
                 source.RemoveItem(item, n);
+                int removed = sourceBefore - Count(source, key);
+                if (removed <= 0) { remaining -= n; continue; }
 
-                // AddItem reduces part.m_stack as it places; whatever is left didn't go in.
+                // Measure what the destination actually took, instead of trusting the
+                // object, and give back exactly what did not fit.
+                part.m_stack = removed;
+                int destBefore = Count(destination, key);
                 destination.AddItem(part);
-                if (part.m_stack > 0)
+                int back = removed - (Count(destination, key) - destBefore);
+                if (back > 0)
                 {
-                    // Give back what didn't fit. If even the source refuses it, the units
-                    // would vanish -- so fail loudly instead of silently.
-                    if (!source.AddItem(part))
+                    var returned = item.Clone();
+                    returned.m_stack = back;
+                    if (!source.AddItem(returned))
                         Plugin.Log.LogError(
-                            $"[CHESTS] LOST {part.m_stack}x '{key}': neither the chest nor "
+                            $"[CHESTS] LOST {back}x '{key}': neither the chest nor "
                           + "the backpack accepted it. Tell the mod author.");
                 }
 
