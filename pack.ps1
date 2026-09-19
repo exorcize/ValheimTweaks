@@ -43,7 +43,7 @@ $manifest = [ordered]@{
     name           = "ValheimTweaks"
     version_number = $versao
     website_url    = ""
-    description    = "Ajustes de video e rede que o menu do Valheim nao oferece: filtro anisotropico, anti-serrilhado com qualidade, nevoa ajustavel, tela cheia exclusiva, timeout de rede e distancia de simulacao."
+    description    = "Video and network tweaks the Valheim menu does not offer: anisotropic filtering, quality anti-aliasing, adjustable fog, exclusive fullscreen, network timeout and simulation distance."
     dependencies   = @(
         "denikson-BepInExPack_Valheim-5.4.2350",
         # O menu de opcoes (F1) vem daqui; sem ele so da para editar o .cfg na mao.

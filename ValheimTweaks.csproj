@@ -121,7 +121,7 @@
          parecido. Reescrever o manifest no deploy mantem as duas honestas. -->
     <WriteLinesToFile File="$(PluginDir)\manifest.json" Overwrite="true" Encoding="UTF-8"
                       Condition="'$(ModDisabled)' != 'true'"
-                      Lines="{&quot;name&quot;:&quot;ValheimTweaks&quot;,&quot;version_number&quot;:&quot;$(Version)&quot;,&quot;website_url&quot;:&quot;&quot;,&quot;description&quot;:&quot;Ajustes de video, rede e conveniencia para o Valheim.&quot;,&quot;dependencies&quot;:[&quot;denikson-BepInExPack_Valheim-5.4.2350&quot;,&quot;shudnal-ConfigurationManager-1.1.18&quot;]}" />
+                      Lines="{&quot;name&quot;:&quot;ValheimTweaks&quot;,&quot;version_number&quot;:&quot;$(Version)&quot;,&quot;website_url&quot;:&quot;&quot;,&quot;description&quot;:&quot;Video, network and quality-of-life tweaks for Valheim.&quot;,&quot;dependencies&quot;:[&quot;denikson-BepInExPack_Valheim-5.4.2350&quot;,&quot;shudnal-ConfigurationManager-1.1.18&quot;]}" />
 
     <Message Importance="high" Condition="'$(ModDisabled)' != 'true'"
              Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll (manifest -&gt; $(Version))" />

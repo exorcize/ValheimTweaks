@@ -118,225 +118,225 @@ namespace ValheimTweaks
 
         internal static void Init(ConfigFile cfg)
         {
-            HotReload = cfg.Bind("00 - Geral", "HotReload", true,
-                "Aplica mudanças deste arquivo na hora, sem precisar fechar o jogo.");
+            HotReload = cfg.Bind("00 - General", "HotReload", true,
+                "Applies changes to this file on the fly, without needing to close the game.");
 
             // ------------------------------------------------------------------
             // 01 - Diagnóstico
             // ------------------------------------------------------------------
-            DumpOnWorldLoad = cfg.Bind("01 - Diagnostico", "DumpOnWorldLoad", true,
-                "Ao entrar no mundo, anota no log um resumo das configurações de vídeo em uso.");
+            DumpOnWorldLoad = cfg.Bind("01 - Diagnostics", "DumpOnWorldLoad", true,
+                "When you enter a world, writes a summary of the active video settings to the log.");
 
-            DumpNow = cfg.Bind("01 - Diagnostico", "DumpNow", false,
-                "Gera esse resumo agora. Desmarca sozinho depois.");
+            DumpNow = cfg.Bind("01 - Diagnostics", "DumpNow", false,
+                "Generates that summary now. Unchecks itself afterwards.");
 
-            ProfileNow = cfg.Bind("01 - Diagnostico", "ProfileNow", false,
-                "Mede o desempenho pelos próximos segundos e escreve o resultado no log. " +
-                "Desmarca sozinho depois.");
+            ProfileNow = cfg.Bind("01 - Diagnostics", "ProfileNow", false,
+                "Measures performance for the next few seconds and writes the result to the log. " +
+                "Unchecks itself afterwards.");
 
-            ProfileSeconds = cfg.Bind("01 - Diagnostico", "ProfileSeconds", 20f,
-                new ConfigDescription("Duração da medição, em segundos.",
+            ProfileSeconds = cfg.Bind("01 - Diagnostics", "ProfileSeconds", 20f,
+                new ConfigDescription("Duration of the measurement, in seconds.",
                     new AcceptableValueRange<float>(5f, 120f)));
 
-            ProfileSystems = cfg.Bind("01 - Diagnostico", "ProfileSystems", true,
-                "Inclui na medição o tempo que cada parte do jogo consome por quadro.");
+            ProfileSystems = cfg.Bind("01 - Diagnostics", "ProfileSystems", true,
+                "Includes in the measurement the time each part of the game spends per frame.");
 
             // ------------------------------------------------------------------
             // 02 - Rede
             // ------------------------------------------------------------------
-            TimeoutEnabled = cfg.Bind("02 - Rede", "TimeoutEnabled", true,
-                "Ajusta quanto tempo o jogo aguenta uma conexão sem resposta antes de " +
-                "derrubar. Todos no servidor precisam do mod e do mesmo valor, porque cada " +
-                "um encerra a própria conexão.");
+            TimeoutEnabled = cfg.Bind("02 - Network", "TimeoutEnabled", true,
+                "Adjusts how long the game tolerates an unresponsive connection before " +
+                "dropping it. Everyone on the server needs the mod and the same value, because each " +
+                "person closes their own connection.");
 
-            TimeoutSeconds = cfg.Bind("02 - Rede", "TimeoutSeconds", 90f,
+            TimeoutSeconds = cfg.Bind("02 - Network", "TimeoutSeconds", 90f,
                 new ConfigDescription(
-                    "Segundos até desistir de uma conexão parada. O jogo usa 30.",
+                    "Seconds before giving up on a stalled connection. The game uses 30.",
                     new AcceptableValueRange<float>(30f, 600f)));
 
             // ------------------------------------------------------------------
             // 03 - Visual
             // ------------------------------------------------------------------
             ForceAnisotropic = cfg.Bind("03 - Visual", "ForceAnisotropic", true,
-                "Deixa chão, estradas e pisos nítidos quando vistos de ângulo, em vez de " +
-                "borrados. Custo quase zero.");
+                "Keeps the ground, roads and floors sharp when seen at an angle, instead of " +
+                "blurry. Almost no cost.");
 
             AnisotropicLevel = cfg.Bind("03 - Visual", "AnisotropicLevel", 16,
-                new ConfigDescription("Intensidade do filtro. 1 desliga, 16 é o máximo.",
+                new ConfigDescription("Filter strength. 1 turns it off, 16 is the maximum.",
                     new AcceptableValueRange<int>(1, 16)));
 
             FullResTextures = cfg.Bind("03 - Visual", "FullResTextures", true,
-                "Mantém as texturas em resolução cheia.");
+                "Keeps textures at full resolution.");
 
             FogEnabled = cfg.Bind("03 - Visual", "FogEnabled", true,
-                "Desmarcar remove a névoa por completo. Fica artificial, mas serve para ver " +
-                "o quanto dela está escondendo a paisagem.");
+                "Unchecking removes the fog entirely. It looks artificial, but it shows " +
+                "how much of it is hiding the landscape.");
 
             FogDensityScale = cfg.Bind("03 - Visual", "FogDensityScale", 1.0f,
                 new ConfigDescription(
-                    "Quanta névoa o jogo desenha. 1.0 é o padrão; abaixo disso o horizonte " +
-                    "abre e as cores ao longe param de lavar. Não custa desempenho.",
+                    "How much fog the game draws. 1.0 is the default; below that the horizon " +
+                    "opens up and distant colors stop washing out. No performance cost.",
                     new AcceptableValueRange<float>(0f, 2f)));
 
             AmbientBrightness = cfg.Bind("03 - Visual", "AmbientBrightness", 1.0f,
                 new ConfigDescription(
-                    "Clareia ou escurece a luz ambiente. Acima de 1 as sombras ficam menos " +
-                    "fechadas; abaixo de 1 aumenta o contraste.",
+                    "Brightens or darkens the ambient light. Above 1 shadows become less " +
+                    "crushed; below 1 increases contrast.",
                     new AcceptableValueRange<float>(0.25f, 2f)));
 
             TrilightAmbient = cfg.Bind("03 - Visual", "TrilightAmbient", false,
-                "Luz ambiente vinda de céu, horizonte e chão separadamente, em vez de uma cor " +
-                "só. Dá mais volume aos objetos, mas pode mudar o tom das cenas. Experimental.");
+                "Ambient light coming from sky, horizon and ground separately, instead of a single " +
+                "color. Gives objects more volume, but can change the tone of scenes. Experimental.");
 
             LodBiasOverride = cfg.Bind("03 - Visual", "LodBiasOverride", 0f,
                 new ConfigDescription(
-                    "Distância em que itens no chão, pedras e detalhes deixam de ser " +
-                    "desenhados. Dobrar o valor dobra a distância, e cobra desempenho na " +
-                    "mesma medida. 0 usa o que estiver no menu do jogo.",
+                    "Distance at which items on the ground, stones and details stop being " +
+                    "drawn. Doubling the value doubles the distance, and charges performance " +
+                    "accordingly. 0 uses whatever is in the game menu.",
                     new AcceptableValueRange<float>(0f, 20f)));
 
             SsaoOverride = cfg.Bind("03 - Visual", "SsaoOverride", true,
-                "Sombra suave onde os objetos encostam no chão e nos cantos. É o que tira o " +
-                "aspecto de coisa colada por cima do cenário.");
+                "Soft shadow where objects touch the ground and in corners. It is what removes the " +
+                "look of things pasted on top of the scenery.");
 
             SsaoSampleCount = cfg.Bind("03 - Visual", "SsaoSampleCount", 2,
                 new ConfigDescription(
-                    "Qualidade da sombra de contato: 0 baixa, 1 média, 2 alta, 3 muito alta.",
+                    "Contact shadow quality: 0 low, 1 medium, 2 high, 3 very high.",
                     new AcceptableValueRange<int>(0, 3)));
 
             SsaoFullResolution = cfg.Bind("03 - Visual", "SsaoFullResolution", true,
-                "Calcula a sombra de contato em resolução cheia. Fica mais definida e custa " +
-                "mais GPU. Desmarque se precisar economizar.");
+                "Computes the contact shadow at full resolution. It looks sharper and costs " +
+                "more GPU. Uncheck if you need to save performance.");
 
             SsaoIntensity = cfg.Bind("03 - Visual", "SsaoIntensity", 1.0f,
-                new ConfigDescription("Força da sombra de contato.",
+                new ConfigDescription("Strength of the contact shadow.",
                     new AcceptableValueRange<float>(0f, 3f)));
 
             SsaoRadius = cfg.Bind("03 - Visual", "SsaoRadius", 2.0f,
                 new ConfigDescription(
-                    "Alcance da sombra, em metros. Pequeno marca só os cantos; grande " +
-                    "sombreia áreas inteiras.",
+                    "Reach of the shadow, in meters. Small only marks the corners; large " +
+                    "shades entire areas.",
                     new AcceptableValueRange<float>(0.25f, 8f)));
 
             SsaoPower = cfg.Bind("03 - Visual", "SsaoPower", 1.8f,
-                new ConfigDescription("Contraste da sombra. Mais alto escurece o miolo.",
+                new ConfigDescription("Shadow contrast. Higher darkens the core.",
                     new AcceptableValueRange<float>(0.5f, 6f)));
 
             AaOverride = cfg.Bind("03 - Visual", "AaOverride", true,
-                "Controla o anti-serrilhado, que o jogo só liga e desliga sem deixar " +
-                "escolher a qualidade.");
+                "Controls anti-aliasing, which the game only turns on and off without letting you " +
+                "choose the quality.");
 
             AaUseTaa = cfg.Bind("03 - Visual", "AaUseTaa", false,
-                "Usa TAA no lugar do FXAA. Bordas bem mais limpas em folhagem, cordas e " +
-                "cercas, mas pode deixar rastro atrás de coisas em movimento.");
+                "Uses TAA instead of FXAA. Much cleaner edges on foliage, ropes and " +
+                "fences, but can leave trailing behind moving objects.");
 
             FxaaPreset = cfg.Bind("03 - Visual", "FxaaPreset", 4,
                 new ConfigDescription(
-                    "Qualidade do FXAA, de 0 (mais rápido) a 4 (mais limpo). Só vale com " +
-                    "AaUseTaa desmarcado.",
+                    "FXAA quality, from 0 (fastest) to 4 (cleanest). Only applies with " +
+                    "AaUseTaa unchecked.",
                     new AcceptableValueRange<int>(0, 4)));
 
             TaaJitterSpread = cfg.Bind("03 - Visual", "TaaJitterSpread", 0.75f,
-                new ConfigDescription("Suavização do TAA. Maior suaviza mais e borra mais.",
+                new ConfigDescription("TAA smoothing. Higher smooths more and blurs more.",
                     new AcceptableValueRange<float>(0.1f, 1f)));
 
             TaaSharpen = cfg.Bind("03 - Visual", "TaaSharpen", 0.3f,
-                new ConfigDescription("Compensa o borrão do TAA. Demais cria halo nas bordas.",
+                new ConfigDescription("Compensates for TAA blur. Too much creates halos on edges.",
                     new AcceptableValueRange<float>(0f, 3f)));
 
             TaaStationaryBlending = cfg.Bind("03 - Visual", "TaaStationaryBlending", 0.95f,
-                new ConfigDescription("Estabilidade da imagem com a câmera parada.",
+                new ConfigDescription("Image stability with the camera still.",
                     new AcceptableValueRange<float>(0f, 0.99f)));
 
             TaaMotionBlending = cfg.Bind("03 - Visual", "TaaMotionBlending", 0.85f,
-                new ConfigDescription("Baixe este se aparecer rastro atrás do que se move.",
+                new ConfigDescription("Lower this if you see trailing behind moving objects.",
                     new AcceptableValueRange<float>(0f, 0.99f)));
 
             ShadowDistance = cfg.Bind("03 - Visual", "ShadowDistance", 0f,
                 new ConfigDescription(
-                    "Até onde as sombras do sol aparecem, em metros. O menu do jogo vai até " +
-                    "150. 0 usa o menu.",
+                    "How far the sun's shadows appear, in meters. The game menu goes up to " +
+                    "150. 0 uses the menu.",
                     new AcceptableValueRange<float>(0f, 500f)));
 
             ShadowCascades = cfg.Bind("03 - Visual", "ShadowCascades", 0,
                 new ConfigDescription(
-                    "Divisões da sombra do sol: mais divisões deixam a sombra nítida também " +
-                    "ao longe. Aceita 1, 2 ou 4. 0 usa o menu.",
+                    "Sun shadow cascades: more cascades keep the shadow sharp even at a " +
+                    "distance. Accepts 1, 2 or 4. 0 uses the menu.",
                     new AcceptableValueRange<int>(0, 4)));
 
             ShadowResolution = cfg.Bind("03 - Visual", "ShadowResolution", 0,
                 new ConfigDescription(
-                    "Nitidez das sombras: 1 baixa, 2 média, 3 alta, 4 muito alta. O menu do " +
-                    "jogo para em alta. 0 usa o menu.",
+                    "Shadow sharpness: 1 low, 2 medium, 3 high, 4 very high. The game " +
+                    "menu stops at high. 0 uses the menu.",
                     new AcceptableValueRange<int>(0, 4)));
 
             PointLightLimit = cfg.Bind("03 - Visual", "PointLightLimit", -2,
                 new ConfigDescription(
-                    "Quantas tochas e fogueiras ficam acesas ao mesmo tempo. O jogo oferece " +
-                    "4, 15, 40 ou sem limite. Aqui dá para pôr qualquer número. " +
-                    "-2 usa o menu, -1 é sem limite.",
+                    "How many torches and campfires stay lit at the same time. The game offers " +
+                    "4, 15, 40 or no limit. Here you can set any number. " +
+                    "-2 uses the menu, -1 is no limit.",
                     new AcceptableValueRange<int>(-2, 64)));
 
             PointLightShadowLimit = cfg.Bind("03 - Visual", "PointLightShadowLimit", -2,
                 new ConfigDescription(
-                    "Quantas dessas luzes projetam sombra. É o ajuste mais pesado numa base " +
-                    "cheia de fogo. O jogo oferece 0, 1, 3 ou sem limite; algo entre 6 e 8 " +
-                    "costuma ser o meio-termo. -2 usa o menu, -1 é sem limite.",
+                    "How many of those lights cast shadows. It is the heaviest setting in a base " +
+                    "full of fire. The game offers 0, 1, 3 or no limit; something between 6 and 8 " +
+                    "is usually the sweet spot. -2 uses the menu, -1 is no limit.",
                     new AcceptableValueRange<int>(-2, 32)));
 
             ClutterDistance = cfg.Bind("03 - Visual", "ClutterDistance", 0f,
                 new ConfigDescription(
-                    "Até onde a grama é desenhada, em metros. O jogo usa 45, e é por isso que " +
-                    "a grama parece nascer à sua frente enquanto anda. Aumentar afasta esse " +
-                    "limite, mas a área cresce ao quadrado e cobra caro. 0 usa o padrão.",
+                    "How far the grass is drawn, in meters. The game uses 45, and that is why " +
+                    "the grass seems to grow in front of you as you walk. Raising it pushes that " +
+                    "limit back, but the area grows squared and costs a lot. 0 uses the default.",
                     new AcceptableValueRange<float>(0f, 150f)));
 
             ClutterAmountScale = cfg.Bind("03 - Visual", "ClutterAmountScale", 0f,
                 new ConfigDescription(
-                    "Densidade da grama, independente do alcance. 2.0 dobra a quantidade. " +
-                    "0 usa o padrão.",
+                    "Grass density, regardless of range. 2.0 doubles the amount. " +
+                    "0 uses the default.",
                     new AcceptableValueRange<float>(0f, 4f)));
 
             Tesselation = cfg.Bind("03 - Visual", "Tesselation", 0,
                 new ConfigDescription(
-                    "Dá relevo de verdade ao terreno em vez de textura plana. Só pesa na GPU. " +
-                    "0 usa o menu, 1 liga, 2 desliga.",
+                    "Gives the terrain real relief instead of a flat texture. Only costs GPU. " +
+                    "0 uses the menu, 1 on, 2 off.",
                     new AcceptableValueRange<int>(0, 2)));
 
             FieldOfView = cfg.Bind("03 - Visual", "FieldOfView", 0f,
                 new ConfigDescription(
-                    "Campo de visão. O jogo usa 65 e não deixa mudar. Acima de 100 as bordas " +
-                    "distorcem. 0 mantém o padrão.",
+                    "Field of view. The game uses 65 and won't let you change it. Above 100 the edges " +
+                    "distort. 0 keeps the default.",
                     new AcceptableValueRange<float>(0f, 120f)));
 
             DisplayMode = cfg.Bind("03 - Visual", "DisplayMode", 0,
                 new ConfigDescription(
-                    "Modo de janela: 1 tela cheia exclusiva, 2 sem bordas, 3 janela. " +
-                    "A exclusiva costuma deixar o movimento mais suave, e o menu do jogo não " +
-                    "oferece essa opção. 0 mantém como está.",
+                    "Window mode: 1 exclusive fullscreen, 2 borderless, 3 windowed. " +
+                    "Exclusive usually makes movement smoother, and the game menu doesn't " +
+                    "offer that option. 0 keeps it as is.",
                     new AcceptableValueRange<int>(0, 3)));
 
             DisplayWidth = cfg.Bind("03 - Visual", "DisplayWidth", 0,
-                new ConfigDescription("Largura. 0 usa a resolução da área de trabalho.",
+                new ConfigDescription("Width. 0 uses the desktop resolution.",
                     new AcceptableValueRange<int>(0, 7680)));
 
             DisplayHeight = cfg.Bind("03 - Visual", "DisplayHeight", 0,
-                new ConfigDescription("Altura. 0 usa a resolução da área de trabalho.",
+                new ConfigDescription("Height. 0 uses the desktop resolution.",
                     new AcceptableValueRange<int>(0, 4320)));
 
             FreezeTimeOfDay = cfg.Bind("03 - Visual", "FreezeTimeOfDay", false,
-                "Trava a hora do dia na sua tela, útil para comparar ajustes sem o sol se " +
-                "mexer. Vale só para você: o horário do mundo e dos outros jogadores segue " +
-                "normal.");
+                "Freezes the time of day on your screen, useful for comparing settings without the sun " +
+                "moving. Only affects you: the world's time and the other players' " +
+                "continues normally.");
 
             TimeOfDay = cfg.Bind("03 - Visual", "TimeOfDay", 0.5f,
                 new ConfigDescription(
-                    "Hora usada quando a anterior está marcada. 0 meia-noite, 0.25 amanhecer, " +
-                    "0.5 meio-dia, 0.75 entardecer.",
+                    "Time used when the previous option is checked. 0 midnight, 0.25 dawn, " +
+                    "0.5 noon, 0.75 dusk.",
                     new AcceptableValueRange<float>(0f, 1f)));
 
             ForceWeather = cfg.Bind("03 - Visual", "ForceWeather", "",
-                "Trava o clima na sua tela. Vazio segue o normal do bioma. " +
+                "Freezes the weather on your screen. Empty follows the biome's normal. " +
                 "Ex.: Clear, Misty, Rain, ThunderStorm, SnowStorm.");
 
             // ------------------------------------------------------------------
@@ -345,263 +345,263 @@ namespace ValheimTweaks
             // ------------------------------------------------------------------
             // 05 - Conveniencia
             // ------------------------------------------------------------------
-            TeleportSpeed = cfg.Bind("05 - Conveniencia", "TeleportSpeed", 4f,
+            TeleportSpeed = cfg.Bind("05 - Convenience", "TeleportSpeed", 4f,
                 new ConfigDescription(
-                    "Acelera o portal. O jogo impoe uma espera fixa de 8 segundos em viagem " +
-                    "longa, mesmo quando o destino ja carregou; 4 transforma isso em 2 " +
-                    "segundos. A verificacao de destino pronto continua valendo, entao some " +
-                    "so a espera artificial, nunca a real. 1 mantem o padrao.",
+                    "Speeds up the portal. The game imposes a fixed 8-second wait on a long " +
+                    "trip, even when the destination has already loaded; 4 turns that into 2 " +
+                    "seconds. The check that the destination is ready still applies, so only " +
+                    "the artificial wait goes away, never the real one. 1 keeps the default.",
                     new AcceptableValueRange<float>(1f, 8f)));
 
-            TeleportSimDistance = cfg.Bind("05 - Conveniencia", "TeleportSimDistance", 2,
+            TeleportSimDistance = cfg.Bind("05 - Convenience", "TeleportSimDistance", 2,
                 new ConfigDescription(
-                    "Reduz a distancia de simulacao SO durante a travessia do portal e " +
-                    "restaura ao chegar. E de longe o maior ganho: o destino so libera " +
-                    "quando a zona central termina de carregar, e com a distancia normal ela " +
-                    "disputa a fila com mais de cem zonas. Medido: 15s no padrao contra 1,5s " +
-                    "com 2 e 0,7s com 1. Valores menores sao mais rapidos mas podem deixar " +
-                    "objetos aparecendo aos poucos ao chegar. 0 desliga. " +
-                    "Nao afeta os outros jogadores.",
+                    "Reduces the simulation distance ONLY during the portal crossing and " +
+                    "restores it on arrival. It is by far the biggest gain: the destination only releases " +
+                    "when the central zone finishes loading, and with the normal distance it " +
+                    "competes in the queue with over a hundred zones. Measured: 15s at default versus 1.5s " +
+                    "with 2 and 0.7s with 1. Lower values are faster but can leave " +
+                    "objects popping in gradually on arrival. 0 turns it off. " +
+                    "Does not affect other players.",
                     new AcceptableValueRange<int>(0, 8)));
 
             // --- Guardar nos baus proximos ---
             // As tres teclas abaixo vem SEM atalho desde que o painel de baus passou
             // a aceitar Ctrl+clique. O LeftControl daqui, em especial, brigava com
             // ele. Quem prefere o jeito antigo e so escolher uma tecla no F1.
-            StoreMarkKey = cfg.Bind("05 - Conveniencia", "StoreMarkKey",
+            StoreMarkKey = cfg.Bind("05 - Convenience", "StoreMarkKey",
                 new KeyboardShortcut(KeyCode.None),
-                "Com o inventario aberto, aponte um item e aperte esta tecla para marca-lo " +
-                "como 'guardar nos baus'. O item marcado fica com o icone azulado e a marca " +
-                "acompanha o item, mesmo se ele mudar de lugar.");
+                "With the inventory open, point at an item and press this key to mark it " +
+                "as 'store in chests'. The marked item gets a bluish icon and the mark " +
+                "follows the item, even if it changes location.");
 
-            StoreMarkedKey = cfg.Bind("05 - Conveniencia", "StoreMarkedKey",
+            StoreMarkedKey = cfg.Bind("05 - Convenience", "StoreMarkedKey",
                 new KeyboardShortcut(KeyCode.None),
-                "Guarda de uma vez todos os itens marcados nos baus proximos.");
+                "Stores all marked items in nearby chests at once.");
 
-            StoreHoveredKey = cfg.Bind("05 - Conveniencia", "StoreHoveredKey",
+            StoreHoveredKey = cfg.Bind("05 - Convenience", "StoreHoveredKey",
                 new KeyboardShortcut(KeyCode.None),
-                "Guarda na hora apenas o item apontado, sem precisar marcar antes.");
+                "Immediately stores only the pointed item, without needing to mark it first.");
 
-            StoreRadius = cfg.Bind("05 - Conveniencia", "StoreRadius", 12f,
+            StoreRadius = cfg.Bind("05 - Convenience", "StoreRadius", 12f,
                 new ConfigDescription(
-                    "Distancia em metros para procurar baus.",
+                    "Distance in meters to search for chests.",
                     new AcceptableValueRange<float>(2f, 50f)));
 
-            StoreFallbackAnyChest = cfg.Bind("05 - Conveniencia", "StoreFallbackAnyChest", false,
-                "Por padrao um item so entra em bau que JA tenha aquele item, para nao " +
-                "baguncar a organizacao. Ligando isto, o que sobrar vai parar em qualquer " +
-                "bau com espaco.");
+            StoreFallbackAnyChest = cfg.Bind("05 - Convenience", "StoreFallbackAnyChest", false,
+                "By default an item only goes into a chest that ALREADY has that item, to avoid " +
+                "messing up the organization. With this on, whatever is left goes into any " +
+                "chest with space.");
 
-            StoreHudEnabled = cfg.Bind("05 - Conveniencia", "StoreHudEnabled", true,
-                "Mostra no canto inferior esquerdo a lista do que foi guardado, com o icone " +
-                "do item e, quando o bau tem nome proprio, uma seta e o nome.");
+            StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
+                "Shows a list in the bottom-left corner of what was stored, with the item's " +
+                "icon and, when the chest has a custom name, an arrow and the name.");
 
-            StoreHudX = cfg.Bind("05 - Conveniencia", "StoreHudX", 20f,
-                new ConfigDescription("Distancia da borda esquerda, em pixels.",
+            StoreHudX = cfg.Bind("05 - Convenience", "StoreHudX", 20f,
+                new ConfigDescription("Distance from the left edge, in pixels.",
                     new AcceptableValueRange<float>(0f, 800f)));
 
-            StoreHudY = cfg.Bind("05 - Conveniencia", "StoreHudY", 240f,
+            StoreHudY = cfg.Bind("05 - Convenience", "StoreHudY", 240f,
                 new ConfigDescription(
-                    "Altura a partir da borda de baixo, em pixels. O padrao ja passa por cima " +
-                    "da HUD de vida e comida; ajuste se ficar sobreposto na sua resolucao.",
+                    "Height from the bottom edge, in pixels. The default already goes over " +
+                    "the health and food HUD; adjust if it overlaps at your resolution.",
                     new AcceptableValueRange<float>(0f, 900f)));
 
-            StoreHudSeconds = cfg.Bind("05 - Conveniencia", "StoreHudSeconds", 7f,
-                new ConfigDescription("Quanto tempo cada linha fica na tela.",
+            StoreHudSeconds = cfg.Bind("05 - Convenience", "StoreHudSeconds", 7f,
+                new ConfigDescription("How long each line stays on screen.",
                     new AcceptableValueRange<float>(1f, 20f)));
 
-            StoreHudMaxLines = cfg.Bind("05 - Conveniencia", "StoreHudMaxLines", 8,
-                new ConfigDescription("Maximo de linhas ao mesmo tempo.",
+            StoreHudMaxLines = cfg.Bind("05 - Convenience", "StoreHudMaxLines", 8,
+                new ConfigDescription("Maximum number of lines at the same time.",
                     new AcceptableValueRange<int>(1, 20)));
 
-            StoreHudFontSize = cfg.Bind("05 - Conveniencia", "StoreHudFontSize", 14f,
-                new ConfigDescription("Tamanho da fonte da lista.",
+            StoreHudFontSize = cfg.Bind("05 - Convenience", "StoreHudFontSize", 14f,
+                new ConfigDescription("Font size of the list.",
                     new AcceptableValueRange<float>(8f, 28f)));
 
-            ChestPeekEnabled = cfg.Bind("05 - Conveniencia", "ChestPeekEnabled", true,
-                "Ao mirar um bau de perto, mostra o conteudo dele no canto direito sem " +
-                "precisar abrir. Vale tambem para carroca e navio.");
+            ChestPeekEnabled = cfg.Bind("05 - Convenience", "ChestPeekEnabled", true,
+                "When aiming at a chest up close, shows its contents on the right side without " +
+                "needing to open it. Also works for carts and ships.");
 
-            ChestPeekDistance = cfg.Bind("05 - Conveniencia", "ChestPeekDistance", 5f,
+            ChestPeekDistance = cfg.Bind("05 - Convenience", "ChestPeekDistance", 5f,
                 new ConfigDescription(
-                    "Distancia maxima para espiar. Mirar de longe nao basta.",
+                    "Maximum distance to peek. Aiming from far away isn't enough.",
                     new AcceptableValueRange<float>(1f, 20f)));
 
-            ChestPeekHideDelay = cfg.Bind("05 - Conveniencia", "ChestPeekHideDelay", 0.3f,
+            ChestPeekHideDelay = cfg.Bind("05 - Convenience", "ChestPeekHideDelay", 0.3f,
                 new ConfigDescription(
-                    "Segundos que o painel fica depois que voce desvia a mira. Evita " +
-                    "piscar quando a mira passa raspando.",
+                    "Seconds the panel stays after you look away. Avoids " +
+                    "flickering when your aim passes close by.",
                     new AcceptableValueRange<float>(0f, 3f)));
 
-            ChestPeekX = cfg.Bind("05 - Conveniencia", "ChestPeekX", 20f,
-                new ConfigDescription("Distancia da borda direita, em pixels.",
+            ChestPeekX = cfg.Bind("05 - Convenience", "ChestPeekX", 20f,
+                new ConfigDescription("Distance from the right edge, in pixels.",
                     new AcceptableValueRange<float>(0f, 800f)));
 
-            AutoMineKey = cfg.Bind("05 - Conveniencia", "AutoMineKey",
+            AutoMineKey = cfg.Bind("05 - Convenience", "AutoMineKey",
                 new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftAlt),
-                "Liga e desliga a mineracao automatica. Com a picareta na mao e o minerio " +
-                "sob a mira, o personagem bate sozinho ate quebrar e para. Desviar a mira, " +
-                "trocar de item ou o alvo quebrar interrompe na hora.");
+                "Turns auto-mining on and off. With the pickaxe in hand and the ore " +
+                "under your aim, the character swings by itself until it breaks and stops. Looking away, " +
+                "switching items or the target breaking stops it immediately.");
 
-            AutoMineOres = cfg.Bind("05 - Conveniencia", "AutoMineOres",
+            AutoMineOres = cfg.Bind("05 - Convenience", "AutoMineOres",
                 "copper,tin,silver,iron,obsidian,meteorite,flametal,blackmetal",
-                "O que conta como minerio. O mod olha o que o alvo SOLTA e compara com " +
-                "esta lista, entao pedra comum (que solta Stone) fica de fora. Separe por " +
-                "virgula; para minerio de outro mod, acrescente um pedaco do nome dele.");
+                "What counts as ore. The mod looks at what the target DROPS and compares it with " +
+                "this list, so common stone (which drops Stone) is left out. Separate with " +
+                "commas; for ore from another mod, add a piece of its name.");
 
-            AutoMineRangeScale = cfg.Bind("05 - Conveniencia", "AutoMineRangeScale", 1f,
+            AutoMineRangeScale = cfg.Bind("05 - Convenience", "AutoMineRangeScale", 1f,
                 new ConfigDescription(
-                    "Multiplica o alcance real da picareta equipada. A distancia e medida " +
-                    "ate o ponto mais proximo do minerio, nao ate o centro dele. Abaixo de 1 " +
-                    "exige chegar mais perto; acima, aceita de um pouco mais longe.",
+                    "Multiplies the real reach of the equipped pickaxe. The distance is measured " +
+                    "to the nearest point of the ore, not to its center. Below 1 " +
+                    "requires getting closer; above, accepts from a bit farther away.",
                     new AcceptableValueRange<float>(0.5f, 2f)));
 
-            AutoMineHudY = cfg.Bind("05 - Conveniencia", "AutoMineHudY", 120f,
+            AutoMineHudY = cfg.Bind("05 - Convenience", "AutoMineHudY", 120f,
                 new ConfigDescription(
-                    "Altura do aviso de 'minerar automatico' na tela, a partir de baixo.",
+                    "Height of the 'auto-mining' indicator on screen, from the bottom.",
                     new AcceptableValueRange<float>(0f, 900f)));
 
-            AutoMineToggleSeconds = cfg.Bind("05 - Conveniencia", "AutoMineToggleSeconds", 1.5f,
+            AutoMineToggleSeconds = cfg.Bind("05 - Convenience", "AutoMineToggleSeconds", 1.5f,
                 new ConfigDescription(
-                    "Quanto tempo o aviso destaca LIGADO/DESLIGADO depois de apertar a tecla. " +
-                    "Passado isso, enquanto ligado, fica so o rotulo discreto.",
+                    "How long the indicator highlights ON/OFF after pressing the key. " +
+                    "After that, while on, only the discreet label remains.",
                     new AcceptableValueRange<float>(0.3f, 6f)));
 
-            AutoMineDebug = cfg.Bind("05 - Conveniencia", "AutoMineDebug", false,
-                "Quando o auto-minerar recusa um alvo, anota no log qual componente ele usa " +
-                "e o que ele solta. Serve para descobrir o nome de um minerio que ficou de " +
-                "fora da lista, em vez de ficar tentando no escuro.");
+            AutoMineDebug = cfg.Bind("05 - Convenience", "AutoMineDebug", false,
+                "When auto-mining refuses a target, logs which component it uses " +
+                "and what it drops. Useful for finding out the name of an ore that is missing " +
+                "from the list, instead of guessing in the dark.");
 
-            ChestSearchEnabled = cfg.Bind("05 - Conveniencia", "ChestSearchEnabled", true,
-                "Adiciona um botao no inventario que abre um painel com tudo o que esta " +
-                "nos baus ao redor, com busca por nome. Clicar num item traz ele pra mochila.");
+            ChestSearchEnabled = cfg.Bind("05 - Convenience", "ChestSearchEnabled", true,
+                "Adds a button to the inventory that opens a panel with everything that is " +
+                "in nearby chests, with search by name. Clicking an item brings it to your backpack.");
 
-            ChestSearchRadius = cfg.Bind("05 - Conveniencia", "ChestSearchRadius", 20f,
+            ChestSearchRadius = cfg.Bind("05 - Convenience", "ChestSearchRadius", 20f,
                 new ConfigDescription(
-                    "Ate que distancia procurar bau. Vale para carroca e navio tambem. " +
-                    "Bau em area que o jogo ainda nao carregou nao aparece, por mais que " +
-                    "voce aumente esse numero.",
+                    "How far to search for chests. Also applies to carts and ships. " +
+                    "Chests in areas the game hasn't loaded yet won't appear, no matter " +
+                    "how much you increase this number.",
                     new AcceptableValueRange<float>(5f, 64f)));
 
-            ChestSearchRefresh = cfg.Bind("05 - Conveniencia", "ChestSearchRefresh", 0.5f,
+            ChestSearchRefresh = cfg.Bind("05 - Convenience", "ChestSearchRefresh", 0.5f,
                 new ConfigDescription(
-                    "De quantos em quantos segundos o painel reconfere os baus enquanto " +
-                    "esta aberto.",
+                    "How often, in seconds, the panel rechecks the chests while " +
+                    "it is open.",
                     new AcceptableValueRange<float>(0.2f, 3f)));
 
-            ChestSearchColumns = cfg.Bind("05 - Conveniencia", "ChestSearchColumns", 0,
+            ChestSearchColumns = cfg.Bind("05 - Convenience", "ChestSearchColumns", 0,
                 new ConfigDescription(
-                    "Quantos itens por linha no painel. Em 0 ele decide sozinho pelo " +
-                    "espaco disponivel, que e o que voce quer na maioria das resolucoes.",
+                    "How many items per row in the panel. At 0 it decides on its own based on " +
+                    "the available space, which is what you want in most resolutions.",
                     new AcceptableValueRange<int>(0, 12)));
 
-            ChestSearchSlotSize = cfg.Bind("05 - Conveniencia", "ChestSearchSlotSize", 40f,
-                new ConfigDescription("Tamanho de cada slot do painel, em pixels.",
+            ChestSearchSlotSize = cfg.Bind("05 - Convenience", "ChestSearchSlotSize", 40f,
+                new ConfigDescription("Size of each panel slot, in pixels.",
                     new AcceptableValueRange<float>(28f, 80f)));
 
-            ChestSearchLabelSize = cfg.Bind("05 - Conveniencia", "ChestSearchLabelSize", 8.5f,
-                new ConfigDescription("Tamanho do nome embaixo de cada item.",
+            ChestSearchLabelSize = cfg.Bind("05 - Convenience", "ChestSearchLabelSize", 8.5f,
+                new ConfigDescription("Size of the name below each item.",
                     new AcceptableValueRange<float>(6f, 16f)));
 
-            ChestSearchWidth = cfg.Bind("05 - Conveniencia", "ChestSearchWidth", 0f,
+            ChestSearchWidth = cfg.Bind("05 - Convenience", "ChestSearchWidth", 0f,
                 new ConfigDescription(
-                    "Largura do painel. Em 0 ele usa a mesma do painel de producao do " +
-                    "jogo, que e o que alinha certo em qualquer resolucao.",
+                    "Panel width. At 0 it uses the same as the game's crafting " +
+                    "panel, which is what aligns correctly at any resolution.",
                     new AcceptableValueRange<float>(0f, 900f)));
 
-            ChestSearchHeight = cfg.Bind("05 - Conveniencia", "ChestSearchHeight", 0f,
+            ChestSearchHeight = cfg.Bind("05 - Convenience", "ChestSearchHeight", 0f,
                 new ConfigDescription(
-                    "Altura do painel. Em 0 ele usa a mesma do painel de producao.",
+                    "Panel height. At 0 it uses the same as the crafting panel.",
                     new AcceptableValueRange<float>(0f, 1200f)));
 
-            ChestSearchX = cfg.Bind("05 - Conveniencia", "ChestSearchX", 0f,
-                "Desloca o painel na horizontal a partir do encaixe padrao. Negativo " +
-                "puxa pra esquerda, positivo empurra pra direita.");
+            ChestSearchX = cfg.Bind("05 - Convenience", "ChestSearchX", 0f,
+                "Shifts the panel horizontally from its default position. Negative " +
+                "pulls it left, positive pushes it right.");
 
-            ChestSearchY = cfg.Bind("05 - Conveniencia", "ChestSearchY", 0f,
-                "Sobe (positivo) ou desce (negativo) o painel a partir do encaixe padrao.");
+            ChestSearchY = cfg.Bind("05 - Convenience", "ChestSearchY", 0f,
+                "Moves the panel up (positive) or down (negative) from its default position.");
 
-            ChestSearchButtonX = cfg.Bind("05 - Conveniencia", "ChestSearchButtonX", -8f,
-                "Posicao horizontal do botao dentro do inventario.");
+            ChestSearchButtonX = cfg.Bind("05 - Convenience", "ChestSearchButtonX", -8f,
+                "Horizontal position of the button inside the inventory.");
 
-            ChestSearchButtonY = cfg.Bind("05 - Conveniencia", "ChestSearchButtonY", -36f,
-                "Posicao vertical do botao dentro do inventario.");
+            ChestSearchButtonY = cfg.Bind("05 - Convenience", "ChestSearchButtonY", -36f,
+                "Vertical position of the button inside the inventory.");
 
-            ChestSearchBlockMove = cfg.Bind("05 - Conveniencia", "ChestSearchBlockMove", true,
-                "Trava o andar enquanto o painel de baus esta aberto, para digitar na " +
-                "busca nao sair mexendo o personagem. Desligue se preferir andar com " +
-                "ele aberto.");
+            ChestSearchBlockMove = cfg.Bind("05 - Convenience", "ChestSearchBlockMove", true,
+                "Locks movement while the chest panel is open, so typing in the " +
+                "search doesn't make your character move. Turn it off if you prefer to walk with " +
+                "it open.");
 
-            ChestSearchDebug = cfg.Bind("05 - Conveniencia", "ChestSearchDebug", false,
-                "Escreve no log o passo a passo do painel de baus. So serve para " +
-                "investigar problema; ligado enche o log.");
+            ChestSearchDebug = cfg.Bind("05 - Convenience", "ChestSearchDebug", false,
+                "Writes the chest panel's step-by-step to the log. Only useful for " +
+                "investigating a problem; when on it floods the log.");
 
-            ChestSearchKey = cfg.Bind("05 - Conveniencia", "ChestSearchKey",
+            ChestSearchKey = cfg.Bind("05 - Convenience", "ChestSearchKey",
                 new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
-                "Tecla para abrir o painel de baus direto, sem precisar abrir o " +
-                "inventario e clicar no botao. Se o inventario estiver fechado ela " +
-                "abre os dois. Vem sem tecla; o botao continua funcionando.");
+                "Key to open the chest panel directly, without needing to open the " +
+                "inventory and click the button. If the inventory is closed it " +
+                "opens both. Comes unbound; the button still works.");
 
-            AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
-                "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
-                "uma bancada, forja ou estacao equivalente. Reparo no Valheim nao gasta " +
-                "material, entao isso so poupa cliques.");
+            AutoRepairOnOpen = cfg.Bind("05 - Convenience", "AutoRepairOnOpen", true,
+                "Repairs all worn equipment as soon as you open the inventory near " +
+                "a workbench, forge or equivalent station. Repairing in Valheim doesn't cost " +
+                "materials, so this just saves clicks.");
 
-            RepairButtonRepairsAll = cfg.Bind("05 - Conveniencia", "RepairButtonRepairsAll", true,
-                "O botao de reparo conserta tudo de uma vez em vez de um item por clique.");
+            RepairButtonRepairsAll = cfg.Bind("05 - Convenience", "RepairButtonRepairsAll", true,
+                "The repair button fixes everything at once instead of one item per click.");
 
             SimDistanceEnabled = cfg.Bind("04 - Performance", "SimDistanceEnabled", true,
-                "Controla a distância em que o mundo continua ativo ao seu redor. Quem " +
-                "hospeda define o teto para todos; os outros podem usar menos, nunca mais.");
+                "Controls the distance at which the world stays active around you. The host " +
+                "sets the ceiling for everyone; others can use less, never more.");
 
             SimDistanceNear = cfg.Bind("04 - Performance", "SimDistanceNear", 5,
                 new ConfigDescription(
-                    "Distância em que inimigos, animais e objetos existem de fato. Cada passo " +
-                    "aqui são 64 metros a mais e bem mais trabalho para quem hospeda: " +
-                    "2 dá 160m, 3 dá 224m, 5 dá 352m, 6 dá 416m. O menu do jogo para no 6.",
+                    "Distance at which enemies, animals and objects actually exist. Each step " +
+                    "here is 64 more meters and a lot more work for the host: " +
+                    "2 gives 160m, 3 gives 224m, 5 gives 352m, 6 gives 416m. The game menu stops at 6.",
                     new AcceptableValueRange<int>(1, 8)));
 
             SimDistanceFar = cfg.Bind("04 - Performance", "SimDistanceFar", 2,
                 new ConfigDescription(
-                    "Anel extra só de cenário ao fundo, sem criaturas e sem simulação. " +
-                    "É barato: dá horizonte sem o custo do ajuste acima. O jogo usa 2.",
+                    "Extra ring of background scenery only, with no creatures and no simulation. " +
+                    "It is cheap: gives you a horizon without the cost of the setting above. The game uses 2.",
                     new AcceptableValueRange<int>(0, 6)));
 
             MaxQueuedFrames = cfg.Bind("04 - Performance", "MaxQueuedFrames", 0,
                 new ConfigDescription(
-                    "Quadros preparados com antecedência. 1 responde mais rápido ao mouse; " +
-                    "2 é o padrão do jogo. 0 não mexe.",
+                    "Frames prepared in advance. 1 responds faster to the mouse; " +
+                    "2 is the game's default. 0 leaves it alone.",
                     new AcceptableValueRange<int>(0, 4)));
 
             MaxSmoke = cfg.Bind("04 - Performance", "MaxSmoke", 0,
                 new ConfigDescription(
-                    "Limite de partículas de fumaça. Cada uma é simulada com física, então " +
-                    "numa base com muitas fogueiras isso pesa. O jogo usa 100. 0 não mexe.",
+                    "Limit of smoke particles. Each one is physics-simulated, so " +
+                    "in a base with many campfires it weighs heavily. The game uses 100. 0 leaves it alone.",
                     new AcceptableValueRange<int>(0, 100)));
 
             FadeDistantSmokeFirst = cfg.Bind("04 - Performance", "FadeDistantSmokeFirst", true,
-                "Ao bater no limite, some primeiro com a fumaça mais distante em vez da mais " +
-                "antiga, que costuma ser justamente a que está na sua frente.");
+                "When hitting the limit, fades out the most distant smoke first instead of the " +
+                "oldest, which is usually the one right in front of you.");
 
 
             ZoneGenBudgetMs = cfg.Bind("04 - Performance", "ZoneGenBudgetMs", 0f,
                 new ConfigDescription(
-                    "Tempo máximo por quadro gerando terreno novo, em milissegundos. " +
-                    "Ajuda em mundo recém-criado, onde o jogo se permite pausas longas. " +
-                    "0 não mexe.",
+                    "Maximum time per frame generating new terrain, in milliseconds. " +
+                    "Helps in a newly created world, where the game allows itself long pauses. " +
+                    "0 leaves it alone.",
                     new AcceptableValueRange<float>(0f, 100f)));
 
             ZdoReleaseIntervalSec = cfg.Bind("04 - Performance", "ZdoReleaseIntervalSec", 2f,
                 new ConfigDescription(
-                    "De quanto em quanto tempo o servidor redistribui os objetos entre os " +
-                    "jogadores. Aumentar alivia quem hospeda com muita gente conectada, ao " +
-                    "custo de objetos demorarem mais para trocar de dono. O jogo usa 2.",
+                    "How often the server redistributes objects among the " +
+                    "players. Increasing it eases the load on the host with many people connected, at " +
+                    "the cost of objects taking longer to change owner. The game uses 2.",
                     new AcceptableValueRange<float>(1f, 10f)));
 
             GcSliceMs = cfg.Bind("04 - Performance", "GcSliceMs", 0f,
                 new ConfigDescription(
-                    "Quanto tempo por quadro o jogo gasta liberando memória. Valores menores " +
-                    "espalham esse trabalho em vez de concentrar. 0 não mexe.",
+                    "How much time per frame the game spends freeing memory. Lower values " +
+                    "spread that work out instead of concentrating it. 0 leaves it alone.",
                     new AcceptableValueRange<float>(0f, 10f)));
         }
     }
