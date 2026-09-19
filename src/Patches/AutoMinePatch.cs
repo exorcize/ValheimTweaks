@@ -145,6 +145,30 @@ namespace ValheimTweaks.Patches
             Plugin.Log.LogInfo(partes.ToString());
         }
 
+        /// <summary>
+        /// Distancia ate a SUPERFICIE do alvo.
+        ///
+        /// Collider.ClosestPoint so aceita box, esfera, capsula e mesh CONVEXA --
+        /// e deposito de minerio e mesh nao convexa. Nesses casos o Unity nao so
+        /// cospe um aviso por frame no log (milhares em poucos minutos de jogo)
+        /// como devolve o proprio ponto consultado: a distancia saia zero e o
+        /// limite de alcance nunca reprovava nada.
+        ///
+        /// Para collider nao suportado usamos a caixa envolvente. Menos preciso
+        /// que a malha, mas funciona em qualquer tipo, nao polui o log e -- o que
+        /// importa -- nao mente sobre a distancia.
+        /// </summary>
+        private static float DistanciaAteSuperficie(Collider col, Vector3 origem)
+        {
+            var mesh = col as MeshCollider;
+            bool suportado = col is BoxCollider || col is SphereCollider
+                             || col is CapsuleCollider || (mesh != null && mesh.convex);
+
+            Vector3 ponto = suportado ? col.ClosestPoint(origem)
+                                      : col.ClosestPointOnBounds(origem);
+            return Vector3.Distance(origem, ponto);
+        }
+
         private static float AlcanceDaArma(Player player)
         {
             var arma = player.GetCurrentWeapon();
@@ -188,9 +212,9 @@ namespace ValheimTweaks.Patches
             var col = MinerioMirado(player);
             if (col == null) return;
 
-            // Ponto mais proximo do collider, nao o centro do objeto.
+            // Distancia ate a superficie do alvo, nao ate o centro.
             Vector3 origem = player.transform.position + Vector3.up * 1f;
-            float d = Vector3.Distance(origem, col.ClosestPoint(origem));
+            float d = DistanciaAteSuperficie(col, origem);
             if (d > AlcanceDaArma(player)) return;
 
             // Mesmo valor que o jogo escreve ao apertar o botao de ataque.
@@ -227,8 +251,15 @@ namespace ValheimTweaks.Patches
             }
 
             // Reaplica a cada exibicao: se a HUD ainda nao estava pronta quando o
-            // objeto foi criado, a fonte teria ficado no fallback para sempre.
-            StoreHudPatch.AplicarFonte(_avisoTxt);
+            // objeto foi criado, a fonte teria ficado no fallback para sempre. E
+            // sem fonte o TMP procura LiberationSans, que o Valheim nao inclui --
+            // o rotulo sai sem fonte nenhuma. Melhor esconder e tentar no proximo
+            // frame do que mostrar quebrado.
+            if (!StoreHudPatch.AplicarFonte(_avisoTxt))
+            {
+                if (_aviso.activeSelf) _aviso.SetActive(false);
+                return;
+            }
 
             // Logo apos alternar, destaca o estado; depois volta ao rotulo discreto.
             // Sem emoji: a fonte do Valheim nao tem esses glifos e sai quadradinho.

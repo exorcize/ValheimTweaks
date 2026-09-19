@@ -1,10 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.27.0</Version>
+    <Version>0.32.2</Version>
     <LangVersion>latest</LangVersion>
     <!-- O jogo carrega o DLL; nao queremos deps transitivas nem arquivos extras. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -113,8 +113,18 @@
     <MakeDir Directories="$(PluginDir)" Condition="'$(ModDisabled)' != 'true'" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)"
           ContinueOnError="true" Condition="'$(ModDisabled)' != 'true'" />
+
+    <!-- O r2modman mostra a versao do manifest.json, nao a do DLL. Copiando so o
+         DLL, a lista de mods ficava congelada na versao do primeiro import (0.15.0
+         aqui) enquanto o jogo rodava outra bem mais nova, e a diferenca entre as
+         duas telas virava suspeita de mod duplicado, que e um problema de verdade e
+         parecido. Reescrever o manifest no deploy mantem as duas honestas. -->
+    <WriteLinesToFile File="$(PluginDir)\manifest.json" Overwrite="true" Encoding="UTF-8"
+                      Condition="'$(ModDisabled)' != 'true'"
+                      Lines="{&quot;name&quot;:&quot;ValheimTweaks&quot;,&quot;version_number&quot;:&quot;$(Version)&quot;,&quot;website_url&quot;:&quot;&quot;,&quot;description&quot;:&quot;Ajustes de video, rede e conveniencia para o Valheim.&quot;,&quot;dependencies&quot;:[&quot;denikson-BepInExPack_Valheim-5.4.2350&quot;,&quot;shudnal-ConfigurationManager-1.1.18&quot;]}" />
+
     <Message Importance="high" Condition="'$(ModDisabled)' != 'true'"
-             Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll" />
+             Text="  -&gt; deploy: $(PluginDir)\$(AssemblyName).dll (manifest -&gt; $(Version))" />
   </Target>
 
 </Project>

@@ -41,9 +41,9 @@ namespace ValheimTweaks.Patches
         /// TextMeshPro cai no fallback -- foi o que deixou o texto com cara de
         /// console na primeira tentativa.
         /// </summary>
-        internal static void AplicarFonte(TMP_Text alvo)
+        internal static bool AplicarFonte(TMP_Text alvo)
         {
-            if (alvo == null) return;
+            if (alvo == null) return false;
 
             if (_fonte == null && Hud.instance != null)
             {
@@ -61,8 +61,11 @@ namespace ValheimTweaks.Patches
                 }
             }
 
-            if (_fonte != null) alvo.font = _fonte;
+            if (_fonte == null) return false;   // HUD ainda nao pronta: tenta de novo depois
+
+            alvo.font = _fonte;
             if (_material != null) alvo.fontSharedMaterial = _material;
+            return true;
         }
 
         // ------------------------------------------------------------------

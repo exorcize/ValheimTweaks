@@ -9,11 +9,28 @@
 $ErrorActionPreference = 'Stop'
 $raiz  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dll   = Join-Path $raiz "bin\Release\ValheimTweaks.dll"
-if (-not (Test-Path $dll)) { throw "compile antes: dotnet build -c Release" }
 
 # Versao vem do csproj, para nao divergir do que o plugin reporta no log.
 $versao = ([xml](Get-Content (Join-Path $raiz "ValheimTweaks.csproj"))).Project.PropertyGroup.Version |
           Where-Object { $_ } | Select-Object -First 1
+
+# Compila Release aqui dentro. Antes o script so LIA bin\Release e avisava para
+# compilar antes; como o dia a dia e `dotnet build` (que gera Debug), o Release
+# ficou parado por dias e varios zips sairam com DLL velho e manifest novo.
+# O sintoma enganava: o r2modman mostrava a versao nova (le o manifest) e o
+# Configuration Manager mostrava a velha (le o DLL), o que parece mod duplicado.
+Write-Host "compilando Release..."
+& dotnet build -c Release -v minimal | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "a compilacao Release falhou; zip nao gerado" }
+if (-not (Test-Path $dll)) { throw "bin\Release\ValheimTweaks.dll nao apareceu" }
+
+# Cinto de seguranca: confere que o DLL empacotado E a versao do csproj. Um zip
+# com versao errada custa uma rodada de teste da outra pessoa.
+$verDll = [Reflection.AssemblyName]::GetAssemblyName($dll).Version.ToString(3)
+if ($verDll -ne $versao) {
+    throw "DLL em bin\Release e $verDll mas o csproj diz $versao. Zip abortado."
+}
+Write-Host "  DLL conferido: $verDll"
 
 $saida = Join-Path $raiz "dist"
 $stage = Join-Path $saida "stage"

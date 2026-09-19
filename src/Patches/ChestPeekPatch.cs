@@ -148,12 +148,16 @@ namespace ValheimTweaks.Patches
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
             rt.anchoredPosition = new Vector2(-ModConfig.ChestPeekX.Value, 0f);
 
+            // Mesma madeira dos painéis do jogo, em vez de um retângulo liso meu.
+            EstiloJogo.Descobrir();
             var fundo = _painel.AddComponent<Image>();
-            fundo.color = new Color(0.08f, 0.08f, 0.07f, 0.82f);
+            EstiloJogo.AplicarFundo(fundo);
             fundo.raycastTarget = false;
 
             var col = _painel.AddComponent<VerticalLayoutGroup>();
-            col.padding = new RectOffset(9, 9, 8, 8);
+            // Folga maior que antes: a moldura de madeira tem borda própria, e o
+            // conteúdo encostado nela fica espremido.
+            col.padding = new RectOffset(18, 18, 14, 16);
             col.spacing = 6f;
             col.childAlignment = TextAnchor.UpperLeft;
             col.childForceExpandWidth = false;
@@ -165,7 +169,9 @@ namespace ValheimTweaks.Patches
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _titulo = NovoTexto(_painel.transform, 14f, "#D8C48A");
+            _titulo = NovoTexto(_painel.transform, 17f, "#E6D3A2");
+            EstiloJogo.AplicarTitulo(_titulo);
+            _titulo.alignment = TextAlignmentOptions.Center;
 
             var gradeGo = new GameObject("grade", typeof(RectTransform));
             gradeGo.transform.SetParent(_painel.transform, worldPositionStays: false);
@@ -232,7 +238,54 @@ namespace ValheimTweaks.Patches
             _painel.SetActive(true);
         }
 
+        /// <summary>
+        /// Usa o slot do próprio inventário (InventoryGrid.m_elementPrefab) em vez de
+        /// desenhar um quadrado. Assim a borda, o fundo e a posição do número são
+        /// exatamente os do jogo, e o painel deixa de parecer coisa de fora.
+        /// </summary>
         private static void NovoSlot(float lado, Entrada e)
+        {
+            var prefab = InventoryGui.instance?.m_playerGrid?.m_elementPrefab;
+
+            if (prefab == null)
+            {
+                SlotSimples(lado, e);   // antes do inventário existir
+                return;
+            }
+
+            var slotGo = Object.Instantiate(prefab, _grade);
+            slotGo.SetActive(true);
+
+            var el = slotGo.GetComponent<InventoryElement>();
+            el.m_icon.enabled = e.Icone != null;
+            el.m_icon.sprite = e.Icone;
+            el.m_icon.color = Color.white;
+
+            el.m_amount.enabled = true;
+            el.m_amount.text = e.Total.ToString();
+
+            el.m_durability.gameObject.SetActive(false);
+            el.m_equiped.enabled = false;
+            el.m_queued.enabled = false;
+            el.m_noteleport.enabled = false;
+            el.m_food.enabled = false;
+            el.m_quality.enabled = false;
+            if (el.m_selected != null) el.m_selected.SetActive(false);
+
+            // Sem tooltip nem clique: aqui é só espiar, e o mouse está no baú.
+            if (el.m_tooltip != null) el.m_tooltip.enabled = false;
+            foreach (var h in slotGo.GetComponentsInChildren<UIInputHandler>(true)) h.enabled = false;
+            foreach (var d in slotGo.GetComponentsInChildren<UIDragHandler>(true)) d.enabled = false;
+
+            var bind = slotGo.transform.Find("binding");
+            if (bind != null)
+            {
+                var bt = bind.GetComponent<TMP_Text>();
+                if (bt != null) bt.enabled = false;
+            }
+        }
+
+        private static void SlotSimples(float lado, Entrada e)
         {
             var slot = new GameObject("slot", typeof(RectTransform));
             slot.transform.SetParent(_grade, worldPositionStays: false);

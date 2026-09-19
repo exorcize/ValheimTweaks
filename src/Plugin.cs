@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using BepInEx;
 using BepInEx.Logging;
@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.27.0";
+        public const string VERSION = "0.32.2";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -36,6 +36,22 @@ namespace ValheimTweaks
 
             _harmony = new Harmony(GUID);
             _harmony.PatchAll();
+
+            // Um patch que não pega não dá erro: ele simplesmente não acontece, e o
+            // sintoma vira "não funciona". Listar o que de fato foi remendado no boot
+            // custa nada e já economizou uma rodada inteira de tentativa e erro.
+            try
+            {
+                var alvos = new System.Collections.Generic.List<string>();
+                foreach (var m in _harmony.GetPatchedMethods())
+                    alvos.Add($"{m.DeclaringType?.Name}.{m.Name}");
+                alvos.Sort();
+                Log.LogInfo($"Patches aplicados ({alvos.Count}): {string.Join(", ", alvos.ToArray())}");
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning($"Nao consegui listar os patches: {e.Message}");
+            }
 
             Config.SettingChanged += OnSettingChanged;
             SetupHotReload();
@@ -87,6 +103,7 @@ namespace ValheimTweaks
             Patches.StoreHudPatch.Update();
             Patches.ChestPeekPatch.Update();
             Patches.AutoMinePatch.Update();
+            Patches.ChestSearchPatch.Update();
 
             if (_reloadPending && ModConfig.HotReload.Value)
             {
@@ -141,6 +158,8 @@ namespace ValheimTweaks
             }
         }
 
+        private static string Liga(bool v) => v ? "LIGADO" : "desligado";
+
         /// <summary>Reaplica tudo que e settavel em runtime.</summary>
         internal static void ApplyAll(string reason)
         {
@@ -157,6 +176,17 @@ namespace ValheimTweaks
                 Patches.GcPatch.Apply();
                 Patches.TimeoutPatch.Apply();
                 Patches.SimulationDistancePatch.Apply();
+
+                // Estado das features na linguagem de quem usa. Serve para responder
+                // "está ligado aí?" lendo o log, sem ter que abrir o F1 e descrever
+                // menu por telefone.
+                Log.LogInfo(
+                    "Features: painel de baus=" + Liga(ModConfig.ChestSearchEnabled.Value)
+                  + " | espiar bau=" + Liga(ModConfig.ChestPeekEnabled.Value)
+                  + " | guardar nos baus=" + Liga(ModConfig.StoreHudEnabled.Value)
+                  + " | reparo automatico=" + Liga(ModConfig.AutoRepairOnOpen.Value)
+                  + " | timeout de rede=" + (ModConfig.TimeoutEnabled.Value
+                        ? ModConfig.TimeoutSeconds.Value.ToString("0") + "s" : "desligado"));
                 // AmbientPatch nao precisa de Apply: o Postfix em EnvMan.SetEnv
                 // le a config a cada troca de ambiente, entao o slider e continuo.
                 Log.LogInfo($"Configuracoes aplicadas ({reason}).");

@@ -48,9 +48,33 @@ segundos para menos de 2. Vale só para você, não muda nada para os outros.
 minério sob a mira, o personagem bate sozinho até quebrar e para. Só minério, não
 pedra: o mod olha o que o alvo solta.
 
-**Guardar nos baús** — marque itens no inventário e uma tecla despeja tudo nos
-baús próximos, encaixando nas pilhas que já existem. Uma lista no canto mostra o
-que foi guardado e onde.
+**Guardar nos baús (teclas)** — marque itens no inventário e uma tecla despeja
+tudo nos baús próximos, encaixando nas pilhas que já existem. Uma lista no canto
+mostra o que foi guardado e onde. Vem **sem teclas atribuídas**: o Ctrl+clique do
+painel cobre o mesmo caso. Quem preferir assim escolhe as teclas no F1
+(`StoreMarkKey`, `StoreMarkedKey`, `StoreHoveredKey`).
+
+**Painel dos baús** — abra o inventário e clique em **Baús próximos** (ou
+configure uma tecla em `ChestSearchKey`). No lugar do painel de produção aparece
+tudo o que está nos baús ao redor, com busca por nome que ignora acento
+(`carvao` acha "Carvão"). Uma barra no topo mostra quantos slots ainda estão
+livres somando todos os baús.
+
+Clicar num item pega uma pilha, igual a pegar de um baú aberto. **Shift+clique**
+abre a telinha de dividir do próprio jogo para escolher a quantidade, e
+**Ctrl+clique** pega tudo. O rodapé também traz atalhos de 1, 10, uma pilha ou
+tudo, com `-/+` e um campo para digitar o número exato.
+
+Para guardar, **Ctrl+clique** num item do inventário manda ele direto para os
+baús. (Sem o painel aberto, esse mesmo atalho larga o item no chão — é o
+comportamento do jogo.) Ou pegue o item como faria normalmente e clique no
+painel. Antes de confirmar ele mostra para onde cada parte vai e por quê:
+primeiro completando pilhas que já existem, depois nos baús que já têm aquele
+item, e só então em espaço livre. Se algo não couber, ele diz quanto.
+
+Enquanto o painel está aberto o personagem não anda, para digitar na busca não
+sair mexendo com ele. Fecha pelo botão ou com Esc. Quem preferir andar com ele
+aberto desliga em `ChestSearchBlockMove`.
 
 **Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
 sem precisar abrir.

@@ -95,6 +95,21 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> AutoMineHudY;
         internal static ConfigEntry<bool> AutoMineDebug;
         internal static ConfigEntry<float> AutoMineToggleSeconds;
+        internal static ConfigEntry<bool> ChestSearchEnabled;
+        internal static ConfigEntry<float> ChestSearchRadius;
+        internal static ConfigEntry<float> ChestSearchRefresh;
+        internal static ConfigEntry<int> ChestSearchColumns;
+        internal static ConfigEntry<float> ChestSearchSlotSize;
+        internal static ConfigEntry<float> ChestSearchLabelSize;
+        internal static ConfigEntry<float> ChestSearchWidth;
+        internal static ConfigEntry<float> ChestSearchHeight;
+        internal static ConfigEntry<float> ChestSearchX;
+        internal static ConfigEntry<float> ChestSearchY;
+        internal static ConfigEntry<float> ChestSearchButtonX;
+        internal static ConfigEntry<float> ChestSearchButtonY;
+        internal static ConfigEntry<bool> ChestSearchBlockMove;
+        internal static ConfigEntry<bool> ChestSearchDebug;
+        internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> ChestSearchKey;
         internal static ConfigEntry<bool> AutoRepairOnOpen;
         internal static ConfigEntry<bool> RepairButtonRepairsAll;
         internal static ConfigEntry<bool> SimDistanceEnabled;
@@ -350,18 +365,21 @@ namespace ValheimTweaks
                     new AcceptableValueRange<int>(0, 8)));
 
             // --- Guardar nos baus proximos ---
+            // As tres teclas abaixo vem SEM atalho desde que o painel de baus passou
+            // a aceitar Ctrl+clique. O LeftControl daqui, em especial, brigava com
+            // ele. Quem prefere o jeito antigo e so escolher uma tecla no F1.
             StoreMarkKey = cfg.Bind("05 - Conveniencia", "StoreMarkKey",
-                new KeyboardShortcut(KeyCode.LeftAlt),
+                new KeyboardShortcut(KeyCode.None),
                 "Com o inventario aberto, aponte um item e aperte esta tecla para marca-lo " +
                 "como 'guardar nos baus'. O item marcado fica com o icone azulado e a marca " +
                 "acompanha o item, mesmo se ele mudar de lugar.");
 
             StoreMarkedKey = cfg.Bind("05 - Conveniencia", "StoreMarkedKey",
-                new KeyboardShortcut(KeyCode.Y),
+                new KeyboardShortcut(KeyCode.None),
                 "Guarda de uma vez todos os itens marcados nos baus proximos.");
 
             StoreHoveredKey = cfg.Bind("05 - Conveniencia", "StoreHoveredKey",
-                new KeyboardShortcut(KeyCode.LeftControl),
+                new KeyboardShortcut(KeyCode.None),
                 "Guarda na hora apenas o item apontado, sem precisar marcar antes.");
 
             StoreRadius = cfg.Bind("05 - Conveniencia", "StoreRadius", 12f,
@@ -449,10 +467,80 @@ namespace ValheimTweaks
                     "Passado isso, enquanto ligado, fica so o rotulo discreto.",
                     new AcceptableValueRange<float>(0.3f, 6f)));
 
-            AutoMineDebug = cfg.Bind("05 - Conveniencia", "AutoMineDebug", true,
+            AutoMineDebug = cfg.Bind("05 - Conveniencia", "AutoMineDebug", false,
                 "Quando o auto-minerar recusa um alvo, anota no log qual componente ele usa " +
                 "e o que ele solta. Serve para descobrir o nome de um minerio que ficou de " +
                 "fora da lista, em vez de ficar tentando no escuro.");
+
+            ChestSearchEnabled = cfg.Bind("05 - Conveniencia", "ChestSearchEnabled", true,
+                "Adiciona um botao no inventario que abre um painel com tudo o que esta " +
+                "nos baus ao redor, com busca por nome. Clicar num item traz ele pra mochila.");
+
+            ChestSearchRadius = cfg.Bind("05 - Conveniencia", "ChestSearchRadius", 20f,
+                new ConfigDescription(
+                    "Ate que distancia procurar bau. Vale para carroca e navio tambem. " +
+                    "Bau em area que o jogo ainda nao carregou nao aparece, por mais que " +
+                    "voce aumente esse numero.",
+                    new AcceptableValueRange<float>(5f, 64f)));
+
+            ChestSearchRefresh = cfg.Bind("05 - Conveniencia", "ChestSearchRefresh", 0.5f,
+                new ConfigDescription(
+                    "De quantos em quantos segundos o painel reconfere os baus enquanto " +
+                    "esta aberto.",
+                    new AcceptableValueRange<float>(0.2f, 3f)));
+
+            ChestSearchColumns = cfg.Bind("05 - Conveniencia", "ChestSearchColumns", 0,
+                new ConfigDescription(
+                    "Quantos itens por linha no painel. Em 0 ele decide sozinho pelo " +
+                    "espaco disponivel, que e o que voce quer na maioria das resolucoes.",
+                    new AcceptableValueRange<int>(0, 12)));
+
+            ChestSearchSlotSize = cfg.Bind("05 - Conveniencia", "ChestSearchSlotSize", 40f,
+                new ConfigDescription("Tamanho de cada slot do painel, em pixels.",
+                    new AcceptableValueRange<float>(28f, 80f)));
+
+            ChestSearchLabelSize = cfg.Bind("05 - Conveniencia", "ChestSearchLabelSize", 8.5f,
+                new ConfigDescription("Tamanho do nome embaixo de cada item.",
+                    new AcceptableValueRange<float>(6f, 16f)));
+
+            ChestSearchWidth = cfg.Bind("05 - Conveniencia", "ChestSearchWidth", 0f,
+                new ConfigDescription(
+                    "Largura do painel. Em 0 ele usa a mesma do painel de producao do " +
+                    "jogo, que e o que alinha certo em qualquer resolucao.",
+                    new AcceptableValueRange<float>(0f, 900f)));
+
+            ChestSearchHeight = cfg.Bind("05 - Conveniencia", "ChestSearchHeight", 0f,
+                new ConfigDescription(
+                    "Altura do painel. Em 0 ele usa a mesma do painel de producao.",
+                    new AcceptableValueRange<float>(0f, 1200f)));
+
+            ChestSearchX = cfg.Bind("05 - Conveniencia", "ChestSearchX", 0f,
+                "Desloca o painel na horizontal a partir do encaixe padrao. Negativo " +
+                "puxa pra esquerda, positivo empurra pra direita.");
+
+            ChestSearchY = cfg.Bind("05 - Conveniencia", "ChestSearchY", 0f,
+                "Sobe (positivo) ou desce (negativo) o painel a partir do encaixe padrao.");
+
+            ChestSearchButtonX = cfg.Bind("05 - Conveniencia", "ChestSearchButtonX", -8f,
+                "Posicao horizontal do botao dentro do inventario.");
+
+            ChestSearchButtonY = cfg.Bind("05 - Conveniencia", "ChestSearchButtonY", -36f,
+                "Posicao vertical do botao dentro do inventario.");
+
+            ChestSearchBlockMove = cfg.Bind("05 - Conveniencia", "ChestSearchBlockMove", true,
+                "Trava o andar enquanto o painel de baus esta aberto, para digitar na " +
+                "busca nao sair mexendo o personagem. Desligue se preferir andar com " +
+                "ele aberto.");
+
+            ChestSearchDebug = cfg.Bind("05 - Conveniencia", "ChestSearchDebug", false,
+                "Escreve no log o passo a passo do painel de baus. So serve para " +
+                "investigar problema; ligado enche o log.");
+
+            ChestSearchKey = cfg.Bind("05 - Conveniencia", "ChestSearchKey",
+                new BepInEx.Configuration.KeyboardShortcut(KeyCode.None),
+                "Tecla para abrir o painel de baus direto, sem precisar abrir o " +
+                "inventario e clicar no botao. Se o inventario estiver fechado ela " +
+                "abre os dois. Vem sem tecla; o botao continua funcionando.");
 
             AutoRepairOnOpen = cfg.Bind("05 - Conveniencia", "AutoRepairOnOpen", true,
                 "Repara todo o equipamento gasto assim que voce abre o inventario perto de " +
