@@ -1,0 +1,11 @@
+# Store text files with LF in the repository, no matter which platform they were
+# edited on, so the history stays consistent. Git still checks them out with the
+# platform's convention when core.autocrlf asks for it.
+* text=auto
+
+# Binary formats: never normalize.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.zip binary
+*.dll binary
