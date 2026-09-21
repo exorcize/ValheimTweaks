@@ -63,6 +63,32 @@ namespace ValheimTweaks.Patches
             return true;
         }
 
+        /// <summary>
+        /// True when a chest we do not own can be handed over: its owner is the local player,
+        /// has no owner yet, or is a peer that is currently connected. A chest whose owner is
+        /// offline can never answer the handshake, and the request would sit in flight for
+        /// the full timeout -- which is what made storing into the other player's chest feel
+        /// like it froze.
+        /// </summary>
+        internal static bool OwnerOnline(Container chest)
+        {
+            var nview = chest.GetComponent<ZNetView>();
+            var zdo = nview != null ? nview.GetZDO() : null;
+            if (zdo == null) return false;
+
+            long owner = zdo.GetOwner();
+            if (owner == 0 || owner == ZNet.GetUID()) return true;
+
+            var net = ZNet.instance;
+            var peers = net != null ? net.GetConnectedPeers() : null;
+            if (peers == null) return false;
+
+            foreach (var peer in peers)
+                if (peer != null && peer.m_uid == owner) return true;
+
+            return false;
+        }
+
         /// <summary>The chest's proper name, or the type's name. Never empty.</summary>
         internal static string VisibleName(Container chest)
         {

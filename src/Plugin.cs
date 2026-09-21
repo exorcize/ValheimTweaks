@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.33.8";
+        public const string VERSION = "0.33.9";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -133,7 +133,9 @@ namespace ValheimTweaks
                 if (!_dumpedThisWorld)
                 {
                     _dumpedThisWorld = true;
-                    if (ModConfig.DumpOnWorldLoad.Value) Diagnostics.Dump("world loaded");
+                    // Checked here so every plugin is loaded by now.
+                    Patches.BuildFromChests.CheckConflicts();
+                    if (ModConfig.DumpOnWorldLoad.Value) Diagnostics.Dump("mundo carregado");
                 }
             }
             else

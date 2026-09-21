@@ -80,11 +80,11 @@ Enquanto o painel está aberto o personagem não anda, para digitar na busca nã
 sair mexendo com ele. Fecha pelo botão ou com Esc. Quem preferir andar com ele
 aberto desliga em `ChestSearchBlockMove`.
 
-Por padrão ele guarda só em baús **seus** (`StoreOnlyOwnedChests`). Um baú que o
-cliente do outro jogador está tomando conta no momento é ignorado: escrever nele
-exige um handshake de rede e, se os dois lados discordarem de quem é o dono, uma
-versão sobrescreve a outra e o item some. Sempre há outro baú por perto, então
-ignorá-los não custa nada.
+Por padrão ele também guarda em baús que o cliente do outro jogador está tomando
+conta no momento (`StoreNonOwnedChests`). Eles são entregues pelo handshake de
+posse do próprio jogo antes de qualquer escrita, e o movimento mede os dois lados,
+então nada se perde. Um baú cujo dono está offline é ignorado em vez de travar.
+Desligue a opção para só mexer em baús seus.
 
 **Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
 sem precisar abrir.
@@ -142,6 +142,15 @@ visual e da rede, o outro do motor.
 Os poucos ajustes de desempenho daqui vêm todos no padrão do jogo e existem para
 casos específicos (fumaça em base com muitas fogueiras, intervalo de rede em
 servidor cheio).
+
+## Compatibilidade
+
+Alguns mods fazem o mesmo trabalho que este. O **SmartCraftStorage** e o
+**AzuCraftyBoxes** puxam material dos baús próximos para construir e fabricar.
+Usar um deles junto com o "construir dos baús" daqui faria contar e remover o
+mesmo material duas vezes (daria para fabricar gastando menos, e itens poderiam
+ser comidos). Quando um deles é detectado, essa feature daqui se desliga sozinha e
+avisa no log. O resto do mod não é afetado.
 
 ## Alterando as opções
 

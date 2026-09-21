@@ -81,7 +81,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<BepInEx.Configuration.KeyboardShortcut> StoreHoveredKey;
         internal static ConfigEntry<float> StoreRadius;
         internal static ConfigEntry<bool> StoreFallbackAnyChest;
-        internal static ConfigEntry<bool> StoreOnlyOwnedChests;
+        internal static ConfigEntry<bool> StoreNonOwnedChests;
         internal static ConfigEntry<bool> StoreHudEnabled;
         internal static ConfigEntry<float> StoreHudX;
         internal static ConfigEntry<float> StoreHudY;
@@ -412,12 +412,12 @@ namespace ValheimTweaks
                 "messing up the organization. With this on, whatever is left goes into any " +
                 "chest with space.");
 
-            StoreOnlyOwnedChests = cfg.Bind("05 - Convenience", "StoreOnlyOwnedChests", true,
-                "Stores only into chests you own. A chest owned by the other player's client " +
-                "has to be handed over by the network before it can receive items; if the two " +
-                "sides disagree about who owns it, one version overwrites the other and items " +
-                "vanish. Skipping those chests costs nothing -- there is always another one " +
-                "around. Turn this off to use the handshake again.");
+            StoreNonOwnedChests = cfg.Bind("05 - Convenience", "StoreNonOwnedChests", true,
+                "Also stores into chests currently owned by the other player's client. Those " +
+                "chests are handed over by the game's own ownership handshake before anything " +
+                "is written, and the move measures both ends, so nothing is lost. A chest whose " +
+                "owner is offline is skipped (nobody can hand it over, and the request would " +
+                "just stall). Turn this off to only ever touch chests you own.");
 
             StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
                 "Shows a list in the bottom-left corner of what was stored, with the item's " +

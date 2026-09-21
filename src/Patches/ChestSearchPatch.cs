@@ -859,10 +859,12 @@ namespace ValheimTweaks.Patches
                 return inv != null && inv.ContainsItemByName(name);
             }
 
-            // With StoreOnlyOwnedChests on, a chest the other player's client owns is left
-            // out of the plan entirely, so the store never goes through the RPC handshake.
+            // A chest we own is used directly. One owned by the other player goes through
+            // the game's ownership handshake, which is safe but needs the owner connected
+            // to answer -- one whose owner is offline is left out instead of stalling.
             bool DontUse(Container chest)
-                => ModConfig.StoreOnlyOwnedChests.Value && !Chests.Usable(chest);
+                => !Chests.Usable(chest)
+                   && (!ModConfig.StoreNonOwnedChests.Value || !Chests.OwnerOnline(chest));
 
             // 1) top off existing stacks
             foreach (var b in _chests)
@@ -1146,20 +1148,22 @@ namespace ValheimTweaks.Patches
             var plan = PlanDeposit(item, amount, out int leftover);
             if (plan.Count == 0)
             {
-                // If the only chests with room are owned by the other player, they were
-                // skipped on purpose (StoreOnlyOwnedChests). Say so instead of the vague
-                // "no room", which read like a bug.
-                int skipped = 0;
+                // If the only chests with room are owned by the other player, they were left
+                // out on purpose (option off, or the owner is offline). Say so instead of the
+                // vague "no room", which read like a bug.
+                int blocked = 0;
                 foreach (var b in _chests)
-                    if (ModConfig.StoreOnlyOwnedChests.Value && !Chests.Usable(b.Chest)) skipped++;
+                    if (!Chests.Usable(b.Chest)
+                        && (!ModConfig.StoreNonOwnedChests.Value || !Chests.OwnerOnline(b.Chest)))
+                        blocked++;
 
-                player.Message(MessageHud.MessageType.Center, skipped > 0
-                    ? Lang.T("No room in your chests (the other player's are skipped)",
-                             "Sem espaço nos SEUS baús (os do outro jogador são ignorados)")
+                player.Message(MessageHud.MessageType.Center, blocked > 0
+                    ? Lang.T("No room in your chests (the other player's are skipped or offline)",
+                             "Sem espaço nos SEUS baús (os do outro jogador estão fora do ar ou ignorados)")
                     : Lang.T("No room in nearby chests", "Sem espaço nos baús por perto"));
 
                 Plugin.Log.LogInfo($"[CHESTS] store '{Key(item)}': nothing stored, "
-                                 + $"leftover {leftover}, non-owned chests skipped {skipped}");
+                                 + $"leftover {leftover}, unusable chests skipped {blocked}");
                 return;
             }
 

@@ -45,9 +45,67 @@ namespace ValheimTweaks.Patches
         private static bool _checking;    // inside Player.HaveRequirements(Piece, ...)
         private static bool _consuming;   // inside Player.UpdatePlacement, while in build mode
 
-        private static bool Enabled => ModConfig.BuildFromChestsEnabled.Value;
+        private static bool _conflictChecked;
+        private static bool _conflict;
+
+        private static bool Enabled
+        {
+            get
+            {
+                if (!_conflictChecked) CheckConflicts();
+                return ModConfig.BuildFromChestsEnabled.Value && !_conflict;
+            }
+        }
 
         internal static void Invalidate() => _nextScan = 0f;
+
+        /// <summary>
+        /// Another mod already adds nearby chest contents to the same Inventory calls
+        /// (CountItems / HaveItem / RemoveItem). Running both means the same materials are
+        /// counted and removed twice, which lets you craft for less and can eat items. The
+        /// dedicated mods cover building too, so ours steps aside and says so in the log.
+        /// </summary>
+        internal static void CheckConflicts()
+        {
+            if (_conflictChecked) return;
+            _conflictChecked = true;
+
+            try
+            {
+                foreach (var info in BepInEx.Bootstrap.Chainloader.PluginInfos.Values)
+                {
+                    var md = info != null ? info.Metadata : null;
+                    if (md == null) continue;
+                    if (md.GUID == Plugin.GUID) continue;
+
+                    string guid = md.GUID ?? "";
+                    string name = md.Name ?? "";
+
+                    bool other =
+                        guid.IndexOf("smartcraftstorage", System.StringComparison.OrdinalIgnoreCase) >= 0
+                        || name.IndexOf("SmartCraft", System.StringComparison.OrdinalIgnoreCase) >= 0
+                        || guid.IndexOf("craftyboxes", System.StringComparison.OrdinalIgnoreCase) >= 0
+                        || name.IndexOf("CraftyBoxes", System.StringComparison.OrdinalIgnoreCase) >= 0
+                        || guid.IndexOf("craftfromcontainers", System.StringComparison.OrdinalIgnoreCase) >= 0
+                        || guid.IndexOf("craftfromchests", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (!other) continue;
+
+                    _conflict = true;
+                    Plugin.Log.LogWarning(
+                        $"[CHESTS] '{name}' also pulls materials from nearby chests. Our " +
+                        "build-from-chests is OFF to avoid counting/removing the same materials " +
+                        "twice. It may also repair-all; if you see duplicated repair messages, " +
+                        "turn off RepairButtonRepairsAll. To use ours instead, remove that mod " +
+                        "or disable its storage feature.");
+                    break;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[CHESTS] conflict check failed: {e.Message}");
+            }
+        }
 
         // ==================================================================
         // Cache

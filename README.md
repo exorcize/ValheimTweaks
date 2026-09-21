@@ -80,11 +80,11 @@ While the panel is open the character cannot walk, so typing in the search does
 not make him move. Close it with the button or with Esc. If you would rather walk
 with it open, turn off `ChestSearchBlockMove`.
 
-By default it stores only into chests **you own** (`StoreOnlyOwnedChests`). A
-chest the other player's client currently owns is skipped: writing into it needs a
-network handshake, and if the two sides disagree about who owns it, one version
-overwrites the other and items vanish. There is always another chest around, so
-nothing is lost by skipping them.
+By default it also stores into chests the other player's client currently owns
+(`StoreNonOwnedChests`). Those are handed over by the game's own ownership
+handshake before anything is written, and the move measures both ends, so nothing
+is lost. A chest whose owner is offline is skipped instead of stalling. Turn the
+option off to only ever touch chests you own.
 
 **Peek chest** — aiming at a nearby chest shows its contents on the right side
 without opening it.
@@ -143,6 +143,15 @@ the network, the other the engine.
 The few performance tweaks here all ship at the game's default and exist for
 specific cases (smoke in a base with many campfires, network interval on a full
 server).
+
+## Compatibility
+
+Some mods do the same job as this one. **SmartCraftStorage** and
+**AzuCraftyBoxes** pull materials from nearby chests for building and crafting.
+Running one of them together with this mod's build-from-chests would count and
+remove the same materials twice (you could craft for less, and items could be
+eaten). When one of them is detected, that feature here turns itself off and says
+so in the log. Everything else in the mod is unaffected.
 
 ## Changing the options
 
