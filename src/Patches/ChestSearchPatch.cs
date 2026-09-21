@@ -514,6 +514,10 @@ namespace ValheimTweaks.Patches
             var locations = new List<Location>(agg.Locations);
             locations.Sort((a, b) => b.Amount.CompareTo(a.Amount));
 
+            // Takes are logged too, so "where did it go" has an answer in both directions.
+            Plugin.Log.LogInfo($"[CHESTS] take '{agg.Key}': asked {amount} (of {agg.Total}), "
+                             + $"from {locations.Count} chest(s)");
+
             _taken = 0;
             _roundName = agg.LocalName;
 
@@ -739,6 +743,8 @@ namespace ValheimTweaks.Patches
             Player.m_localPlayer?.Message(MessageHud.MessageType.TopLeft,
                 $"{_taken} {_roundName}");
 
+            Plugin.Log.LogInfo($"[CHESTS] done: {_taken}x {_roundName}");
+
             _taken = 0;
             _signature = null;     // force a rebuild
             _nextScan = 0f;
@@ -762,7 +768,9 @@ namespace ValheimTweaks.Patches
                 if (p.Chest == null || fromInventory != p.Chest.GetInventory()) return true;
 
                 _inFlight = null;
-                _taken += Move(__instance, fromInventory, p.Key, p.Amount);
+                int n = Move(__instance, fromInventory, p.Key, p.Amount);
+                Plugin.Log.LogInfo($"[CHESTS] take-move '{p.Key}': asked {p.Amount}, moved {n}");
+                _taken += n;
                 Complete();
                 return false;
             }
