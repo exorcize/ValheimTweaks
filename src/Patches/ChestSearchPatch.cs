@@ -515,7 +515,7 @@ namespace ValheimTweaks.Patches
             locations.Sort((a, b) => b.Amount.CompareTo(a.Amount));
 
             // Takes are logged too, so "where did it go" has an answer in both directions.
-            Plugin.Log.LogInfo($"[CHESTS] take '{agg.Key}': asked {amount} (of {agg.Total}), "
+            Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: take '{agg.Key}': asked {amount} (of {agg.Total}), "
                              + $"from {locations.Count} chest(s)");
 
             _taken = 0;
@@ -643,7 +643,7 @@ namespace ValheimTweaks.Patches
             // The store path carries a specific stack, so log it: this is the path
             // where "it disappeared" reports come from.
             if (only != null)
-                Plugin.Log.LogInfo($"[CHESTS] store-move '{key}': asked {amount}, "
+                Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: store-move '{key}': asked {amount}, "
                                  + $"out {movedOut}, in {movedIn}");
 
             // Safety net: if the two ends don't match, someone gained or
@@ -723,7 +723,7 @@ namespace ValheimTweaks.Patches
 
             if (p.Storing)
             {
-                Plugin.Log.LogInfo($"[CHESTS] request {p.Amount} '{p.Key}' -> {Chests.VisibleName(p.Chest)}");
+                Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: request {p.Amount} '{p.Key}' -> {Chests.VisibleName(p.Chest)}");
                 // Same handshake as "take", in reverse: the owner grants ownership
                 // (ForceSendZDO + SetOwner) before the inventory is touched.
                 p.Chest.StackAll();
@@ -743,7 +743,7 @@ namespace ValheimTweaks.Patches
             Player.m_localPlayer?.Message(MessageHud.MessageType.TopLeft,
                 $"{_taken} {_roundName}");
 
-            Plugin.Log.LogInfo($"[CHESTS] done: {_taken}x {_roundName}");
+            Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: done: {_taken}x {_roundName}");
 
             _taken = 0;
             _signature = null;     // force a rebuild
@@ -769,7 +769,7 @@ namespace ValheimTweaks.Patches
 
                 _inFlight = null;
                 int n = Move(__instance, fromInventory, p.Key, p.Amount);
-                Plugin.Log.LogInfo($"[CHESTS] take-move '{p.Key}': asked {p.Amount}, moved {n}");
+                Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: take-move '{p.Key}': asked {p.Amount}, moved {n}");
                 _taken += n;
                 Complete();
                 return false;
@@ -1170,7 +1170,7 @@ namespace ValheimTweaks.Patches
                              "Sem espaço nos SEUS baús (os do outro jogador estão fora do ar ou ignorados)")
                     : Lang.T("No room in nearby chests", "Sem espaço nos baús por perto"));
 
-                Plugin.Log.LogInfo($"[CHESTS] store '{Key(item)}': nothing stored, "
+                Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: store '{Key(item)}': nothing stored, "
                                  + $"leftover {leftover}, unusable chests skipped {blocked}");
                 return;
             }
@@ -1183,7 +1183,7 @@ namespace ValheimTweaks.Patches
 
             // Store logging stays on: this is where "the item disappeared" reports come
             // from, and it is a handful of lines per action, not per frame.
-            Plugin.Log.LogInfo($"[CHESTS] store '{key}': asked {amount} (stack {item.m_stack}), "
+            Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: store '{key}': asked {amount} (stack {item.m_stack}), "
                              + $"plan {plan.Count} chest(s), leftover {leftover}");
             foreach (var d in plan)
                 Plugin.Log.LogInfo($"[CHESTS]   plan {d.Amount} -> {Chests.VisibleName(d.Chest)}"

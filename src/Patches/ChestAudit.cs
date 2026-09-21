@@ -101,47 +101,55 @@ namespace ValheimTweaks.Patches
 
         // ==================================================================
         // Container network handshakes
+        //
+        // The first long argument of an RPC method is filled by the network with
+        // whoever SENT the packet, not the destination. On a request that is the
+        // player asking; on a response it is the owner granting. The line names the
+        // local player too, so it is clear on which client it was written.
         // ==================================================================
+        internal static string Who =>
+            Player.m_localPlayer != null ? Player.m_localPlayer.GetPlayerName() : "?";
+
         [HarmonyPatch(typeof(Container), "RPC_RequestOpen")]
         internal static class RequestOpenHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] open request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: open request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_RequestStack")]
         internal static class RequestStackHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] stack request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: stack request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_RequestTakeAll")]
         internal static class RequestTakeAllHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] take-all request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: take-all request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_OpenResponse")]
         internal static class OpenResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] open response granted={granted} to uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: open response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_StackResponse")]
         internal static class StackResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] stack response granted={granted} to uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: stack response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_TakeAllResponse")]
         internal static class TakeAllResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] take-all response granted={granted} to uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Who}: take-all response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         // ==================================================================
