@@ -135,6 +135,7 @@ namespace ValheimTweaks.Patches
         internal static void Update()
         {
             ProcessQueue();
+            CheckRollbacks();
 
             if (!ModConfig.ChestSearchEnabled.Value)
             {
@@ -220,6 +221,63 @@ namespace ValheimTweaks.Patches
 
         private static Vector2 _builtSize;
         private static int _fontVersion;
+
+        // Post-store safety net. A chest can lose what we put in right after the move
+        // (a network overwrite, for example). We remember what was moved and check again
+        // a moment later; if it vanished from the chest, it goes back to the backpack
+        // instead of being lost.
+        private class PendingCheck
+        {
+            internal Inventory Destination;
+            internal Inventory Source;
+            internal string Key;
+            internal int Expected;
+            internal ItemDrop.ItemData Sample;
+            internal float At;
+        }
+
+        private static readonly List<PendingCheck> _checks = new List<PendingCheck>();
+
+        private static void CheckRollbacks()
+        {
+            if (_checks.Count == 0) return;
+
+            float now = Time.realtimeSinceStartup;
+            for (int i = _checks.Count - 1; i >= 0; i--)
+            {
+                var c = _checks[i];
+                if (now < c.At) continue;
+                _checks.RemoveAt(i);
+
+                if (c.Destination == null || c.Source == null || c.Sample == null) continue;
+
+                int missing = c.Expected - Count(c.Destination, c.Key);
+                if (missing <= 0) continue;
+
+                int maxStack = Mathf.Max(1, c.Sample.m_shared.m_maxStackSize);
+                int left = missing;
+                int before = Count(c.Source, c.Key);
+                while (left > 0)
+                {
+                    var part = c.Sample.Clone();
+                    part.m_stack = Mathf.Min(left, maxStack);
+                    c.Source.AddItem(part);
+
+                    int added = Count(c.Source, c.Key) - before;
+                    if (added <= 0) break;   // backpack has no room
+                    before += added;
+                    left -= added;
+                }
+
+                int returned = missing - left;
+                if (returned > 0)
+                    Plugin.Log.LogError($"[CHESTS] ROLLBACK: {returned}x '{c.Key}' left the chest "
+                                      + "after being stored; returned to the backpack.");
+                if (left > 0)
+                    Plugin.Log.LogError($"[CHESTS] LOST {left}x '{c.Key}': it left the chest and the "
+                                      + "backpack had no room. Tell the mod author.");
+            }
+        }
 
         /// <summary>
         /// Rebuilds the whole panel while preserving what you already typed. It only
@@ -645,6 +703,19 @@ namespace ValheimTweaks.Patches
             if (only != null)
                 Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: store-move '{key}': asked {amount}, "
                                  + $"out {movedOut}, in {movedIn}");
+
+            // Watch that the chest really kept it. Only for stores (the destination is a
+            // chest); a take's destination is the backpack and the player is free to use it.
+            if (only != null && movedIn > 0 && ModConfig.StoreRollback.Value)
+                _checks.Add(new PendingCheck
+                {
+                    Destination = destination,
+                    Source = source,
+                    Key = key,
+                    Expected = Count(destination, key),
+                    Sample = only.Clone(),
+                    At = Time.realtimeSinceStartup + 2f,
+                });
 
             // Safety net: if the two ends don't match, someone gained or
             // lost an item. There's no safe way to undo it here, but yelling in the log

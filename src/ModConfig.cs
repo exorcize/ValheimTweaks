@@ -82,6 +82,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> StoreRadius;
         internal static ConfigEntry<bool> StoreFallbackAnyChest;
         internal static ConfigEntry<bool> StoreNonOwnedChests;
+        internal static ConfigEntry<bool> StoreRollback;
         internal static ConfigEntry<bool> StoreHudEnabled;
         internal static ConfigEntry<float> StoreHudX;
         internal static ConfigEntry<float> StoreHudY;
@@ -418,6 +419,12 @@ namespace ValheimTweaks
                 "is written, and the move measures both ends, so nothing is lost. A chest whose " +
                 "owner is offline is skipped (nobody can hand it over, and the request would " +
                 "just stall). Turn this off to only ever touch chests you own.");
+
+            StoreRollback = cfg.Bind("05 - Convenience", "StoreRollback", true,
+                "After storing, checks a moment later that the chest really kept the items. If " +
+                "they vanished from it (a network overwrite, for example), they are put back in " +
+                "your backpack instead of being lost. Trade-off: if someone else takes those " +
+                "items from the chest within the check window, they end up duplicated.");
 
             StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
                 "Shows a list in the bottom-left corner of what was stored, with the item's " +

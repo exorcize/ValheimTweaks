@@ -86,6 +86,9 @@ handshake before anything is written, and the move measures both ends, so nothin
 is lost. A chest whose owner is offline is skipped instead of stalling. Turn the
 option off to only ever touch chests you own.
 
+A moment after storing, it checks that the chest really kept the items; if they
+vanished from it, they go back to your backpack (`StoreRollback`).
+
 **Peek chest** — aiming at a nearby chest shows its contents on the right side
 without opening it.
 

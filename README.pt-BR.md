@@ -86,6 +86,9 @@ posse do próprio jogo antes de qualquer escrita, e o movimento mede os dois lad
 então nada se perde. Um baú cujo dono está offline é ignorado em vez de travar.
 Desligue a opção para só mexer em baús seus.
 
+Um instante depois de guardar, confere se o baú manteve os itens; se sumiram dele,
+volta pra mochila (`StoreRollback`).
+
 **Espiar baú** — mirando um baú de perto, o conteúdo aparece no canto direito
 sem precisar abrir.
 
