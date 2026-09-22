@@ -539,6 +539,10 @@ namespace ValheimTweaks.Patches
             /// identical stacks could empty the other one.
             /// </summary>
             internal ItemDrop.ItemData Only;
+            /// <summary>How many times this request was refused/timed out and requeued.</summary>
+            internal int Tries;
+            /// <summary>Don't send it before this time; a busy chest is retried shortly after.</summary>
+            internal float NotBefore;
         }
 
         private static readonly List<Request> _queue = new List<Request>();
@@ -741,10 +745,37 @@ namespace ValheimTweaks.Patches
             private static void Postfix(bool granted)
             {
                 if (granted || _inFlight == null || !_inFlight.Storing) return;
-                Plugin.Log.LogInfo($"[CHESTS] refused by '{Chests.VisibleName(_inFlight.Chest)}'");
+
+                var p = _inFlight;
                 _inFlight = null;
+                Plugin.Log.LogInfo($"[CHESTS] refused by '{Chests.VisibleName(p.Chest)}'");
+                Retry(p, "refused");
                 Complete();
             }
+        }
+
+        /// <summary>
+        /// Puts a refused/timed-out request back in the queue a moment later. A chest owned
+        /// by the other player is refused while they have it open; retrying shortly after
+        /// makes it go through once they close it, instead of failing until it is opened by
+        /// hand. Gives up after a few tries so a permanently busy chest cannot stall the queue.
+        /// </summary>
+        private static void Retry(Request p, string why)
+        {
+            if (p == null) return;
+
+            if (p.Tries >= 3)
+            {
+                Plugin.Log.LogWarning($"[CHESTS] gave up on {p.Amount}x '{p.Key}' -> "
+                                    + $"{Chests.VisibleName(p.Chest)} ({why})");
+                return;
+            }
+
+            p.Tries++;
+            p.NotBefore = Time.realtimeSinceStartup + 1.5f;
+            _queue.Add(p);
+            Plugin.Log.LogInfo($"[CHESTS] retry {p.Tries}/3 for {p.Amount}x '{p.Key}' -> "
+                             + $"{Chests.VisibleName(p.Chest)} ({why})");
         }
 
         /// <summary>
@@ -768,8 +799,10 @@ namespace ValheimTweaks.Patches
             if (_inFlight != null)
             {
                 if (Time.realtimeSinceStartup < _inFlightUntil) return;
-                Plugin.Log.LogInfo($"[CHESTS] no response from '{Chests.VisibleName(_inFlight.Chest)}'");
+                var timedOut = _inFlight;
                 _inFlight = null;
+                Plugin.Log.LogInfo($"[CHESTS] no response from '{Chests.VisibleName(timedOut.Chest)}'");
+                Retry(timedOut, "no response");
                 Complete();
             }
 
@@ -777,6 +810,9 @@ namespace ValheimTweaks.Patches
 
             var p = _queue[0];
             if (p.Chest == null) { _queue.RemoveAt(0); return; }
+
+            // Waiting out a retry delay: hold the queue instead of skipping ahead of it.
+            if (Time.realtimeSinceStartup < p.NotBefore) return;
 
             // The game refuses two TakeAlls on the same chest within 2s
             // (Container.RPC_RequestTakeAll, m_lastTakeAllTime). Waiting is better than
@@ -917,8 +953,13 @@ namespace ValheimTweaks.Patches
 
             // Free slots get consumed over the course of the plan, otherwise two passes
             // would reserve the same slot and the "didn't fit" count would come out optimistic.
+            // Our own chests first: they are written directly, with no handshake and no
+            // waiting on the other client. The other player's are only used if needed.
+            var chests = new List<ChestInfo>(_chests);
+            chests.Sort((a, b) => Chests.Usable(b.Chest).CompareTo(Chests.Usable(a.Chest)));
+
             var free = new Dictionary<Container, int>();
-            foreach (var b in _chests) free[b.Chest] = b.Free;
+            foreach (var b in chests) free[b.Chest] = b.Free;
 
             void Put(Container chest, string chestName, int n, string reason)
             {
@@ -946,7 +987,7 @@ namespace ValheimTweaks.Patches
                    && (!ModConfig.StoreNonOwnedChests.Value || !Chests.OwnerOnline(chest));
 
             // 1) top off existing stacks
-            foreach (var b in _chests)
+            foreach (var b in chests)
             {
                 if (left <= 0) break;
                 if (DontUse(b.Chest)) continue;
@@ -957,7 +998,7 @@ namespace ValheimTweaks.Patches
             }
 
             // 2) chests that already have the item
-            foreach (var b in _chests)
+            foreach (var b in chests)
             {
                 if (left <= 0) break;
                 if (DontUse(b.Chest)) continue;
@@ -968,7 +1009,7 @@ namespace ValheimTweaks.Patches
             }
 
             // 3) anyone with space
-            foreach (var b in _chests)
+            foreach (var b in chests)
             {
                 if (left <= 0) break;
                 if (DontUse(b.Chest)) continue;
@@ -1262,7 +1303,10 @@ namespace ValheimTweaks.Patches
 
             foreach (var d in plan)
             {
-                if (IsOwner(d.Chest))
+                // Owned chests are written directly. When we are the host, a chest owned by
+                // the other client is claimed first (safe, authoritative, instant) instead of
+                // waiting on their handshake. Only a client falls back to the handshake.
+                if (IsOwner(d.Chest) || Chests.TryClaim(d.Chest))
                     _taken += Move(d.Chest.GetInventory(), backpack, key, d.Amount, item);
                 else
                     _queue.Add(new Request

@@ -64,6 +64,30 @@ namespace ValheimTweaks.Patches
         }
 
         /// <summary>
+        /// If we are the host, take ownership of a chest owned by someone else before writing
+        /// to it. The host is authoritative, so the change is safe and instant -- no waiting
+        /// on the other client's handshake, which is what left the chest "not yours" until it
+        /// was opened by hand. Clients cannot do this; they still use the handshake.
+        /// </summary>
+        internal static bool TryClaim(Container chest)
+        {
+            if (chest == null) return false;
+
+            var net = ZNet.instance;
+            if (net == null || !net.IsServer()) return false;
+
+            var nview = chest.GetComponent<ZNetView>();
+            if (nview == null || !nview.IsValid()) return false;
+            if (nview.IsOwner()) return true;
+            if (chest.IsInUse()) return false;
+            if (chest.m_checkGuardStone
+                && !PrivateArea.CheckAccess(chest.transform.position, 0f, false)) return false;
+
+            nview.ClaimOwnership();
+            return nview.IsOwner();
+        }
+
+        /// <summary>
         /// True when a chest we do not own can be handed over: its owner is the local player,
         /// has no owner yet, or is a peer that is currently connected. A chest whose owner is
         /// offline can never answer the handshake, and the request would sit in flight for

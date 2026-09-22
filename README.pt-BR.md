@@ -83,8 +83,12 @@ aberto desliga em `ChestSearchBlockMove`.
 Por padrão ele também guarda em baús que o cliente do outro jogador está tomando
 conta no momento (`StoreNonOwnedChests`). Eles são entregues pelo handshake de
 posse do próprio jogo antes de qualquer escrita, e o movimento mede os dois lados,
-então nada se perde. Um baú cujo dono está offline é ignorado em vez de travar.
-Desligue a opção para só mexer em baús seus.
+então nada se perde. Seus baús são sempre usados primeiro; um baú do outro jogador
+só é tocado quando necessário. Se você é o host, o baú é assumido direto (seguro,
+instantâneo) em vez de esperar o cliente dele, e se ele estiver com o baú aberto o
+pedido é retentado por alguns segundos em vez de falhar até você abrir na mão. Um
+baú cujo dono está offline é ignorado em vez de travar. Desligue a opção para só
+mexer em baús seus.
 
 Um instante depois de guardar, confere se o baú manteve os itens; se sumiram dele,
 volta pra mochila (`StoreRollback`).

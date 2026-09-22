@@ -83,8 +83,12 @@ with it open, turn off `ChestSearchBlockMove`.
 By default it also stores into chests the other player's client currently owns
 (`StoreNonOwnedChests`). Those are handed over by the game's own ownership
 handshake before anything is written, and the move measures both ends, so nothing
-is lost. A chest whose owner is offline is skipped instead of stalling. Turn the
-option off to only ever touch chests you own.
+is lost. Your own chests are always used first; a chest owned by the other player
+is only touched when needed. When you host, the chest is claimed directly (safe,
+instant) instead of waiting on their client, and if they have it open the request
+is retried for a few seconds instead of failing until you open it by hand. A chest
+whose owner is offline is skipped instead of stalling. Turn the option off to only
+ever touch chests you own.
 
 A moment after storing, it checks that the chest really kept the items; if they
 vanished from it, they go back to your backpack (`StoreRollback`).
