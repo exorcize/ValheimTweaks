@@ -158,6 +158,10 @@ remove the same materials twice (you could craft for less, and items could be
 eaten). When one of them is detected, that feature here turns itself off and says
 so in the log. Everything else in the mod is unaffected.
 
+At boot the log also lists every method of this mod that another mod patches too
+("Methods shared with other mods"). Shared methods are where conflicts live; the
+game never errors on them, so having the list makes a mystery into a name.
+
 ## Changing the options
 
 Through **F1** in game, or by editing directly:

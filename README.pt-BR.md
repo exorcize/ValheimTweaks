@@ -157,6 +157,10 @@ mesmo material duas vezes (daria para fabricar gastando menos, e itens poderiam
 ser comidos). Quando um deles é detectado, essa feature daqui se desliga sozinha e
 avisa no log. O resto do mod não é afetado.
 
+No boot o log também lista todo método nosso que outro mod remenda também
+("Methods shared with other mods"). É nesses métodos que moram os conflitos, e o
+jogo nunca dá erro neles — ter a lista transforma mistério em nome.
+
 ## Alterando as opções
 
 Pelo **F1** em jogo, ou editando direto:

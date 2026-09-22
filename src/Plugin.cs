@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.33.13";
+        public const string VERSION = "0.33.14";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -50,7 +50,44 @@ namespace ValheimTweaks
             }
             catch (Exception e)
             {
-                Log.LogWarning($"Couldn't list the patches: {e.Message}");
+                Log.LogWarning($"Nao consegui listar os patches: {e.Message}");
+            }
+
+            // Which of our methods another mod also patches? Shared methods are where
+            // conflicts live, and the game gives no error for them -- the symptom is just
+            // "stopped working" or an item behaving oddly. Listing them at boot turns a
+            // mystery into a name. Ask Harmony for the real owners, not a guess.
+            try
+            {
+                var shared = new System.Collections.Generic.List<string>();
+                foreach (var m in _harmony.GetPatchedMethods())
+                {
+                    var info = Harmony.GetPatchInfo(m);
+                    if (info == null) continue;
+
+                    var others = new System.Collections.Generic.SortedSet<string>();
+                    foreach (var p in info.Prefixes) if (p.owner != GUID) others.Add(p.owner);
+                    foreach (var p in info.Postfixes) if (p.owner != GUID) others.Add(p.owner);
+                    foreach (var p in info.Transpilers) if (p.owner != GUID) others.Add(p.owner);
+
+                    if (others.Count > 0)
+                        shared.Add($"{m.DeclaringType?.Name}.{m.Name} <- {string.Join(", ", others)}");
+                }
+
+                if (shared.Count > 0)
+                {
+                    shared.Sort();
+                    Log.LogWarning($"Methods shared with other mods ({shared.Count}): "
+                                 + string.Join(" | ", shared));
+                }
+                else
+                {
+                    Log.LogInfo("No method of ours is patched by another mod.");
+                }
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning($"Nao consegui checar conflitos: {e.Message}");
             }
 
             Config.SettingChanged += OnSettingChanged;
