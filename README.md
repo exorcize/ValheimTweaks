@@ -132,8 +132,10 @@ same scene.
 There is also a **chest audit** (`ChestAuditLog`): it writes to the log every chest
 interaction on the network — who opened, stacked or took from which chest, whether
 the owner allowed it, the chest id and its owner — and, with `ChestAuditContents`,
-the item list before and after each change. It exists to answer "where did my item
-go" with facts. Turn it off on a busy base to keep the log small.
+the item list before and after each change. With `ChestAuditContents` it also logs,
+timestamped, what entered or left your own backpack every half second, so an item
+that disappears without reaching a chest is visible too. It exists to answer "where
+did my item go" with facts. Turn it off on a busy base to keep the log small.
 
 ## About performance
 

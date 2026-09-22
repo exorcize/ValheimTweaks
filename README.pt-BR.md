@@ -131,8 +131,10 @@ cena.
 Há também uma **auditoria de baús** (`ChestAuditLog`): escreve no log toda
 interação de rede com baús — quem abriu, empilhou ou pegou tudo de qual baú, se o
 dono autorizou, o id e o dono do baú — e, com `ChestAuditContents`, a lista de
-itens antes e depois de cada mudança. Serve para responder "para onde foi meu
-item" com fatos. Desligue numa base movimentada para o log não crescer.
+itens antes e depois de cada mudança. Com `ChestAuditContents` ele também registra,
+com hora, o que entrou ou saiu da sua mochila a cada meio segundo — então um item
+que desaparece sem chegar a um baú também fica visível. Serve para responder "para
+onde foi meu item" com fatos. Desligue numa base movimentada para o log não crescer.
 
 ## Sobre desempenho
 

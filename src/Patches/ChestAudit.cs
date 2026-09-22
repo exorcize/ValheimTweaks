@@ -23,23 +23,78 @@ namespace ValheimTweaks.Patches
     internal static class ChestAudit
     {
         private static readonly Dictionary<ZDOID, string> _seen = new Dictionary<ZDOID, string>();
+        private static readonly Dictionary<string, int> _backpack = new Dictionary<string, int>();
         private static bool _loggedWorld;
+        private static float _nextBackpackScan;
 
         internal static void Tick()
         {
-            if (!ModConfig.ChestAuditLog.Value) return;
+            if (!ModConfig.ChestAuditLog.Value)
+            {
+                _backpack.Clear();
+                return;
+            }
 
             var player = Player.m_localPlayer;
             if (player == null)
             {
                 _loggedWorld = false;
                 _seen.Clear();
+                _backpack.Clear();
                 return;
             }
-            if (_loggedWorld) return;
-            _loggedWorld = true;
 
-            LogWorld(player);
+            if (!_loggedWorld)
+            {
+                _loggedWorld = true;
+                LogWorld(player);
+            }
+
+            if (!ModConfig.ChestAuditContents.Value) return;
+            if (Time.realtimeSinceStartup < _nextBackpackScan) return;
+            _nextBackpackScan = Time.realtimeSinceStartup + 0.5f;
+            DiffBackpack(player);
+        }
+
+        internal static string Stamp() => System.DateTime.Now.ToString("HH:mm:ss");
+
+        /// <summary>
+        /// Every half second, compares the backpack with the previous snapshot and logs what
+        /// entered or left it. This is the missing half of the audit: without it, an item
+        /// that leaves the backpack without showing up in a chest has no trace at all.
+        /// </summary>
+        private static void DiffBackpack(Player player)
+        {
+            var inv = player.GetInventory();
+            if (inv == null) return;
+
+            var now = new Dictionary<string, int>();
+            foreach (var item in inv.GetAllItems())
+            {
+                if (item == null || item.m_shared == null) continue;
+
+                string name = Localization.instance.Localize(item.m_shared.m_name);
+                if (item.m_shared.m_maxQuality > 1) name += "#" + item.m_quality;
+
+                now.TryGetValue(name, out int have);
+                now[name] = have + item.m_stack;
+            }
+
+            var sb = new StringBuilder();
+            foreach (var kv in now)
+            {
+                _backpack.TryGetValue(kv.Key, out int before);
+                if (kv.Value > before) sb.Append($" +{kv.Value - before} {kv.Key}");
+                else if (kv.Value < before) sb.Append($" -{before - kv.Value} {kv.Key}");
+            }
+            foreach (var kv in _backpack)
+                if (!now.ContainsKey(kv.Key)) sb.Append($" -{kv.Value} {kv.Key}");
+
+            _backpack.Clear();
+            foreach (var kv in now) _backpack[kv.Key] = kv.Value;
+
+            if (sb.Length > 0)
+                Plugin.Log.LogInfo($"[AUDIT] {Stamp()} backpack:{sb}");
         }
 
         private static void LogWorld(Player player)
@@ -114,42 +169,42 @@ namespace ValheimTweaks.Patches
         internal static class RequestOpenHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: open request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: open request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_RequestStack")]
         internal static class RequestStackHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: stack request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: stack request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_RequestTakeAll")]
         internal static class RequestTakeAllHook
         {
             private static void Postfix(Container __instance, long uid)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: take-all request from uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: take-all request from uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_OpenResponse")]
         internal static class OpenResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: open response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: open response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_StackResponse")]
         internal static class StackResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: stack response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: stack response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         [HarmonyPatch(typeof(Container), "RPC_TakeAllResponse")]
         internal static class TakeAllResponseHook
         {
             private static void Postfix(Container __instance, long uid, bool granted)
-                => Plugin.Log.LogInfo($"[AUDIT] {Who}: take-all response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
+                => Plugin.Log.LogInfo($"[AUDIT] {Stamp()} {Who}: take-all response granted={granted} by owner uid={uid} -> {Describe(__instance)}");
         }
 
         // ==================================================================
@@ -173,7 +228,7 @@ namespace ValheimTweaks.Patches
 
                 // Only reports changes, not the first sighting of each chest.
                 if (before != null)
-                    Plugin.Log.LogInfo($"[AUDIT] changed {Describe(__instance)}{Contents(__instance)} (was{before})");
+                    Plugin.Log.LogInfo($"[AUDIT] {Stamp()} changed {Describe(__instance)}{Contents(__instance)} (was{before})");
             }
         }
     }
