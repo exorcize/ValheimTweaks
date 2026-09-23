@@ -27,7 +27,13 @@ if (-not (Test-Path $dll)) { throw "bin\Release\ValheimTweaks.dll did not appear
 
 # Safety belt: checks that the packaged DLL IS the csproj version. A zip with the
 # wrong version costs the other person a round of testing.
-$dllVersion = [Reflection.AssemblyName]::GetAssemblyName($dll).Version.ToString(3)
+#
+# Read from the PE version resource, not with [Reflection.AssemblyName]::GetAssemblyName:
+# that one LOADS the file, and Windows App Control refuses to load an unsigned DLL
+# ("a policy blocked this file", HRESULT 0x800711C7), which killed the packaging on a
+# machine where the build itself was fine. VersionInfo only reads the header. MSBuild
+# derives FileVersion from <Version>, so the check is the same one.
+$dllVersion = ((Get-Item $dll).VersionInfo.FileVersion -split '\.')[0..2] -join '.'
 if ($dllVersion -ne $version) {
     throw "DLL in bin\Release is $dllVersion but the csproj says $version. Zip aborted."
 }
