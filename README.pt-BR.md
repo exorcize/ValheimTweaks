@@ -132,6 +132,12 @@ Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afeta
 o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
 cena.
 
+**Backup:** a cada poucos minutos (`ChestSnapshotMinutes`) o conteúdo de todo baú
+carregado é gravado num arquivo pequeno ao lado da config. Se algo sumir,
+`RestoreSnapshotNow` devolve, nos baús ao seu redor, todo item que o snapshot tem e
+o baú não tem mais. É a única forma de recuperar um item que o jogo perdeu, já que
+ele não guarda histórico.
+
 Há também uma **auditoria de baús** (`ChestAuditLog`): escreve no log toda
 interação de rede com baús — quem abriu, empilhou ou pegou tudo de qual baú, se o
 dono autorizou, o id e o dono do baú — e, com `ChestAuditContents`, a lista de

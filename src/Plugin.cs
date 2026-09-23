@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.33.18";
+        public const string VERSION = "0.33.19";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -142,6 +142,7 @@ namespace ValheimTweaks
             Patches.AutoMinePatch.Update();
             Patches.ChestSearchPatch.Update();
             Patches.ChestAudit.Tick();
+            Patches.ChestSnapshot.Tick();
 
             if (_reloadPending && ModConfig.HotReload.Value)
             {
@@ -172,6 +173,7 @@ namespace ValheimTweaks
                     _dumpedThisWorld = true;
                     // Checked here so every plugin is loaded by now.
                     Patches.BuildFromChests.CheckConflicts();
+                    Patches.ChestSnapshot.Save();   // baseline for the session
                     if (ModConfig.DumpOnWorldLoad.Value) Diagnostics.Dump("mundo carregado");
                 }
             }
@@ -194,6 +196,12 @@ namespace ValheimTweaks
             {
                 ModConfig.DumpChestsNow.Value = false;
                 Patches.ChestAudit.DumpChests();
+            }
+
+            if (ModConfig.RestoreSnapshotNow.Value)
+            {
+                ModConfig.RestoreSnapshotNow.Value = false;
+                Patches.ChestSnapshot.Restore();
             }
 
             if (ModConfig.ProfileNow.Value)

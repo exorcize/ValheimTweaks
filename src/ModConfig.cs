@@ -26,6 +26,12 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> ChestAuditLog;
         internal static ConfigEntry<bool> ChestAuditContents;
 
+        // ---------- 07 - Backup ----------
+        internal static ConfigEntry<bool> ChestSnapshotEnabled;
+        internal static ConfigEntry<float> ChestSnapshotMinutes;
+        internal static ConfigEntry<bool> RestoreSnapshotNow;
+        internal static ConfigEntry<string> RestoreSnapshotFile;
+
         // ---------- 02 - Network ----------
         internal static ConfigEntry<bool> TimeoutEnabled;
         internal static ConfigEntry<float> TimeoutSeconds;
@@ -167,6 +173,29 @@ namespace ValheimTweaks
                 "Includes the full list of items (and amounts) whenever a chest's contents " +
                 "or owner change. This is the detailed part of ChestAuditLog; turn it off " +
                 "to keep the log smaller if you only care about who touched which chest.");
+
+            // ------------------------------------------------------------------
+            // 07 - Backup
+            // ------------------------------------------------------------------
+            ChestSnapshotEnabled = cfg.Bind("07 - Backup", "ChestSnapshotEnabled", true,
+                "Every few minutes, writes the contents of every loaded chest to a small " +
+                "file next to the config. It is the only way to bring back an item that " +
+                "went missing, since the game keeps no history. Costs almost nothing.");
+
+            ChestSnapshotMinutes = cfg.Bind("07 - Backup", "ChestSnapshotMinutes", 5f,
+                new ConfigDescription(
+                    "How often the snapshot is taken, in minutes. Shorter means less can be " +
+                    "lost between snapshots.",
+                    new AcceptableValueRange<float>(0.5f, 30f)));
+
+            RestoreSnapshotNow = cfg.Bind("07 - Backup", "RestoreSnapshotNow", false,
+                "Puts back, into the chests loaded around you, every item present in the " +
+                "snapshot but missing now. Read the log: it lists what was restored and " +
+                "warns about chests whose zone was not loaded. Unchecks itself afterwards.");
+
+            RestoreSnapshotFile = cfg.Bind("07 - Backup", "RestoreSnapshotFile", "",
+                "Which snapshot file to restore from, e.g. snapshot-20260922-233000.txt. " +
+                "Leave empty to use the most recent one.");
 
             // ------------------------------------------------------------------
             // 02 - Network

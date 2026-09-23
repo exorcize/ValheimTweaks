@@ -133,6 +133,12 @@ It comes with an option to freeze the time of day and the weather on your screen
 without affecting the world or other players, so you can compare two tweaks in the
 same scene.
 
+**Backups:** every few minutes (`ChestSnapshotMinutes`) the contents of every loaded
+chest are written to a small file next to the config. If something goes missing,
+`RestoreSnapshotNow` puts back into the chests around you every item the snapshot has
+and the chest no longer does. This is the only way to recover an item the game lost,
+since it keeps no history.
+
 There is also a **chest audit** (`ChestAuditLog`): it writes to the log every chest
 interaction on the network — who opened, stacked or took from which chest, whether
 the owner allowed it, the chest id and its owner — and, with `ChestAuditContents`,
