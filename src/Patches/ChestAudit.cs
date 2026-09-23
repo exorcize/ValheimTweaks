@@ -134,7 +134,10 @@ namespace ValheimTweaks.Patches
             string name = StoreHudPatch.ChestName(chest);
             if (string.IsNullOrEmpty(name)) name = Localization.instance.Localize(chest.m_name);
 
-            return $"'{name}' zdo={zid} owner={owner}";
+            // Position, so a chest in the log can be walked to instead of guessed by its
+            // contents. The ZDO id identifies it but says nothing about where it is.
+            Vector3 p = chest.transform.position;
+            return $"'{name}' zdo={zid} owner={owner} pos=({p.x:0},{p.z:0})";
         }
 
         private static string Contents(Container chest)
