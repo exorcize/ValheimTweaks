@@ -226,17 +226,56 @@ namespace ValheimTweaks.Patches
         // (a network overwrite, for example). We remember what was moved and check again
         // a moment later; if it vanished from the chest, it goes back to the backpack
         // instead of being lost.
+        //
+        // ---- Why three checks and why only the first one restores ----
+        // A single check 2s after the move misses the loss this is meant to catch: the
+        // network overwrite arrives when ownership of the chest changes hands, which in a
+        // real session was 27s to 3min later. So we look again at 10s and 30s.
+        //
+        // But recreating an item half a minute later is far more likely to duplicate it
+        // than to save it: by then the most common reason for it to be missing is that
+        // somebody took it, and we cannot tell the two apart from here. So the late checks
+        // only report, loudly and by name, and the recovery is the chest snapshot, which
+        // restores from a record instead of from a guess.
         private class PendingCheck
         {
+            /// <summary>Seconds after the move at which to look. Only the first restores.</summary>
+            internal static readonly float[] Stages = { 2f, 10f, 30f };
+
+            internal Container Chest;
             internal Inventory Destination;
             internal Inventory Source;
             internal string Key;
             internal int Expected;
+            /// <summary>Units in the backpack right after the move; see Missing().</summary>
+            internal int SourceExpected;
             internal ItemDrop.ItemData Sample;
+            internal int Stage;
             internal float At;
+            /// <summary>When the move happened, so each stage is measured from it.</summary>
+            internal float Since;
         }
 
         private static readonly List<PendingCheck> _checks = new List<PendingCheck>();
+
+        /// <summary>
+        /// How many of the stored units the chest no longer has AND that did not come back
+        /// to the backpack.
+        ///
+        /// The second half is what stops the safety net from duplicating: taking the item
+        /// straight back out of the chest is an ordinary thing to do, and it empties the
+        /// chest exactly like a network overwrite would. Seen in a real session -- ten
+        /// pine cones stored, taken back by hand, and handed out a second time by this
+        /// check. Whatever returned to the backpack is not missing.
+        /// </summary>
+        private static int Missing(PendingCheck c)
+        {
+            int gone = c.Expected - Count(c.Destination, c.Key);
+            if (gone <= 0) return 0;
+
+            int back = Count(c.Source, c.Key) - c.SourceExpected;
+            return Mathf.Max(0, gone - Mathf.Max(0, back));
+        }
 
         private static void CheckRollbacks()
         {
@@ -247,12 +286,40 @@ namespace ValheimTweaks.Patches
             {
                 var c = _checks[i];
                 if (now < c.At) continue;
+
+                if (c.Destination == null || c.Source == null || c.Sample == null)
+                {
+                    _checks.RemoveAt(i);
+                    continue;
+                }
+
+                int missing = Missing(c);
+
+                if (missing <= 0)
+                {
+                    // Still there. Look again later: the overwrite that erases a store
+                    // arrives when the chest changes owner, which can be a minute away.
+                    if (++c.Stage < PendingCheck.Stages.Length)
+                        c.At = c.Since + PendingCheck.Stages[c.Stage];
+                    else
+                        _checks.RemoveAt(i);
+                    continue;
+                }
+
                 _checks.RemoveAt(i);
+                string where = c.Chest != null ? $" '{Chests.VisibleName(c.Chest)}'" : "";
 
-                if (c.Destination == null || c.Source == null || c.Sample == null) continue;
-
-                int missing = c.Expected - Count(c.Destination, c.Key);
-                if (missing <= 0) continue;
+                // Past the first stage we only report. Putting the item back this late
+                // would more often duplicate it than save it.
+                if (c.Stage > 0)
+                {
+                    Plugin.Log.LogError(
+                        $"[CHESTS] LOST {missing}x '{c.Key}' from{where}: it was stored "
+                      + $"{PendingCheck.Stages[c.Stage]:0}s ago and the chest no longer has it, "
+                      + "and it did not come back to your backpack. If nobody took it, this is a "
+                      + "network overwrite: use RestoreSnapshotNow to put it back.");
+                    continue;
+                }
 
                 int maxStack = Mathf.Max(1, c.Sample.m_shared.m_maxStackSize);
                 int left = missing;
@@ -271,10 +338,10 @@ namespace ValheimTweaks.Patches
 
                 int returned = missing - left;
                 if (returned > 0)
-                    Plugin.Log.LogError($"[CHESTS] ROLLBACK: {returned}x '{c.Key}' left the chest "
-                                      + "after being stored; returned to the backpack.");
+                    Plugin.Log.LogError($"[CHESTS] ROLLBACK: {returned}x '{c.Key}' left{where} "
+                                      + "right after being stored; returned to the backpack.");
                 if (left > 0)
-                    Plugin.Log.LogError($"[CHESTS] LOST {left}x '{c.Key}': it left the chest and the "
+                    Plugin.Log.LogError($"[CHESTS] LOST {left}x '{c.Key}': it left{where} and the "
                                       + "backpack had no room. Tell the mod author.");
             }
         }
@@ -543,6 +610,16 @@ namespace ValheimTweaks.Patches
             internal int Tries;
             /// <summary>Don't send it before this time; a busy chest is retried shortly after.</summary>
             internal float NotBefore;
+            /// <summary>
+            /// The chest's ZDO data revision when the request went out. Anything newer than
+            /// this is the previous owner's copy landing -- see StoreDeferral.
+            /// </summary>
+            internal uint Revision;
+            /// <summary>
+            /// Granted, and the move is waiting for that copy. The queue holds still while
+            /// this is set: the request is neither in flight nor finished.
+            /// </summary>
+            internal bool Waiting;
         }
 
         private static readonly List<Request> _queue = new List<Request>();
@@ -647,7 +724,7 @@ namespace ValheimTweaks.Patches
         /// failing, and vanishing is worse than both -- hence the check below.
         /// </summary>
         private static int Move(Inventory destination, Inventory source, string key, int amount,
-                                ItemDrop.ItemData only = null)
+                                ItemDrop.ItemData only = null, Container chest = null)
         {
             if (destination == null || source == null || amount <= 0) return 0;
 
@@ -713,12 +790,19 @@ namespace ValheimTweaks.Patches
             if (only != null && movedIn > 0 && ModConfig.StoreRollback.Value)
                 _checks.Add(new PendingCheck
                 {
+                    Chest = chest,
                     Destination = destination,
                     Source = source,
                     Key = key,
                     Expected = Count(destination, key),
+                    // What the backpack has right after the move. If the item shows up
+                    // there again it came back by some other route -- the player took it
+                    // out -- and must not be counted as lost, or we would recreate it.
+                    SourceExpected = Count(source, key),
                     Sample = only.Clone(),
-                    At = Time.realtimeSinceStartup + 2f,
+                    Stage = 0,
+                    Since = Time.realtimeSinceStartup,
+                    At = Time.realtimeSinceStartup + PendingCheck.Stages[0],
                 });
 
             // Safety net: if the two ends don't match, someone gained or
@@ -784,10 +868,10 @@ namespace ValheimTweaks.Patches
         /// its own add-then-remove.
         /// </summary>
         internal static int SafeTransfer(Inventory destination, Inventory source,
-                                         ItemDrop.ItemData item)
+                                         ItemDrop.ItemData item, Container chest = null)
         {
             if (item == null) return 0;
-            return Move(destination, source, Key(item), item.m_stack, item);
+            return Move(destination, source, Key(item), item.m_stack, item, chest);
         }
 
         /// <summary>
@@ -798,6 +882,10 @@ namespace ValheimTweaks.Patches
         {
             if (_inFlight != null)
             {
+                // Granted, waiting for the previous owner's copy of the chest. StoreDeferral
+                // drives it from here and calls back; the RPC timeout must not fire on it.
+                if (_inFlight.Waiting) return;
+
                 if (Time.realtimeSinceStartup < _inFlightUntil) return;
                 var timedOut = _inFlight;
                 _inFlight = null;
@@ -827,6 +915,11 @@ namespace ValheimTweaks.Patches
 
             _inFlight = p;
             _inFlightUntil = Time.realtimeSinceStartup + 3f;
+
+            // Read the revision BEFORE asking: the store handshake hands the chest over
+            // long before its contents follow, and a change from this value is the only
+            // signal that they landed. See StoreDeferral.
+            p.Revision = StoreDeferral.Revision(p.Chest);
 
             if (p.Storing)
             {
@@ -860,6 +953,16 @@ namespace ValheimTweaks.Patches
         /// <summary>
         /// Only kicks in when the request went out through the RPC path (another
         /// player's chest). Outside the window, the game's "take all" stays intact.
+        ///
+        /// Taking has the same staleness problem as storing, but not the same cure. The
+        /// store is granted by an RPC that races a ForceSendZDO aimed at us, so there is a
+        /// copy on the way and waiting for it is worth it. RPC_TakeAllResponse instead
+        /// claims the chest, force-sends the ZDO to the PREVIOUS owner and reads its own
+        /// copy in the same breath: nothing is coming to us, so waiting would only make
+        /// every take slower. What is worth doing is reading the newest copy we already
+        /// have -- Container only does that once a second -- because taking from a stale
+        /// inventory saves that stale inventory, erasing whatever the other player had
+        /// just put in.
         /// </summary>
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveAll))]
         internal static class MoveAllHook
@@ -869,13 +972,16 @@ namespace ValheimTweaks.Patches
                 if (!FilterActive) return true;
 
                 var p = _inFlight;
+                if (p == null) return true;
 
                 // Check that it's the response for OUR chest: if the player pressed
                 // the game's own "take all" within the window, we don't hijack it.
                 if (p.Chest == null || fromInventory != p.Chest.GetInventory()) return true;
 
                 _inFlight = null;
-                int n = Move(__instance, fromInventory, p.Key, p.Amount);
+                Chests.Reload(p.Chest);
+
+                int n = Move(__instance, p.Chest.GetInventory(), p.Key, p.Amount);
                 Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: take-move '{p.Key}': asked {p.Amount}, moved {n}");
                 _taken += n;
                 Complete();
@@ -892,6 +998,10 @@ namespace ValheimTweaks.Patches
         /// QuickStorePatch also prefixes this method, with its own window. The two
         /// coexist because each only acts within its own window, and the two are never
         /// open at the same time (they start from different player actions).
+        ///
+        /// The move does NOT happen here. Being granted means we own the chest now; it does
+        /// not mean we have its contents yet -- see StoreDeferral for why writing at this
+        /// point is what makes items vanish.
         /// </summary>
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll))]
         internal static class StackAllHook
@@ -901,16 +1011,50 @@ namespace ValheimTweaks.Patches
                 if (!FilterActive) return true;
 
                 var p = _inFlight;
-                if (p == null || !p.Storing) return true;
+                if (p == null || !p.Storing || p.Waiting) return true;
                 if (p.Chest == null || __instance != p.Chest.GetInventory()) return true;
 
-                _inFlight = null;
-                int n = Move(__instance, fromInventory, p.Key, p.Amount, p.Only);
-                _taken += n;
-                __result = n;
-                Complete();
+                p.Waiting = true;
+                var source = fromInventory;
+                StoreDeferral.Defer(p.Chest, p.Revision, why => RunDeferredStore(p, source, why));
+
+                __result = 0;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// The move that StackAllHook held back. By now the chest is ours AND its contents
+        /// are the ones the previous owner had, so the save lands on the newest revision
+        /// and is accepted by the rest of the network instead of being thrown away.
+        /// </summary>
+        private static void RunDeferredStore(Request p, Inventory source, string why)
+        {
+            if (_inFlight == p) _inFlight = null;
+            p.Waiting = false;
+
+            var destination = p.Chest != null ? p.Chest.GetInventory() : null;
+            if (destination == null || source == null) { Complete(); return; }
+
+            // Ownership can go back to the other client while we wait (they walked up to
+            // the chest, they opened it). Writing then is precisely the case that loses
+            // items, so the request goes back in the queue and asks again.
+            if (!Chests.Usable(p.Chest))
+            {
+                Plugin.Log.LogInfo($"[CHESTS] '{Chests.VisibleName(p.Chest)}' is not ours anymore; "
+                                 + "nothing written");
+                Retry(p, "ownership went back");
+                Complete();
+                return;
+            }
+
+            int n = Move(destination, source, p.Key, p.Amount, p.Only, p.Chest);
+            _taken += n;
+
+            Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: deferred store '{p.Key}' -> "
+                             + $"{Chests.VisibleName(p.Chest)} ({why}, "
+                             + $"rev {p.Revision} -> {StoreDeferral.Revision(p.Chest)})");
+            Complete();
         }
 
         // ==================================================================
@@ -1307,7 +1451,7 @@ namespace ValheimTweaks.Patches
                 // the other client is claimed first (safe, authoritative, instant) instead of
                 // waiting on their handshake. Only a client falls back to the handshake.
                 if (IsOwner(d.Chest) || Chests.TryClaim(d.Chest))
-                    _taken += Move(d.Chest.GetInventory(), backpack, key, d.Amount, item);
+                    _taken += Move(d.Chest.GetInventory(), backpack, key, d.Amount, item, d.Chest);
                 else
                     _queue.Add(new Request
                     {

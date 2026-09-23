@@ -141,6 +141,7 @@ namespace ValheimTweaks
             Patches.ChestPeekPatch.Update();
             Patches.AutoMinePatch.Update();
             Patches.ChestSearchPatch.Update();
+            Patches.StoreDeferral.Tick();
             Patches.ChestAudit.Tick();
             Patches.ChestSnapshot.Tick();
 

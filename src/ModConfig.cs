@@ -89,6 +89,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<float> StoreRadius;
         internal static ConfigEntry<bool> StoreFallbackAnyChest;
         internal static ConfigEntry<bool> StoreNonOwnedChests;
+        internal static ConfigEntry<float> StoreHandshakeWaitSec;
         internal static ConfigEntry<bool> StoreRollback;
         internal static ConfigEntry<bool> StoreHudEnabled;
         internal static ConfigEntry<float> StoreHudX;
@@ -449,17 +450,33 @@ namespace ValheimTweaks
                 "chest with space.");
 
             StoreNonOwnedChests = cfg.Bind("05 - Convenience", "StoreNonOwnedChests", true,
-                "Also stores into chests currently owned by the other player's client. Those " +
-                "chests are handed over by the game's own ownership handshake before anything " +
-                "is written, and the move measures both ends, so nothing is lost. A chest whose " +
+                "Also stores into chests currently owned by the other player's client. The " +
+                "game's ownership handshake hands the chest over first, and the write then " +
+                "waits for that client's copy of the contents to arrive (StoreHandshakeWaitSec) " +
+                "before touching anything -- without that wait the write is discarded by the " +
+                "network and the items vanish at the next ownership handover. A chest whose " +
                 "owner is offline is skipped (nobody can hand it over, and the request would " +
-                "just stall). Turn this off to only ever touch chests you own.");
+                "just stall). Turn this off to only ever touch chests you own: it is the one " +
+                "setting that removes this whole class of problem, at the cost of leaving " +
+                "items in your backpack when only the other player's chests have room.");
+
+            StoreHandshakeWaitSec = cfg.Bind("05 - Convenience", "StoreHandshakeWaitSec", 2f,
+                new ConfigDescription(
+                    "How long to wait, after the other player's client hands a chest over, for " +
+                    "its copy of the contents to arrive before writing. The handover answer is " +
+                    "instant but the contents travel on the slow ZDO loop; writing in between " +
+                    "produces a save the rest of the network throws away. Normally the copy " +
+                    "arrives well inside this and the wait ends early -- this is only the " +
+                    "ceiling. Raise it on a laggy server, lower it if storing feels sluggish. " +
+                    "Chests you already own are never delayed.",
+                    new AcceptableValueRange<float>(0.2f, 5f)));
 
             StoreRollback = cfg.Bind("05 - Convenience", "StoreRollback", true,
-                "After storing, checks a moment later that the chest really kept the items. If " +
-                "they vanished from it (a network overwrite, for example), they are put back in " +
-                "your backpack instead of being lost. Trade-off: if someone else takes those " +
-                "items from the chest within the check window, they end up duplicated.");
+                "After storing, checks that the chest really kept the items, three times: after " +
+                "2s, 10s and 30s. On the first check they are put back in your backpack; the " +
+                "later two only report it in the log, loudly, because recreating an item half a " +
+                "minute later is more likely to duplicate it than to save it. Items you took " +
+                "back out yourself are not counted as lost.");
 
             StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
                 "Shows a list in the bottom-left corner of what was stored, with the item's " +

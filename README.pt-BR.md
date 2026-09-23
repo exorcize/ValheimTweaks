@@ -122,6 +122,16 @@ Duas exceções:
 - **Distância de simulação**: quem hospeda define o teto. Os outros podem usar
   menos, nunca mais.
 
+**Guardar nos baús do outro jogador.** Um baú pertence à máquina que o tem
+carregado, e o handshake do jogo entrega o baú na hora mas manda o conteúdo por um
+canal mais lento. Escrever nesse intervalo produz um save que o resto da rede
+descarta, e os itens reaparecem sumidos na próxima troca de dono — é esse o
+verdadeiro "meu item sumiu". Então a escrita espera esse conteúdo chegar
+(`StoreHandshakeWaitSec`, normalmente uma fração dele) antes de mexer em qualquer
+coisa, e se o baú voltar para o outro dono durante a espera nada é escrito e o item
+fica na sua mochila. Baú que já é seu nunca espera. Pondo `StoreNonOwnedChests` em
+false, esses baús são ignorados de vez.
+
 ## Ferramentas
 
 Há uma seção de diagnóstico que escreve no log um resumo das configurações de

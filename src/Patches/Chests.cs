@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
 using UnityEngine;
 
 namespace ValheimTweaks.Patches
@@ -38,6 +40,29 @@ namespace ValheimTweaks.Patches
                 Buffer.Add(container);
             }
             return Buffer;
+        }
+
+        // Container.Load is private. It is the only thing that copies the ZDO into the
+        // chest's inventory, and the game calls it from CheckForChanges, once a second.
+        private static readonly MethodInfo LoadMethod = AccessTools.Method(typeof(Container), "Load");
+
+        /// <summary>
+        /// Makes the chest read its ZDO now.
+        ///
+        /// Without this, an inventory we are about to write into can be up to a second
+        /// behind the copy that just arrived from its previous owner, and the write would
+        /// be saved on top of contents that are already outdated.
+        /// </summary>
+        internal static void Reload(Container chest)
+        {
+            if (chest == null || LoadMethod == null) return;
+
+            try { LoadMethod.Invoke(chest, null); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[CHESTS] could not read '{VisibleName(chest)}' from the "
+                                    + $"network before writing: {e.Message}");
+            }
         }
 
         /// <summary>

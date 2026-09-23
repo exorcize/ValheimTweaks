@@ -123,6 +123,16 @@ Two exceptions:
 - **Simulation distance**: whoever hosts sets the ceiling. Others can use less,
   never more.
 
+**Storing into the other player's chests.** A chest belongs to whichever machine has
+it loaded, and the game's handshake hands the chest over instantly but sends its
+contents on a slower channel. Writing in between produces a save the rest of the
+network discards, and the items reappear as gone at the next ownership handover —
+that is the real "my item vanished". So the write waits for those contents to arrive
+(`StoreHandshakeWaitSec`, usually a fraction of it) before touching anything, and if
+the chest goes back to its other owner during the wait, nothing is written and the
+item stays in your backpack. Chests you already own are never delayed. Setting
+`StoreNonOwnedChests` to false skips those chests entirely.
+
 ## Tools
 
 There is a diagnostics section that writes a summary of the active video settings

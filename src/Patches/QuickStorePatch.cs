@@ -143,6 +143,11 @@ namespace ValheimTweaks.Patches
         private static readonly Dictionary<Inventory, Container> Owner =
             new Dictionary<Inventory, Container>();
 
+        // Chests that were not ours when we asked, and the ZDO revision they had then.
+        // Having an entry here is what marks a write as "must wait" -- see StoreDeferral.
+        private static readonly Dictionary<Container, uint> s_revisionAtRequest =
+            new Dictionary<Container, uint>();
+
         private static void Dump(System.Func<ItemDrop.ItemData, bool> filter, string what)
         {
             var chests = NearbyChests();
@@ -153,10 +158,17 @@ namespace ValheimTweaks.Patches
             }
 
             Owner.Clear();
+            s_revisionAtRequest.Clear();
             foreach (var b in chests)
             {
                 var inv = b.GetInventory();
                 if (inv != null) Owner[inv] = b;
+
+                // A chest that isn't ours yet is handed over by the handshake long before
+                // its contents arrive, so its write has to wait for them. Remember the
+                // revision from before we ask: the change is what tells us they landed.
+                // A chest we already own has nothing to wait for and is never delayed.
+                if (!Chests.Usable(b)) s_revisionAtRequest[b] = StoreDeferral.Revision(b);
             }
 
             s_filter = filter;
@@ -183,59 +195,103 @@ namespace ValheimTweaks.Patches
                 var player = Player.m_localPlayer;
                 if (player == null) return true;
 
-                int moved = 0;
-                var items = new List<ItemDrop.ItemData>(fromInventory.GetAllItems());
-
                 Owner.TryGetValue(__instance, out var chest);
-                string chestName = StoreHudPatch.ChestName(chest);
 
-                // Both passes go through the shared move: AddItem can put part of the
-                // stack in and still return "false", and the old add-then-remove left
-                // those units duplicated.
-                // 1st pass: only where the chest ALREADY has the item (game behavior).
-                foreach (var item in items)
+                // The chest was the other player's: being granted means we own it now, not
+                // that we have its contents. Writing before they arrive is what makes items
+                // vanish -- StoreDeferral explains it. Wait, then run the same store.
+                if (chest != null && s_revisionAtRequest.TryGetValue(chest, out uint revision))
                 {
-                    if (!s_filter(item) || player.IsItemEquiped(item)) continue;
-                    if (!__instance.ContainsItemByName(item.m_shared.m_name)) continue;
+                    s_revisionAtRequest.Remove(chest);
 
-                    // Remove the mark before moving: it's only valid while the item is yours.
-                    item.m_customData?.Remove(MarkKey);
-                    int movedNow = ChestSearchPatch.SafeTransfer(__instance, fromInventory, item);
+                    // The filter is a moving target (a second dump replaces it); hold on to
+                    // the one this request was started with.
+                    var filter = s_filter;
+                    var chestInv = __instance;
+                    var backpack = fromInventory;
+
+                    StoreDeferral.Defer(chest, revision,
+                        why => StoreInto(chest, chestInv, backpack, filter, why));
+
+                    __result = 0;
+                    return false;
+                }
+
+                __result = StoreInto(chest, __instance, fromInventory, s_filter, null);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Moves everything the filter accepts from the backpack into one chest.
+        ///
+        /// <paramref name="why"/> is null on the direct path (a chest we already own) and
+        /// carries StoreDeferral's reason when the write was held back.
+        /// </summary>
+        private static int StoreInto(Container chest, Inventory chestInv, Inventory backpack,
+                                     System.Func<ItemDrop.ItemData, bool> filter, string why)
+        {
+            var player = Player.m_localPlayer;
+            if (player == null || chestInv == null || backpack == null || filter == null) return 0;
+
+            // Held back and, in the meantime, the chest went back to its other owner (they
+            // walked up to it, they opened it). Writing now is exactly the case that loses
+            // items, so it stays in the backpack and the log says why.
+            if (why != null && !Chests.Usable(chest))
+            {
+                Plugin.Log.LogInfo($"[STORE] '{Chests.VisibleName(chest)}' is not ours anymore; "
+                                 + "nothing stored there");
+                return 0;
+            }
+
+            int moved = 0;
+            string chestName = StoreHudPatch.ChestName(chest);
+
+            // Both passes go through the shared move: AddItem can put part of the
+            // stack in and still return "false", and the old add-then-remove left
+            // those units duplicated.
+            // 1st pass: only where the chest ALREADY has the item (game behavior).
+            foreach (var item in new List<ItemDrop.ItemData>(backpack.GetAllItems()))
+            {
+                if (!filter(item) || player.IsItemEquiped(item)) continue;
+                if (!chestInv.ContainsItemByName(item.m_shared.m_name)) continue;
+
+                // Remove the mark before moving: it's only valid while the item is yours.
+                item.m_customData?.Remove(MarkKey);
+                int movedNow = ChestSearchPatch.SafeTransfer(chestInv, backpack, item, chest);
+                if (movedNow > 0)
+                {
+                    moved++;
+                    StoreHudPatch.Add(item, movedNow, chestName);
+                }
+            }
+
+            // 2nd pass (optional): any chest with space.
+            if (ModConfig.StoreFallbackAnyChest.Value)
+            {
+                foreach (var item in new List<ItemDrop.ItemData>(backpack.GetAllItems()))
+                {
+                    if (!filter(item) || player.IsItemEquiped(item)) continue;
+
+                    int movedNow = ChestSearchPatch.SafeTransfer(chestInv, backpack, item, chest);
                     if (movedNow > 0)
                     {
                         moved++;
                         StoreHudPatch.Add(item, movedNow, chestName);
                     }
                 }
-
-                // 2nd pass (optional): any chest with space.
-                if (ModConfig.StoreFallbackAnyChest.Value)
-                {
-                    foreach (var item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
-                    {
-                        if (!s_filter(item) || player.IsItemEquiped(item)) continue;
-
-                        int movedNow = ChestSearchPatch.SafeTransfer(__instance, fromInventory, item);
-                        if (movedNow > 0)
-                        {
-                            moved++;
-                            StoreHudPatch.Add(item, movedNow, chestName);
-                        }
-                    }
-                }
-
-                if (moved > 0)
-                {
-                    Notify(__instance);
-                    Notify(fromInventory);
-                    s_moved += moved;
-                    Toast(string.Format(
-                        Lang.T("{0} item(s) stored", "{0} item(ns) guardado(s)"), s_moved));
-                }
-
-                __result = moved;
-                return false; // skips the original
             }
+
+            if (moved > 0)
+            {
+                Notify(chestInv);
+                Notify(backpack);
+                s_moved += moved;
+                Toast(string.Format(
+                    Lang.T("{0} item(s) stored", "{0} item(ns) guardado(s)"), s_moved));
+            }
+
+            return moved;
         }
 
         // ------------------------------------------------------------------
