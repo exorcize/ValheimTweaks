@@ -19,6 +19,7 @@ namespace ValheimTweaks
         // ---------- 01 - Diagnostics ----------
         internal static ConfigEntry<bool> DumpOnWorldLoad;
         internal static ConfigEntry<bool> DumpNow;
+        internal static ConfigEntry<bool> DumpChestsNow;
         internal static ConfigEntry<bool> ProfileNow;
         internal static ConfigEntry<float> ProfileSeconds;
         internal static ConfigEntry<bool> ProfileSystems;
@@ -139,6 +140,11 @@ namespace ValheimTweaks
 
             DumpNow = cfg.Bind("01 - Diagnostics", "DumpNow", false,
                 "Generates that summary now. Unchecks itself afterwards.");
+
+            DumpChestsNow = cfg.Bind("01 - Diagnostics", "DumpChestsNow", false,
+                "Writes to the log the contents of every chest currently loaded, with the " +
+                "chest's id, owner and position. Use it to find where an item ended up: turn " +
+                "it on near a base and search the log for the item name. Unchecks itself.");
 
             ProfileNow = cfg.Bind("01 - Diagnostics", "ProfileNow", false,
                 "Measures performance for the next few seconds and writes the result to the log. " +

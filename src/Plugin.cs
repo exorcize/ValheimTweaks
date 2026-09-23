@@ -12,7 +12,7 @@ namespace ValheimTweaks
     {
         public const string GUID = "com.kyoka.valheimtweaks";
         public const string NAME = "ValheimTweaks";
-        public const string VERSION = "0.33.17";
+        public const string VERSION = "0.33.18";
 
         internal static ManualLogSource Log;
         internal static Plugin Instance;
@@ -188,6 +188,12 @@ namespace ValheimTweaks
             {
                 ModConfig.DumpNow.Value = false;
                 Diagnostics.Dump("manual request");
+            }
+
+            if (ModConfig.DumpChestsNow.Value)
+            {
+                ModConfig.DumpChestsNow.Value = false;
+                Patches.ChestAudit.DumpChests();
             }
 
             if (ModConfig.ProfileNow.Value)

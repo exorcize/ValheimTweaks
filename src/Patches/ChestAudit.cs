@@ -27,6 +27,32 @@ namespace ValheimTweaks.Patches
         private static bool _loggedWorld;
         private static float _nextBackpackScan;
 
+        /// <summary>
+        /// Walks every container loaded in the scene and writes its contents, position and
+        /// owner to the log. Triggered from the config (DumpChestsNow). This is how to find
+        /// where an item ended up when the exact moment was missed: grep the dump for the
+        /// item name and you get the chest and where it is.
+        /// </summary>
+        internal static void DumpChests()
+        {
+            try
+            {
+                var chests = UnityEngine.Object.FindObjectsByType<Container>(
+                    UnityEngine.FindObjectsSortMode.None);
+
+                Plugin.Log.LogInfo($"[AUDIT] {Stamp()} chest census: {chests.Length} container(s) loaded");
+                foreach (var chest in chests)
+                {
+                    if (chest == null) continue;
+                    Plugin.Log.LogInfo($"[AUDIT] {Stamp()}   {Describe(chest)}{Contents(chest)}");
+                }
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogError($"[AUDIT] chest census failed: {e.Message}");
+            }
+        }
+
         internal static void Tick()
         {
             if (!ModConfig.ChestAuditLog.Value)
