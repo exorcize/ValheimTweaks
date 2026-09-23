@@ -39,8 +39,12 @@ namespace ValheimTweaks.Patches
             if (player == null)
             {
                 _loggedWorld = false;
-                _seen.Clear();
                 _backpack.Clear();
+                // Keep the chest memory across a death/respawn. Clearing it here made the
+                // first sighting of every chest silent afterwards, which is exactly how an
+                // emptying during that window went unrecorded. Only a real world change
+                // (no scene) drops the memory.
+                if (ZNetScene.instance == null) _seen.Clear();
                 return;
             }
 
@@ -229,9 +233,13 @@ namespace ValheimTweaks.Patches
                 if (before == now) return;
                 _seen[zdo.m_uid] = now;
 
-                // Only reports changes, not the first sighting of each chest.
+                // Reports changes. The first sighting is logged too: if a chest was emptied
+                // while its zone was unloaded, this is the only line that shows the before
+                // and after, and without it the loss had no trace at all.
                 if (before != null)
                     Plugin.Log.LogInfo($"[AUDIT] {Stamp()} changed {Describe(__instance)}{Contents(__instance)} (was{before})");
+                else
+                    Plugin.Log.LogInfo($"[AUDIT] {Stamp()} first seen {Describe(__instance)}{Contents(__instance)}");
             }
         }
     }
