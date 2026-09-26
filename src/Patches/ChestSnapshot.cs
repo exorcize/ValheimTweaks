@@ -140,12 +140,26 @@ namespace ValheimTweaks.Patches
                 var saved = Parse(file);
 
                 int restored = 0, chests = 0;
+                var skipped = new List<string>();
+
                 foreach (var chest in LoadedChests())
                 {
                     var zdo = ZdoOf(chest);
                     var inv = chest.GetInventory();
                     if (zdo == null || inv == null) continue;
                     if (!saved.TryGetValue(Key(zdo), out var want)) continue;
+
+                    // Writing into a chest owned by another player's client is the very thing
+                    // that destroys items: the save goes out with an outdated revision, the
+                    // network discards it and the chest rolls back. A restore that does that
+                    // would look like it worked and quietly recreate nothing -- the worst
+                    // possible outcome for the one tool meant to recover a loss. So those
+                    // chests are named instead, and the player is told how to make them ours.
+                    if (!Chests.Usable(chest))
+                    {
+                        skipped.Add(Chests.VisibleName(chest) + " " + Key(zdo));
+                        continue;
+                    }
 
                     bool touched = false;
                     foreach (var kv in want)
@@ -190,6 +204,14 @@ namespace ValheimTweaks.Patches
                 Plugin.Log.LogWarning($"[RESTORE] from {file.Name}: {restored} unit(s) into "
                                     + $"{chests} chest(s). Items in chests whose zone was not "
                                     + "loaded cannot be restored.");
+
+                if (skipped.Count > 0)
+                    Plugin.Log.LogWarning(
+                        $"[RESTORE] {skipped.Count} chest(s) NOT touched because another player's "
+                      + "client owns them, or they are in use, or a guard stone blocks them -- "
+                      + "writing there would be discarded by the network. Stand next to them with "
+                      + "the other player away, then run RestoreSnapshotNow again: "
+                      + string.Join(", ", skipped));
             }
             catch (Exception e)
             {
@@ -229,7 +251,16 @@ namespace ValheimTweaks.Patches
                         Stack = int.Parse(f[2], CultureInfo.InvariantCulture),
                         Durability = float.Parse(f[3], CultureInfo.InvariantCulture),
                     };
-                    items[f[0] + "|" + it.Quality] = it;
+
+                    // The snapshot writes one entry per STACK, so the same item at the same
+                    // quality shows up several times -- a chest with seven stacks of wood
+                    // writes seven entries. Assigning here would keep only the last one and
+                    // the restore would put back 50 of 350, silently. Restore compares
+                    // against CountOf, which sums every unit of that name and quality, so
+                    // the total is what belongs in the key.
+                    string id = f[0] + "|" + it.Quality;
+                    if (items.TryGetValue(id, out var same)) same.Stack += it.Stack;
+                    else items[id] = it;
                 }
                 result[parts[0]] = items;
             }

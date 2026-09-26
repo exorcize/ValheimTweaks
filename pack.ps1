@@ -37,6 +37,16 @@ $dllVersion = ((Get-Item $dll).VersionInfo.FileVersion -split '\.')[0..2] -join 
 if ($dllVersion -ne $version) {
     throw "DLL in bin\Release is $dllVersion but the csproj says $version. Zip aborted."
 }
+
+# Second belt: BepInPlugin needs a compile-time literal, so Plugin.VERSION is typed by
+# hand and can drift from the csproj. When it does, r2modman and the log disagree about
+# which version is running and a bug report points at the wrong code. Caught exactly
+# that on 0.34.0.
+$declared = (Select-String -Path (Join-Path $root "src\Plugin.cs") `
+                           -Pattern 'VERSION\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+if ($declared -ne $version) {
+    throw "src\Plugin.cs declares $declared but the csproj says $version. Zip aborted."
+}
 Write-Host "  DLL verified: $dllVersion"
 
 $outDir = Join-Path $root "dist"

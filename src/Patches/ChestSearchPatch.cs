@@ -247,6 +247,8 @@ namespace ValheimTweaks.Patches
             internal Inventory Source;
             internal string Key;
             internal int Expected;
+            /// <summary>Units this move actually put in: the ceiling on what we may claim back.</summary>
+            internal int Moved;
             /// <summary>Units in the backpack right after the move; see Missing().</summary>
             internal int SourceExpected;
             internal ItemDrop.ItemData Sample;
@@ -259,14 +261,24 @@ namespace ValheimTweaks.Patches
         private static readonly List<PendingCheck> _checks = new List<PendingCheck>();
 
         /// <summary>
-        /// How many of the stored units the chest no longer has AND that did not come back
-        /// to the backpack.
+        /// How many of the units WE stored the chest no longer has and that did not come
+        /// back to the backpack.
         ///
-        /// The second half is what stops the safety net from duplicating: taking the item
-        /// straight back out of the chest is an ordinary thing to do, and it empties the
-        /// chest exactly like a network overwrite would. Seen in a real session -- ten
-        /// pine cones stored, taken back by hand, and handed out a second time by this
-        /// check. Whatever returned to the backpack is not missing.
+        /// Three guards, each for a way this check used to invent items:
+        ///
+        /// - Whatever returned to the backpack is not missing. Taking the item straight back
+        ///   out is an ordinary thing to do and it empties the chest exactly like a network
+        ///   overwrite would. Seen in a real session: ten pine cones stored, taken back by
+        ///   hand, and handed out a second time by this check.
+        ///
+        /// - Never more than we moved. Expected is the chest's TOTAL of that item, ours and
+        ///   whatever was already there, and stacks merge so there is no telling them apart
+        ///   afterwards. Store 2 needles into a chest holding 40, have the other player take
+        ///   10 of theirs, and the naive subtraction says 10 are missing -- it would hand out
+        ///   five times what we put in, for units that still exist in their backpack.
+        ///
+        /// - Nothing at all when we never owned the write. Ours is the only claim we can
+        ///   make; the chest's own bookkeeping is not ours to correct.
         /// </summary>
         private static int Missing(PendingCheck c)
         {
@@ -274,7 +286,7 @@ namespace ValheimTweaks.Patches
             if (gone <= 0) return 0;
 
             int back = Count(c.Source, c.Key) - c.SourceExpected;
-            return Mathf.Max(0, gone - Mathf.Max(0, back));
+            return Mathf.Clamp(gone - Mathf.Max(0, back), 0, c.Moved);
         }
 
         private static void CheckRollbacks()
@@ -527,6 +539,19 @@ namespace ValheimTweaks.Patches
                 }
             }
 
+            // Chests.Nearby follows Physics.OverlapSphere, whose order is not stable between
+            // queries, so Locations would come out shuffled from one scan to the next. That
+            // matters twice: the "by chest" list would reorder under the player's cursor, and
+            // Signature() -- which now includes the per-chest amounts -- would look different
+            // every refresh and rebuild the whole grid twice a second. Fullest first, with the
+            // instance id breaking ties, is both stable and the more useful order.
+            foreach (var a in _all)
+                a.Locations.Sort((x, y) =>
+                {
+                    int d = y.Amount.CompareTo(x.Amount);
+                    return d != 0 ? d : x.Chest.GetInstanceID().CompareTo(y.Chest.GetInstanceID());
+                });
+
             if (_focused != null && !_all.Contains(_focused))
             {
                 string key = _focused.Key;
@@ -534,12 +559,29 @@ namespace ValheimTweaks.Patches
             }
         }
 
+        /// <summary>
+        /// What the panel is showing, condensed. Build() only runs when this changes, so
+        /// anything the panel displays has to be in here.
+        ///
+        /// The per-chest amounts are part of it because the "by chest" view shows them:
+        /// moving a full stack from one chest to another leaves the total, the chest count
+        /// and the slot counts all identical, and that view would keep pointing at the old
+        /// chest until something unrelated happened to change the total.
+        /// </summary>
         private static string Signature()
         {
             var sb = new StringBuilder();
             sb.Append(_chestsSeen).Append('/').Append(_slotsUsed)
               .Append('/').Append(_slotsTotal).Append('|');
-            foreach (var a in _all) sb.Append(a.Key).Append(':').Append(a.Total).Append(';');
+            foreach (var a in _all)
+            {
+                sb.Append(a.Key).Append(':').Append(a.Total);
+                // Which chest, not just how much: a full stack moved from one chest to
+                // another leaves every total identical and would go unnoticed otherwise.
+                foreach (var o in a.Locations)
+                    sb.Append(',').Append(o.Chest.GetInstanceID()).Append('x').Append(o.Amount);
+                sb.Append(';');
+            }
             return sb.ToString();
         }
 
@@ -795,6 +837,7 @@ namespace ValheimTweaks.Patches
                     Source = source,
                     Key = key,
                     Expected = Count(destination, key),
+                    Moved = movedIn,
                     // What the backpack has right after the move. If the item shows up
                     // there again it came back by some other route -- the player took it
                     // out -- and must not be counted as lost, or we would recreate it.
