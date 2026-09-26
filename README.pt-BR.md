@@ -143,13 +143,13 @@ o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
 cena.
 
 **Verificação do que foi guardado:** salvar um baú estampa uma revisão nele, então o
-momento em que essa revisão é substituída é o único momento em que uma guardada pode
-ser desfeita. É aí que a checagem olha, em vez de num cronômetro — cronômetro ou dispara
-cedo demais, ou não distingue sobrescrita de alguém ter pegado o item. Se os itens
-sumiram e o baú ainda era seu, ninguém estava em posição de pegar e eles voltam para a
-mochila; se o baú já tinha passado para outro jogador, ele apenas reporta. Vigiar não
-custa nada enquanto espera, e para se a zona do baú descarregar — baú que você não vê é
-baú que você não consegue verificar.
+instante em que essa revisão é substituída por dado vindo da rede é o único instante em
+que uma guardada pode ser desfeita. É aí que a checagem olha, em vez de num cronômetro.
+Ela reporta e nunca recria o item: distinguir sobrescrita de rede do outro jogador
+simplesmente ter pegado não é possível de uma máquina só, e inventar item num bom palpite
+troca uma perda que você lê por uma duplicação que você não vê. O que você recebe é o
+baú, o item e a quantidade no log no momento em que acontece; a recuperação é o snapshot
+abaixo, que trabalha com registro.
 
 **Backup:** a cada poucos minutos (`ChestSnapshotMinutes`) o conteúdo de todo baú
 carregado é gravado num arquivo pequeno ao lado da config. Se algo sumir,

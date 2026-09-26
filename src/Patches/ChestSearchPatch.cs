@@ -698,7 +698,7 @@ namespace ValheimTweaks.Patches
             // Notify() above already ran Container.Save, so the revision WriteConfirm reads
             // is the one our write produced -- which is the whole basis of the check.
             if (only != null && movedIn > 0)
-                WriteConfirm.Track(chest, destination, source, key, movedIn, only);
+                WriteConfirm.Track(chest, destination, source, key, movedIn);
 
             // Safety net: if the two ends don't match, someone gained or
             // lost an item. There's no safe way to undo it here, but yelling in the log

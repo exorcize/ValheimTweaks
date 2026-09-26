@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>ValheimTweaks</AssemblyName>
     <RootNamespace>ValheimTweaks</RootNamespace>
-    <Version>0.35.0</Version>
+    <Version>0.35.1</Version>
     <LangVersion>latest</LangVersion>
     <!-- The game loads the DLL; we don't want transitive deps or extra files. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

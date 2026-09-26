@@ -473,13 +473,14 @@ namespace ValheimTweaks
                     new AcceptableValueRange<float>(0.2f, 5f)));
 
             StoreRollback = cfg.Bind("05 - Convenience", "StoreRollback", true,
-                "After storing, watches whether the network keeps the items. Saving a chest " +
-                "stamps a revision on it, so the moment that revision is replaced is the only " +
-                "moment a store can be undone -- that is when the check looks, instead of on a " +
-                "timer. If the items are gone and the chest was still yours, nobody could have " +
-                "taken them and they go back to your backpack. If the chest had already been " +
-                "handed to another player, it only reports, because they may have taken them. " +
-                "Items you took back out yourself are never counted as lost.");
+                "Watches whether the network keeps what you stored, and writes it in the log the " +
+                "moment it does not. Saving a chest stamps a revision on it, so the instant that " +
+                "revision is replaced by data from the network is the only instant a store can " +
+                "be undone -- that is when it looks, instead of on a timer. It reports and never " +
+                "recreates the item: telling a network overwrite from the other player simply " +
+                "taking it is not possible from your machine, and inventing an item on a good " +
+                "guess trades a loss you can read for a duplicate you cannot see. Recovery is " +
+                "RestoreSnapshotNow, which works from a record.");
 
             StoreVerifySeconds = cfg.Bind("05 - Convenience", "StoreVerifySeconds", 120f,
                 new ConfigDescription(

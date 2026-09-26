@@ -29,11 +29,18 @@ namespace ValheimTweaks.Patches
     /// see the chest handed to someone else with our items still in it, they can take them
     /// legitimately and we stop claiming anything.
     ///
-    /// That is attribution, not proof: the other client can claim a chest and empty it fast
-    /// enough that both reach us in one update, and that reads as an overwrite. The guards
-    /// below bound the damage of being wrong -- never more than the move put in, never what
-    /// came back to the backpack by another route. For a loss we cannot pin down we only
-    /// report; the snapshot is the recovery that works from a record instead of an inference.
+    /// ---- Why it reports and never puts anything back ----
+    /// The attribution above is not proof, and two holes showed up that cannot be closed from
+    /// one machine. RPC_ZDOData applies an ownership change on its own, with no data and so no
+    /// Load, which means the chest can become someone else's without us ever seeing it; a
+    /// withdrawal after that reads as an overwrite. And the other client can claim a chest and
+    /// empty it fast enough that both reach us in a single update.
+    ///
+    /// Recreating an item on a signal that good-but-not-certain trades a loss we can name for a
+    /// duplication we cannot see. This file used to put the item back, which was the wrong way
+    /// round -- so it states the loss precisely, at the moment it happens, with the chest and the
+    /// amount, and leaves recovery to the snapshot, which restores from a record instead of an
+    /// inference.
     /// </summary>
     internal static class WriteConfirm
     {
@@ -52,7 +59,6 @@ namespace ValheimTweaks.Patches
             internal uint Revision;
             /// <summary>Was the chest ours at the last update we saw? Drives the attribution.</summary>
             internal bool WasOurs;
-            internal ItemDrop.ItemData Sample;
             internal float Expires;
         }
 
@@ -78,10 +84,10 @@ namespace ValheimTweaks.Patches
         /// run and the revision is the one our write produced.
         /// </summary>
         internal static void Track(Container chest, Inventory destination, Inventory source,
-                                   string key, int units, ItemDrop.ItemData sample)
+                                   string key, int units)
         {
             if (!ModConfig.StoreRollback.Value) return;
-            if (chest == null || destination == null || source == null || sample == null) return;
+            if (chest == null || destination == null || source == null) return;
             if (units <= 0) return;
 
             _watches.Add(new Watch
@@ -94,15 +100,15 @@ namespace ValheimTweaks.Patches
                 SourceTotal = Count(source, key),
                 Revision = StoreDeferral.Revision(chest),
                 WasOurs = OwnedByUs(chest),
-                Sample = sample.Clone(),
                 Expires = Time.realtimeSinceStartup
                         + Mathf.Max(1f, ModConfig.StoreVerifySeconds.Value),
             });
         }
 
         /// <summary>
-        /// The chest just read new contents off its ZDO. This is the only moment a store can
-        /// be undone, so it is the only moment worth looking.
+        /// The chest just read new contents off its ZDO -- from the NETWORK, not from a save
+        /// made on this machine. This is the only moment a store can be undone, so it is the
+        /// only moment worth looking.
         /// </summary>
         internal static void OnLoaded(Container chest)
         {
@@ -145,53 +151,18 @@ namespace ValheimTweaks.Patches
                 if (!w.WasOurs)
                 {
                     Plugin.Log.LogWarning(
-                        $"[CHESTS] {missing}x '{w.Key}' left '{where}' after being stored, but the "
-                      + "chest was another player's by then, so they may have taken it. Not putting "
-                      + "it back. If nobody did, RestoreSnapshotNow recovers it.");
+                        $"[CHESTS] {missing}x '{w.Key}' left '{where}' after being stored, and the "
+                      + "chest was another player's by then, so they may simply have taken it.");
                     continue;
                 }
 
                 Plugin.Log.LogError(
-                    $"[CHESTS] OVERWRITTEN: the network discarded {missing}x '{w.Key}' stored into "
-                  + $"'{where}' (our revision {wrote} replaced by {now} while the chest was still "
-                  + "ours, so nobody could have taken it). Returning it to your backpack.");
-
-                GiveBack(w, missing, where);
+                    $"[CHESTS] OVERWRITTEN: {missing}x '{w.Key}' stored into '{where}' is gone -- "
+                  + $"the network replaced our revision {wrote} with {now} while the chest still "
+                  + "looked ours. Nothing was put back, because this cannot be told apart from the "
+                  + "other player having taken it. RestoreSnapshotNow recovers it from the last "
+                  + "snapshot if nobody did.");
             }
-        }
-
-        private static void GiveBack(Watch w, int missing, string where)
-        {
-            int maxStack = Mathf.Max(1, w.Sample.m_shared.m_maxStackSize);
-            int left = missing;
-            int before = Count(w.Source, w.Key);
-            int start = before;
-
-            while (left > 0)
-            {
-                var part = w.Sample.Clone();
-                part.m_stack = Mathf.Min(left, maxStack);
-                w.Source.AddItem(part);
-
-                int added = Count(w.Source, w.Key) - before;
-                if (added <= 0) break;   // backpack has no room
-                before += added;
-                left -= added;
-            }
-
-            // Two stores into the same chest are two watches, and one overwrite kills both.
-            // The one still pending would see the units this restore just added and take them
-            // for the player having fetched the item themselves, then discount its own claim
-            // to nothing -- 10 of 20 recovered. Its baseline has to move with the backpack.
-            int returned = before - start;
-            if (returned > 0)
-                foreach (var other in _watches)
-                    if (other.Source == w.Source && other.Key == w.Key)
-                        other.SourceTotal += returned;
-
-            if (left > 0)
-                Plugin.Log.LogError($"[CHESTS] LOST {left}x '{w.Key}': it was discarded from "
-                                  + $"'{where}' and your backpack had no room for it.");
         }
 
         /// <summary>Retires watches that ran out of time, reporting a loss we never saw land.</summary>
@@ -225,11 +196,26 @@ namespace ValheimTweaks.Patches
         /// Container.Load is where the ZDO becomes the inventory, so it is where an overwrite
         /// becomes visible. Separate from the audit's hook on purpose: this one has to run
         /// whether or not the audit log is turned on.
+        ///
+        /// ---- Why the return value is the whole point ----
+        /// Load answers false when DataRevision already equals m_lastRevision, and a save made
+        /// on THIS machine sets m_lastRevision as it writes. So a local change -- ours, or
+        /// another mod's -- bumps the revision and then makes Load a no-op, while only data
+        /// that came off the network makes it return true and actually replace the inventory.
+        ///
+        /// Comparing revisions alone would therefore read any local write as an overwrite.
+        /// SmartCraftStorage is exactly that case: it takes materials straight out of a
+        /// chest's inventory for crafting, fuel and feeding, which runs Container.Save. Store
+        /// 40 wood with this mod, let it spend that wood from the same chest, and the check
+        /// would have "recovered" 40 wood into the backpack out of nothing.
         /// </summary>
         [HarmonyPatch(typeof(Container), "Load")]
         internal static class LoadHook
         {
-            private static void Postfix(Container __instance) => OnLoaded(__instance);
+            private static void Postfix(Container __instance, bool __result)
+            {
+                if (__result) OnLoaded(__instance);
+            }
         }
     }
 }

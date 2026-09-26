@@ -143,14 +143,13 @@ It comes with an option to freeze the time of day and the weather on your screen
 without affecting the world or other players, so you can compare two tweaks in the
 same scene.
 
-**Store verification:** saving a chest stamps a revision on it, so the moment that
-revision is replaced is the only moment a store can be undone. That is when the check
-looks, instead of on a timer — a timer either fires too early or cannot tell an
-overwrite from somebody taking the item. If the items are gone and the chest was still
-yours, nobody was in a position to take them and they go back to your backpack; if it
-had already been handed to another player, it only reports. Watching costs nothing while
-it waits, and stops if the chest's zone unloads, because a chest you cannot see is a
-chest you cannot verify.
+**Store verification:** saving a chest stamps a revision on it, so the instant that
+revision is replaced by data from the network is the only instant a store can be undone.
+That is when the check looks, instead of on a timer. It reports and never recreates the
+item: telling a network overwrite from the other player simply taking it is not possible
+from one machine, and inventing an item on a good guess trades a loss you can read for a
+duplicate you cannot see. What you get is the chest, the item and the amount in the log at
+the moment it happens; recovery is the snapshot below, which works from a record.
 
 **Backups:** every few minutes (`ChestSnapshotMinutes`) the contents of every loaded
 chest are written to a small file next to the config. If something goes missing,
