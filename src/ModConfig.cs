@@ -91,6 +91,7 @@ namespace ValheimTweaks
         internal static ConfigEntry<bool> StoreNonOwnedChests;
         internal static ConfigEntry<float> StoreHandshakeWaitSec;
         internal static ConfigEntry<bool> StoreRollback;
+        internal static ConfigEntry<float> StoreVerifySeconds;
         internal static ConfigEntry<bool> StoreHudEnabled;
         internal static ConfigEntry<float> StoreHudX;
         internal static ConfigEntry<float> StoreHudY;
@@ -472,11 +473,22 @@ namespace ValheimTweaks
                     new AcceptableValueRange<float>(0.2f, 5f)));
 
             StoreRollback = cfg.Bind("05 - Convenience", "StoreRollback", true,
-                "After storing, checks that the chest really kept the items, three times: after " +
-                "2s, 10s and 30s. On the first check they are put back in your backpack; the " +
-                "later two only report it in the log, loudly, because recreating an item half a " +
-                "minute later is more likely to duplicate it than to save it. Items you took " +
-                "back out yourself are not counted as lost.");
+                "After storing, watches whether the network keeps the items. Saving a chest " +
+                "stamps a revision on it, so the moment that revision is replaced is the only " +
+                "moment a store can be undone -- that is when the check looks, instead of on a " +
+                "timer. If the items are gone and the chest was still yours, nobody could have " +
+                "taken them and they go back to your backpack. If the chest had already been " +
+                "handed to another player, it only reports, because they may have taken them. " +
+                "Items you took back out yourself are never counted as lost.");
+
+            StoreVerifySeconds = cfg.Bind("05 - Convenience", "StoreVerifySeconds", 120f,
+                new ConfigDescription(
+                    "How long to keep watching a store. The overwrite arrives when the chest " +
+                    "changes owner, which in a measured session was 27s to 3min after the store, " +
+                    "so a short window sees nothing. Costs nothing while waiting: the check only " +
+                    "runs when the chest reads new contents off the network. A chest whose zone " +
+                    "unloads stops being observable and the watch is dropped.",
+                    new AcceptableValueRange<float>(5f, 600f)));
 
             StoreHudEnabled = cfg.Bind("05 - Convenience", "StoreHudEnabled", true,
                 "Shows a list in the bottom-left corner of what was stored, with the item's " +

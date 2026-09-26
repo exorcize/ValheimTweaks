@@ -142,6 +142,15 @@ Junto vem uma opção para travar a hora do dia e o clima na sua tela, sem afeta
 o mundo nem os outros jogadores, para conseguir comparar dois ajustes na mesma
 cena.
 
+**Verificação do que foi guardado:** salvar um baú estampa uma revisão nele, então o
+momento em que essa revisão é substituída é o único momento em que uma guardada pode
+ser desfeita. É aí que a checagem olha, em vez de num cronômetro — cronômetro ou dispara
+cedo demais, ou não distingue sobrescrita de alguém ter pegado o item. Se os itens
+sumiram e o baú ainda era seu, ninguém estava em posição de pegar e eles voltam para a
+mochila; se o baú já tinha passado para outro jogador, ele apenas reporta. Vigiar não
+custa nada enquanto espera, e para se a zona do baú descarregar — baú que você não vê é
+baú que você não consegue verificar.
+
 **Backup:** a cada poucos minutos (`ChestSnapshotMinutes`) o conteúdo de todo baú
 carregado é gravado num arquivo pequeno ao lado da config. Se algo sumir,
 `RestoreSnapshotNow` devolve, nos baús ao seu redor, todo item que o snapshot tem e

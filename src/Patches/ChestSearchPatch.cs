@@ -135,7 +135,7 @@ namespace ValheimTweaks.Patches
         internal static void Update()
         {
             ProcessQueue();
-            CheckRollbacks();
+            WriteConfirm.Tick();
 
             if (!ModConfig.ChestSearchEnabled.Value)
             {
@@ -221,142 +221,6 @@ namespace ValheimTweaks.Patches
 
         private static Vector2 _builtSize;
         private static int _fontVersion;
-
-        // Post-store safety net. A chest can lose what we put in right after the move
-        // (a network overwrite, for example). We remember what was moved and check again
-        // a moment later; if it vanished from the chest, it goes back to the backpack
-        // instead of being lost.
-        //
-        // ---- Why three checks and why only the first one restores ----
-        // A single check 2s after the move misses the loss this is meant to catch: the
-        // network overwrite arrives when ownership of the chest changes hands, which in a
-        // real session was 27s to 3min later. So we look again at 10s and 30s.
-        //
-        // But recreating an item half a minute later is far more likely to duplicate it
-        // than to save it: by then the most common reason for it to be missing is that
-        // somebody took it, and we cannot tell the two apart from here. So the late checks
-        // only report, loudly and by name, and the recovery is the chest snapshot, which
-        // restores from a record instead of from a guess.
-        private class PendingCheck
-        {
-            /// <summary>Seconds after the move at which to look. Only the first restores.</summary>
-            internal static readonly float[] Stages = { 2f, 10f, 30f };
-
-            internal Container Chest;
-            internal Inventory Destination;
-            internal Inventory Source;
-            internal string Key;
-            internal int Expected;
-            /// <summary>Units this move actually put in: the ceiling on what we may claim back.</summary>
-            internal int Moved;
-            /// <summary>Units in the backpack right after the move; see Missing().</summary>
-            internal int SourceExpected;
-            internal ItemDrop.ItemData Sample;
-            internal int Stage;
-            internal float At;
-            /// <summary>When the move happened, so each stage is measured from it.</summary>
-            internal float Since;
-        }
-
-        private static readonly List<PendingCheck> _checks = new List<PendingCheck>();
-
-        /// <summary>
-        /// How many of the units WE stored the chest no longer has and that did not come
-        /// back to the backpack.
-        ///
-        /// Three guards, each for a way this check used to invent items:
-        ///
-        /// - Whatever returned to the backpack is not missing. Taking the item straight back
-        ///   out is an ordinary thing to do and it empties the chest exactly like a network
-        ///   overwrite would. Seen in a real session: ten pine cones stored, taken back by
-        ///   hand, and handed out a second time by this check.
-        ///
-        /// - Never more than we moved. Expected is the chest's TOTAL of that item, ours and
-        ///   whatever was already there, and stacks merge so there is no telling them apart
-        ///   afterwards. Store 2 needles into a chest holding 40, have the other player take
-        ///   10 of theirs, and the naive subtraction says 10 are missing -- it would hand out
-        ///   five times what we put in, for units that still exist in their backpack.
-        ///
-        /// - Nothing at all when we never owned the write. Ours is the only claim we can
-        ///   make; the chest's own bookkeeping is not ours to correct.
-        /// </summary>
-        private static int Missing(PendingCheck c)
-        {
-            int gone = c.Expected - Count(c.Destination, c.Key);
-            if (gone <= 0) return 0;
-
-            int back = Count(c.Source, c.Key) - c.SourceExpected;
-            return Mathf.Clamp(gone - Mathf.Max(0, back), 0, c.Moved);
-        }
-
-        private static void CheckRollbacks()
-        {
-            if (_checks.Count == 0) return;
-
-            float now = Time.realtimeSinceStartup;
-            for (int i = _checks.Count - 1; i >= 0; i--)
-            {
-                var c = _checks[i];
-                if (now < c.At) continue;
-
-                if (c.Destination == null || c.Source == null || c.Sample == null)
-                {
-                    _checks.RemoveAt(i);
-                    continue;
-                }
-
-                int missing = Missing(c);
-
-                if (missing <= 0)
-                {
-                    // Still there. Look again later: the overwrite that erases a store
-                    // arrives when the chest changes owner, which can be a minute away.
-                    if (++c.Stage < PendingCheck.Stages.Length)
-                        c.At = c.Since + PendingCheck.Stages[c.Stage];
-                    else
-                        _checks.RemoveAt(i);
-                    continue;
-                }
-
-                _checks.RemoveAt(i);
-                string where = c.Chest != null ? $" '{Chests.VisibleName(c.Chest)}'" : "";
-
-                // Past the first stage we only report. Putting the item back this late
-                // would more often duplicate it than save it.
-                if (c.Stage > 0)
-                {
-                    Plugin.Log.LogError(
-                        $"[CHESTS] LOST {missing}x '{c.Key}' from{where}: it was stored "
-                      + $"{PendingCheck.Stages[c.Stage]:0}s ago and the chest no longer has it, "
-                      + "and it did not come back to your backpack. If nobody took it, this is a "
-                      + "network overwrite: use RestoreSnapshotNow to put it back.");
-                    continue;
-                }
-
-                int maxStack = Mathf.Max(1, c.Sample.m_shared.m_maxStackSize);
-                int left = missing;
-                int before = Count(c.Source, c.Key);
-                while (left > 0)
-                {
-                    var part = c.Sample.Clone();
-                    part.m_stack = Mathf.Min(left, maxStack);
-                    c.Source.AddItem(part);
-
-                    int added = Count(c.Source, c.Key) - before;
-                    if (added <= 0) break;   // backpack has no room
-                    before += added;
-                    left -= added;
-                }
-
-                int returned = missing - left;
-                if (returned > 0)
-                    Plugin.Log.LogError($"[CHESTS] ROLLBACK: {returned}x '{c.Key}' left{where} "
-                                      + "right after being stored; returned to the backpack.");
-                if (left > 0)
-                    Plugin.Log.LogError($"[CHESTS] LOST {left}x '{c.Key}': it left{where} and the "
-                                      + "backpack had no room. Tell the mod author.");
-            }
-        }
 
         /// <summary>
         /// Rebuilds the whole panel while preserving what you already typed. It only
@@ -476,6 +340,8 @@ namespace ValheimTweaks.Patches
         // ==================================================================
         // Scan
         // ==================================================================
+        internal static string KeyOf(ItemDrop.ItemData item) => Key(item);
+
         private static string Key(ItemDrop.ItemData item)
         {
             // Quality only enters the key when the item has levels -- otherwise two
@@ -827,26 +693,12 @@ namespace ValheimTweaks.Patches
                 Plugin.Log.LogInfo($"[CHESTS] {ChestAudit.Who}: store-move '{key}': asked {amount}, "
                                  + $"out {movedOut}, in {movedIn}");
 
-            // Watch that the chest really kept it. Only for stores (the destination is a
+            // Watch that the network really keeps it. Only for stores (the destination is a
             // chest); a take's destination is the backpack and the player is free to use it.
-            if (only != null && movedIn > 0 && ModConfig.StoreRollback.Value)
-                _checks.Add(new PendingCheck
-                {
-                    Chest = chest,
-                    Destination = destination,
-                    Source = source,
-                    Key = key,
-                    Expected = Count(destination, key),
-                    Moved = movedIn,
-                    // What the backpack has right after the move. If the item shows up
-                    // there again it came back by some other route -- the player took it
-                    // out -- and must not be counted as lost, or we would recreate it.
-                    SourceExpected = Count(source, key),
-                    Sample = only.Clone(),
-                    Stage = 0,
-                    Since = Time.realtimeSinceStartup,
-                    At = Time.realtimeSinceStartup + PendingCheck.Stages[0],
-                });
+            // Notify() above already ran Container.Save, so the revision WriteConfirm reads
+            // is the one our write produced -- which is the whole basis of the check.
+            if (only != null && movedIn > 0)
+                WriteConfirm.Track(chest, destination, source, key, movedIn, only);
 
             // Safety net: if the two ends don't match, someone gained or
             // lost an item. There's no safe way to undo it here, but yelling in the log
